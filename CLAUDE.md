@@ -20,7 +20,8 @@ validates them via backtesting, and writes an explanation report. It does NOT fo
 - `tests/core/` and `tests/pipelines/<usecase>/` — tools are tested against synthetic data
   with KNOWN injected ground truth.
 - `specs/` — spec-kit feature dirs (`NNN-<name>/{spec,plan,tasks}.md`).
-- `sessions/<person>/` — export your Claude sessions here (provenance + grading).
+- `sessions/<iisc-username>/` — export your Claude sessions here, in a folder named by
+  your IISc username (provenance + grading).
 - `data/`, `reports/` — bulk artifacts are gitignored; commit only tiny samples.
 
 ## Environment & commands (uv, single workspace)

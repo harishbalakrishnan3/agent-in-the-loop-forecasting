@@ -20,7 +20,7 @@ src/ailf/pipelines/    one thin pipeline per use-case (drift, changepoint, anoma
 pocs/                  throwaway fail-fast exploration (exempt from quality gates)
 tests/                 core + per-pipeline tests
 specs/                 spec-kit feature dirs (NNN-<name>/)
-sessions/              exported Claude sessions, per person
+sessions/              exported Claude sessions, one folder per IISc username
 docs/                  proposal, plan, decisions
 ```
 

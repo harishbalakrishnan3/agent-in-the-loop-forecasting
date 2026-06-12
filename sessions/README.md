@@ -1,11 +1,11 @@
 # Claude session exports
 
-Each contributor exports their Claude Code sessions here, in a personal folder, for
-provenance and grading (constitution: session transparency).
+Each contributor exports their Claude Code sessions here, in a folder named by their
+**IISc username**, for provenance and grading (constitution: session transparency).
 
 ```
 sessions/
-  <your-name>/
+  <iisc-username>/
     <date>-<short-topic>.md   # or whatever export format you use
 ```
 

@@ -10,9 +10,9 @@
 /tests/core/                    @harishbalakrishnan3
 
 # Drift pipeline — Sowmya, Harish
-/src/ailf/pipelines/drift/      @ksowmya @harishbalakrishnan3
-/tests/pipelines/drift/         @ksowmya @harishbalakrishnan3
-/pocs/drift/                    @ksowmya @harishbalakrishnan3
+/src/ailf/pipelines/drift/      @sowmya291098 @harishbalakrishnan3
+/tests/pipelines/drift/         @sowmya291098 @harishbalakrishnan3
+/pocs/drift/                    @sowmya291098 @harishbalakrishnan3
 
 # Changepoint pipeline — Goutham, Meena, Dinesh
 # TODO: add Dinesh's handle once he accepts the repo invite.

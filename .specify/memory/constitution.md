@@ -169,7 +169,8 @@ at the trunk.
 - **Determinism discipline**: seeds fixed and logged; the config that produced any reported
   number is committed.
 - **Session transparency**: each contributor exports their Claude sessions to the
-  repository's session area for provenance and grading.
+  repository's session area, in a folder named by their IISc username, for provenance and
+  grading.
 
 ## Governance
 
