@@ -37,7 +37,8 @@
     "Prophet",
     "pycache",
     "mypy",
-    "ipynb"
+    "ipynb",
+    "iisc"
   ],
   "ignorePaths": [
     ".venv/**",
