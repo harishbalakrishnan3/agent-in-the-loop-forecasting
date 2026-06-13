@@ -1,0 +1,1807 @@
+ ▐▛███▜▌   Claude Code v2.1.153
+▝▜█████▛▘  claude-opus-4-8 · Amazon Bedrock
+  ▘▘ ▝▝    ~/Documents/Learning/IISc/agent-in-the-loop-forecasting
+
+
+❯ /model                                                                        
+  ⎿  Set model to global.anthropic.claude-opus-4-8 and saved as your default for
+      new sessions
+
+❯ /effort                                                                       
+  ⎿  Set effort level to max (this session only): Maximum capability with
+     deepest reasoning
+
+❯ /speckit-specify Go through project proposal under docs/ directory for        
+context. ALso go through what has been done so far. Here is the feature brief   
+for which we need to create the spec. If you have any doubts, ask and don't     
+assume                                                                          
+                                                                                
+---                                                                             
+  Feature Brief: Drift Dataset Generation & Procurement                         
+                                                                                
+  Why                                                                           
+                                                                                
+  The agent-in-the-loop system is graded on diagnostic correctness              
+(precision/recall/false-positive rate) for drift, which requires test cases     
+with known injected ground truth —                                              
+  something no real dataset provides. This feature delivers the drift-team's    
+data layer: a parameterized synthetic generator (the primary deliverable, for   
+tool unit tests and                                                             
+  agent evals) plus a small set of curated real univariate series (for the demo 
+ and the "reproduce the issue" step). Without labeled drift onsets, none of the 
+ downstream                                                                     
+  diagnostic evals are measurable, so this is foundational.                     
+                                                                                
+  Scope                                                                         
+                                                                                
+  In scope: univariate time series only; gradual drift (the abrupt/localized    
+case is the changepoint team's domain). Dataset generation and procurement —    
+not detection tools,                                                            
+  not the agent, not forecasting.                                               
+                                                                                
+  Out of scope: changepoints, outliers, multivariate series, the diagnostic     
+tools themselves.                                                               
+                                                                                
+  What — Synthetic Generator (primary)                                          
+                                                                                
+  A seeded, parameterized generator producing univariate series with injected,  
+ground-truth-labeled drift. It must support four drift flavors, each mapping to 
+ a distinct Prophet                                                             
+  component (y = g(t) + s(t) + h(t) + ε) and thus a distinct downstream         
+intervention:                                                                   
+                                                                                
+  1. Trend-slope drift — gradual change in trend slope (g(t)).                  
+  2. Mean-level ramp — gradual shift in level (g(t)).                           
+  3. Variance inflation — gradual growth in noise spread (ε).                   
+  4. Seasonal-amplitude drift — seasonal swings grow/shrink over time, i.e.     
+additive→multiplicative (s(t)).                                                 
+                                                                                
+  Required knobs (per the proposal's "knobs/parameters" requirement) with       
+reasonable defaults:                                                            
+  - drift onset (start index/date)                                              
+  - drift magnitude                                                             
+  - transition width (Δt) — the gradual-vs-abrupt control; this is the shared   
+parameter that distinguishes drift from a changepoint, and lets us generate     
+deliberately ambiguous                                                          
+  middle-ground cases                                                           
+  - drift duration                                                              
+  - base noise level                                                            
+  - seasonality (period, base amplitude)                                        
+  - random seed (reproducibility is mandatory)                                  
+                                                                                
+  Ground-truth labels emitted with each case: drift flavor, onset index,        
+transition width, affected component — sufficient to compute detection          
+precision/recall.                                                               
+                                                                                
+  Case composition: core eval set = one injected flavor per case (clean ground  
+truth for metrics); plus a small set of combined-flavor cases as harder stretch 
+ tests.                                                                         
+                                                                                
+  What — Real Datasets (secondary, demo only)                                   
+                                                                                
+  Curate ~2 real univariate series that genuinely exhibit gradual drift, for    
+the demo and forecast-degradation reproduction. Candidates:                     
+  - Air Passengers — growing seasonal amplitude (real-world twin of synthetic   
+seasonal-amplitude drift).                                                      
+  - Mauna Loa CO₂ — slow rising level + seasonality.                            
+                                                                                
+  Accepted caveat: real series have no labeled drift onset, so they are         
+excluded from precision/recall evals — they exist only for qualitative          
+demonstration.                                                                  
+                                                                                
+                                                                                
+  Visual confirmation (acceptance aid)                                          
+                                                                                
+  Each generated/curated series should be visually verifiable as actually       
+containing drift via a standard overlay: series + rolling mean + rolling std,   
+with the injected onset                                                         
+  marked (reproducing Figure 3 of the proposal). This is the eyeball gate for   
+"is this dataset good?"                                                         
+                                                                                
+  Success criteria                                                              
+                                                                                
+  - Generator produces all four flavors, fully parameterized and seeded         
+(reproducible).                                                                 
+  - Every synthetic case carries machine-readable ground-truth labels usable    
+for precision/recall.                                                           
+  - Ambiguous (mid-Δt) cases can be generated on demand.                        
+  - ~2 real demo series are loadable through the same interface.                
+  - A visualization confirms drift presence for any case.                       
+                                                                                
+  ---                                                                           
+
+⏺ I'll start by gathering context: the project proposal, what's been done, the
+  constitution, and the spec-kit scaffolding.
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ I'll read the proposal PDFs and explore the existing structure in parallel.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ I have the proposal. Now let me gather the project state: constitution, spec
+  template, existing structure, decisions, and the research notes file.
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ Let me read the key files: constitution, SPEC.md, spec template, the existing
+  drift datasets stub, decisions, and the research notes.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Now the SPEC.md, spec template, existing drift stubs, decisions, and research
+  notes.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Now the spec template, the existing drift stubs, decisions doc, and the
+  research notes file.
+
+  Read 3 files (ctrl+o to expand)
+
+⏺ Let me check the repo-structure decision and the core datasets module to
+  understand the shared interface.
+
+  Read 2 files (ctrl+o to expand)
+
+⏺ Let me check pyproject for dependencies and the changepoint datasets stub
+  (cross-team coordination point).
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ I have full context now: the proposal, the constitution (esp. Principles II,
+  III, V, VII), SPEC.md, the repo structure, and your prior research session
+  that produced this brief. The brief is detailed, but a few scope-level
+  decisions have no clear default and would materially shape the spec. Let me
+  ask before writing.
+
+⏺ User answered Claude's questions:
+  ⎿  · What case-count / composition should the synthetic generator deliver as 
+     its named, shipped eval corpus? (This drives whether precision/recall is 
+     statistically meaningful — a success criterion.) → ~25 per flavor + ~10 
+     combined
+     · How should generated cases be delivered/persisted? → In-memory objects + 
+     on-disk corpus
+     · How should the drift-vs-changepoint transition-width (Δt) boundary be 
+     handled in this spec? → Expose knob, defer threshold
+
+⏺ I have what I need. Let me check existing branches to pick a non-colliding
+  feature number, then create the spec directory.
+
+⏺ Bash(git branch -a 2>/dev/null; echo "---tags---"; git tag 2>/dev/null; echo
+      "---specs ls---"; ls specs/ 2>/dev/null || echo "specs empty/absent")
+  ⎿  * main
+       remotes/origin/001-project-foundation
+       remotes/origin/HEAD -> origin/main
+     … +6 lines (ctrl+o to expand)
+
+⏺ Next sequential number is 002. I'll create the feature branch and spec
+  directory, then resolve the spec template.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ No before_specify hook exists, so I'll create the feature scaffold with the
+  official script, then create the git branch.
+
+⏺ Bash(cd
+      "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting" &&
+       bash .specify/scripts/bash/create-new-feature.sh --json --short-name
+      "drift-datase…)  ⎿  {
+       "BRANCH_NAME": "001-drift-dataset-generation",
+       "SPEC_FILE": "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the-l
+     … +3 lines (ctrl+o to expand)
+
+⏺ The script picked 001 because specs/ is empty, but 001-project-foundation
+  already exists as a merged branch. I'll renumber to 002 to avoid collision.
+
+⏺ Bash(cd
+      "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting" &&
+       rm -rf specs/001-drift-dataset-generation && bash
+      .specify/scripts/bash/create-new…)
+  ⎿  {
+       "BRANCH_NAME": "002-drift-dataset-generation",
+       "SPEC_FILE": "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the-l
+     … +7 lines (ctrl+o to expand)
+
+⏺ Now I'll create the git branch and write the spec.
+
+⏺ Bash(cd
+      "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting" &&
+       git checkout -b 002-drift-dataset-generation 2>&1 && git branch
+      --show-current)
+  ⎿  Switched to a new branch '002-drift-dataset-generation'
+     002-drift-dataset-generation
+
+⏺ Now I'll write the specification.
+
+⏺ Write(specs/002-drift-dataset-generation/spec.md)
+  ⎿  Error writing file
+
+⏺ The script created the file from the template. Let me read it then overwrite.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Write(specs/002-drift-dataset-generation/spec.md)
+  ⎿  Added 271 lines, removed 73 lines
+        1 -# Feature Specification: [FEATURE NAME]                       
+        1 +# Feature Specification: Drift Dataset Generation & Procuremen
+          +t                                                             
+        2  
+        3 -**Feature Branch**: `[###-feature-name]`                      
+        3 +**Feature Branch**: `002-drift-dataset-generation`            
+        4  
+        5 -**Created**: [DATE]                                           
+        5 +**Created**: 2026-06-13                                       
+        6  
+        7  **Status**: Draft
+        8  
+        9 -**Input**: User description: "$ARGUMENTS"                     
+        9 +**Input**: User description: "Drift Dataset Generation & Procu
+          +rement — the drift team's data layer: a seeded, parameterized 
+          +synthetic generator producing univariate series with injected,
+          + ground-truth-labeled gradual drift (four flavors), plus ~2 cu
+          +rated real univariate series for demo only, with a standard vi
+          +sual-confirmation overlay."                                   
+       10  
+       11 +## Overview                                                   
+       12 +                                                              
+       13 +The agent-in-the-loop system is graded on **diagnostic correct
+          +ness** — precision, recall,                                   
+       14 +and false-positive rate — for detecting drift. Those metrics a
+          +re only measurable when each                                  
+       15 +test case carries a **known, injected drift onset**, which no 
+          +real-world series provides.                                   
+       16 +This feature delivers the drift track's *data layer*: the foun
+          +dation every downstream drift                                 
+       17 +deliverable (the detection tool's unit tests, the agent evals,
+          + the LLM judge) depends on.                                   
+       18 +                                                              
+       19 +The **primary** deliverable is a seeded, parameterized synthet
+          +ic generator that produces                                    
+       20 +univariate series with machine-readable ground-truth drift lab
+          +els, across four drift flavors                                
+       21 +that each map to a distinct Prophet decomposition component (`
+          +y = g(t) + s(t) + h(t) + ε`).                                 
+       22 +The **secondary** deliverable is a small set of curated real u
+          +nivariate series, loadable                                    
+       23 +through the same interface, used only for qualitative demonstr
+          +ation and forecast-degradation                                
+       24 +reproduction.                                                 
+       25 +                                                              
+       26 +This feature is **dataset generation and procurement only**. I
+          +t is explicitly NOT the drift                                 
+       27 +detection tool, the agent, the forecasting models, or backtest
+          +ing.                                                          
+       28 +                                                              
+       29  ## User Scenarios & Testing *(mandatory)*
+       30  
+       13 -<!--                                                          
+       14 -  IMPORTANT: User stories should be PRIORITIZED as user journe
+          -ys ordered by importance.                                     
+       15 -  Each user story/journey must be INDEPENDENTLY TESTABLE - mea
+          -ning if you implement just ONE of them,                       
+       16 -  you should still have a viable MVP (Minimum Viable Product) 
+          -that delivers value.                                          
+       31 +### User Story 1 - Generate a single-flavor labeled drift case
+          + (Priority: P1)                                               
+       32  
+       18 -  Assign priorities (P1, P2, P3, etc.) to each story, where P1
+          - is the most critical.                                        
+       19 -  Think of each story as a standalone slice of functionality t
+          -hat can be:                                                   
+       20 -  - Developed independently                                   
+       21 -  - Tested independently                                      
+       22 -  - Deployed independently                                    
+       23 -  - Demonstrated to users independently                       
+       24 --->                                                           
+       33 +A drift-team developer writing unit tests for the (future) dri
+          +ft-detection tool needs a                                     
+       34 +univariate series that provably contains exactly one kind of g
+          +radual drift, starting at a                                   
+       35 +known location, so the test can assert "the tool found the dri
+          +ft the generator injected."                                   
+       36  
+       26 -### User Story 1 - [Brief Title] (Priority: P1)               
+       37 +**Why this priority**: This is the foundational capability. Wi
+          +thout seeded single-flavor                                    
+       38 +cases carrying ground-truth labels, no precision/recall measur
+          +ement of any downstream drift                                 
+       39 +diagnostic is possible — the whole drift track's evaluation re
+          +sts on it.                                                    
+       40  
+       28 -[Describe this user journey in plain language]                
+       41 +**Independent Test**: Request a case for a chosen flavor with 
+          +a fixed seed; confirm the                                     
+       42 +returned object contains a univariate series plus ground-truth
+          + labels (flavor, onset, transition                            
+       43 +width, affected component), and that regenerating with the sam
+          +e seed and parameters yields an                               
+       44 +identical series and identical labels.                        
+       45  
+       30 -**Why this priority**: [Explain the value and why it has this 
+          -priority level]                                               
+       46 +**Acceptance Scenarios**:                                     
+       47  
+       32 -**Independent Test**: [Describe how this can be tested indepen
+          -dently - e.g., "Can be fully tested by [specific action] and d
+          -elivers [specific value]"]                                    
+       48 +1. **Given** a chosen drift flavor, a seed, and default knobs,
+          + **When** a case is generated,                                
+       49 +   **Then** the result contains one univariate time series and
+          + a ground-truth label record                                  
+       50 +   naming the injected flavor, the onset location, the transit
+          +ion width, and the affected                                   
+       51 +   Prophet component.                                         
+       52 +2. **Given** the same flavor, seed, and knobs, **When** genera
+          +tion is repeated, **Then** the                                
+       53 +   produced series values and labels are identical (reproducib
+          +ility).                                                       
+       54 +3. **Given** two different seeds with otherwise identical knob
+          +s, **When** cases are generated,                              
+       55 +   **Then** the series differ in their noise realization but b
+          +oth carry the same flavor and                                 
+       56 +   onset semantics.                                           
+       57 +4. **Given** a request for each of the four flavors (trend-slo
+          +pe drift, mean-level ramp,                                    
+       58 +   variance inflation, seasonal-amplitude drift), **When** eac
+          +h case is generated, **Then**                                 
+       59 +   each is produced successfully and its label records the cor
+          +rect affected component.                                      
+       60  
+       61 +---                                                           
+       62 +                                                              
+       63 +### User Story 2 - Produce the reproducible eval corpus (Prior
+          +ity: P1)                                                      
+       64 +                                                              
+       65 +A developer preparing the drift agent evals needs a single com
+          +mand that materializes the                                    
+       66 +canonical, versioned corpus of labeled cases to disk, so that 
+          +tool tests, agent evals, and                                  
+       67 +the LLM judge all consume the *same* reproducible dataset and 
+          +can report precision/recall over                              
+       68 +a meaningful number of cases.                                 
+       69 +                                                              
+       70 +**Why this priority**: Diagnostic-correctness metrics are only
+          + meaningful and comparable across                             
+       71 +runs and contributors if everyone evaluates against one fixed,
+          + regenerable corpus. This is the                              
+       72 +artifact the constitution's "results must be recoverable from 
+          +the repository" rule attaches to.                             
+       73 +                                                              
+       74 +**Independent Test**: Run the corpus-generation step; confirm 
+          +it writes the agreed number of                                
+       75 +single-flavor and combined-flavor cases (each with its series 
+          +and label sidecar) under a                                    
+       76 +versioned location, and that deleting and re-running reproduce
+          +s an identical corpus.                                        
+       77 +                                                              
+       78  **Acceptance Scenarios**:
+       79  
+       36 -1. **Given** [initial state], **When** [action], **Then** [exp
+          -ected outcome]                                                
+       37 -2. **Given** [initial state], **When** [action], **Then** [exp
+          -ected outcome]                                                
+       80 +1. **Given** the corpus generation step, **When** it is run, *
+          +*Then** it produces the core set                              
+       81 +   of single-flavor cases (≈25 per flavor across the four flav
+          +ors) plus a smaller set                                       
+       82 +   (≈10) of combined-flavor stretch cases, each persisted with
+          + its series and a                                             
+       83 +   machine-readable ground-truth label record.                
+       84 +2. **Given** an already-generated corpus, **When** generation 
+          +is re-run with the same                                       
+       85 +   configuration, **Then** the regenerated corpus is identical
+          + (same cases, series, labels).                                
+       86 +3. **Given** the generated corpus, **When** a consumer enumera
+          +tes it, **Then** every case is                                
+       87 +   discoverable together with its labels without bespoke per-c
+          +ase parsing.                                                  
+       88 +4. **Given** the corpus configuration (seed and knob sweep), *
+          +*When** it is inspected, **Then**                             
+       89 +   it is committed/recorded such that the exact corpus can be 
+          +reproduced from the repository.                               
+       90  
+       91  ---
+       92  
+       41 -### User Story 2 - [Brief Title] (Priority: P2)               
+       93 +### User Story 3 - Generate ambiguous (mid-transition-width) c
+          +ases on demand (Priority: P2)                                 
+       94  
+       43 -[Describe this user journey in plain language]                
+       95 +A developer stress-testing the drift detector — and the eventu
+          +al agent's drift-vs-changepoint                               
+       96 +judgment — needs to generate deliberately ambiguous cases wher
+          +e the transition width sits                                   
+       97 +between "clearly gradual drift" and "abrupt changepoint," to v
+          +erify graceful handling of the                                
+       98 +boundary.                                                     
+       99  
+       45 -**Why this priority**: [Explain the value and why it has this 
+          -priority level]                                               
+      100 +**Why this priority**: The drift/changepoint boundary is a spe
+          +ctrum, not a binary; the agent                                
+      101 +is evaluated partly on handling ambiguity. The generator must 
+          +make this controllable, but it is                             
+      102 +a stretch beyond the clean single-flavor cases needed for the 
+          +core metric.                                                  
+      103  
+       47 -**Independent Test**: [Describe how this can be tested indepen
+          -dently]                                                       
+      104 +**Independent Test**: Request a case with a transition width i
+          +n the ambiguous band; confirm the                             
+      105 +case is produced, its label records the (wide-ish) transition 
+          +width, and the series visibly                                 
+      106 +transitions over an extended interval rather than at a single 
+          +index.                                                        
+      107  
+      108  **Acceptance Scenarios**:
+      109  
+       51 -1. **Given** [initial state], **When** [action], **Then** [exp
+          -ected outcome]                                                
+      110 +1. **Given** a transition-width value in the ambiguous middle 
+          +band, **When** a case is                                      
+      111 +   generated, **Then** the case is produced and its label reco
+          +rds that transition width.                                    
+      112 +2. **Given** a very small transition width versus a large one 
+          +with otherwise identical knobs,                               
+      113 +   **When** both are generated, **Then** the small-width case 
+          +concentrates its change in a                                  
+      114 +   narrow window and the large-width case spreads it across ma
+          +ny points.                                                    
+      115  
+      116  ---
+      117  
+       55 -### User Story 3 - [Brief Title] (Priority: P3)               
+      118 +### User Story 4 - Load a real demo series through the same in
+          +terface (Priority: P2)                                        
+      119  
+       57 -[Describe this user journey in plain language]                
+      120 +Someone preparing the demo / "reproduce the issue" step needs 
+          +to load a real univariate series                              
+      121 +that genuinely exhibits gradual drift, through the same access
+          + pattern used for synthetic cases,                            
+      122 +so demo code does not branch on synthetic-vs-real.            
+      123  
+       59 -**Why this priority**: [Explain the value and why it has this 
+          -priority level]                                               
+      124 +**Why this priority**: Real series anchor the demo in recogniz
+          +able data and support the                                     
+      125 +forecast-degradation reproduction step, but they cannot contri
+          +bute to precision/recall (no                                  
+      126 +labeled onset), so they rank below the labeled-corpus work.   
+      127  
+       61 -**Independent Test**: [Describe how this can be tested indepen
+          -dently]                                                       
+      128 +**Independent Test**: Load each curated real series; confirm i
+          +t returns a univariate series via                             
+      129 +the same interface as synthetic cases, and that it is clearly 
+          +marked as having no ground-truth                              
+      130 +drift-onset label (i.e., excluded from precision/recall).     
+      131  
+      132  **Acceptance Scenarios**:
+      133  
+       65 -1. **Given** [initial state], **When** [action], **Then** [exp
+          -ected outcome]                                                
+      134 +1. **Given** a curated real drift series (e.g. the growing-sea
+          +sonal-amplitude air-passengers                                
+      135 +   series, or a slow-rising-level-with-seasonality CO₂ series)
+          +, **When** it is loaded, **Then**                             
+      136 +   it returns a univariate time series through the same interf
+          +ace shape as synthetic cases.                                 
+      137 +2. **Given** a real series, **When** its labels are inspected,
+          + **Then** it is explicitly marked                             
+      138 +   as having no ground-truth drift onset and therefore exclude
+          +d from precision/recall evals.                                
+      139 +3. **Given** the set of curated real series, **When** enumerat
+          +ed, **Then** approximately two                                
+      140 +   series are available, each documented as to which drift beh
+          +avior it qualitatively exhibits.                              
+      141  
+      142  ---
+      143  
+       69 -[Add more user stories as needed, each with an assigned priori
+          -ty]                                                           
+      144 +### User Story 5 - Visually confirm a case actually contains d
+          +rift (Priority: P3)                                           
+      145  
+       71 -### Edge Cases                                                
+      146 +A reviewer accepting a generated or curated dataset needs a st
+          +andard visual overlay — the                                   
+      147 +series plus its rolling mean and rolling standard deviation, w
+          +ith the injected onset marked —                               
+      148 +to eyeball-confirm the case genuinely contains drift (reproduc
+          +ing Figure 3 of the proposal).                                
+      149  
+       73 -<!--                                                          
+       74 -  ACTION REQUIRED: The content in this section represents plac
+          -eholders.                                                     
+       75 -  Fill them out with the right edge cases.                    
+       76 --->                                                           
+      150 +**Why this priority**: This is the human acceptance aid ("is t
+          +his dataset good?"). It is                                    
+      151 +valuable for trust and review but is not itself consumed by th
+          +e automated metrics, so it is the                             
+      152 +lowest priority of the set.                                   
+      153  
+       78 -- What happens when [boundary condition]?                     
+       79 -- How does system handle [error scenario]?                    
+      154 +**Independent Test**: Produce the overlay for a synthetic case
+          + and confirm it shows the series,                             
+      155 +a rolling mean, a rolling spread band, and a marker at the inj
+          +ected onset; produce it for a real                            
+      156 +series and confirm the same overlay renders without an onset m
+          +arker.                                                        
+      157  
+       81 -## Requirements *(mandatory)*                                 
+      158 +**Acceptance Scenarios**:                                     
+      159  
+       83 -<!--                                                          
+       84 -  ACTION REQUIRED: The content in this section represents plac
+          -eholders.                                                     
+       85 -  Fill them out with the right functional requirements.       
+       86 --->                                                           
+      160 +1. **Given** a synthetic case, **When** the visual confirmatio
+          +n is produced, **Then** it shows                              
+      161 +   the observations, a rolling mean, a rolling standard-deviat
+          +ion indication, and a marker at                               
+      162 +   the injected drift onset.                                  
+      163 +2. **Given** a real demo series (no onset label), **When** the
+          + visual confirmation is produced,                             
+      164 +   **Then** it renders the same series + rolling-mean + rollin
+          +g-spread overlay without an onset                             
+      165 +   marker.                                                    
+      166  
+      167 +---                                                           
+      168 +                                                              
+      169 +### Edge Cases                                                
+      170 +                                                              
+      171 +- **Onset near series boundaries**: What happens when the requ
+          +ested drift onset leaves too few                              
+      172 +  points before it (no stable reference regime) or too few aft
+          +er it (drift cannot develop)? The                             
+      173 +  generator MUST reject or clearly constrain such requests rat
+          +her than emit a mislabeled case.                              
+      174 +- **Transition width exceeding remaining length**: What happen
+          +s when transition width + onset                               
+      175 +  runs past the end of the series? The generator MUST handle t
+          +his deterministically (reject or                              
+      176 +  clamp, with the label reflecting the actual realized transit
+          +ion).                                                         
+      177 +- **Zero / negative magnitude**: A drift magnitude of zero wou
+          +ld yield a series with no actual                              
+      178 +  drift but a label claiming drift. The generator MUST prevent
+          + a label that contradicts the                                 
+      179 +  produced series.                                            
+      180 +- **Variance-inflation with a non-positive base noise level**:
+          + Growth of noise spread is                                    
+      181 +  undefined without a positive base; the generator MUST requir
+          +e a valid base noise level for                                
+      182 +  that flavor.                                                
+      183 +- **Seasonal-amplitude drift with no seasonality configured**:
+          + This flavor is meaningless                                   
+      184 +  without a seasonal component; the generator MUST require sea
+          +sonality to be present for it.                                
+      185 +- **Combined-flavor conflicts**: When multiple flavors are inj
+          +ected into one case, overlapping                              
+      186 +  onsets/components MUST still produce a coherent, fully-label
+          +ed case (each injected flavor                                 
+      187 +  represented in the labels).                                 
+      188 +- **Real series with missing timestamps / gaps**: Curated real
+          + series MUST be presented in a                                
+      189 +  consistent, regular form (or their irregularities documented
+          +) so downstream consumers are not                             
+      190 +  surprised.                                                  
+      191 +                                                              
+      192 +## Requirements *(mandatory)*                                 
+      193 +                                                              
+      194  ### Functional Requirements
+      195  
+       90 -- **FR-001**: System MUST [specific capability, e.g., "allow u
+          -sers to create accounts"]                                     
+       91 -- **FR-002**: System MUST [specific capability, e.g., "validat
+          -e email addresses"]                                           
+       92 -- **FR-003**: Users MUST be able to [key interaction, e.g., "r
+          -eset their password"]                                         
+       93 -- **FR-004**: System MUST [data requirement, e.g., "persist us
+          -er preferences"]                                              
+       94 -- **FR-005**: System MUST [behavior, e.g., "log all security e
+          -vents"]                                                       
+      196 +**Synthetic generation — core**                               
+      197  
+       96 -*Example of marking unclear requirements:*                    
+      198 +- **FR-001**: The system MUST generate univariate time series 
+          +with deterministically injected                               
+      199 +  gradual drift.                                              
+      200 +- **FR-002**: The system MUST support four distinct drift flav
+          +ors, each tied to a Prophet                                   
+      201 +  decomposition component: (a) **trend-slope drift** — gradual
+          + change in trend slope (`g(t)`);                              
+      202 +  (b) **mean-level ramp** — gradual shift in level (`g(t)`); (
+          +c) **variance inflation** —                                   
+      203 +  gradual growth in noise spread (`ε`); (d) **seasonal-amplitu
+          +de drift** — seasonal swings grow                             
+      204 +  or shrink over time, i.e. additive→multiplicative (`s(t)`). 
+      205 +- **FR-003**: The system MUST expose the following knobs, each
+          + with a reasonable default:                                   
+      206 +  drift **onset** (start location), drift **magnitude**, **tra
+          +nsition width** (Δt), drift                                   
+      207 +  **duration**, **base noise level**, **seasonality** (period 
+          +and base amplitude), and a                                    
+      208 +  **random seed**.                                            
+      209 +- **FR-004**: Generation MUST be fully reproducible: identical
+          + seed + knobs MUST yield an                                   
+      210 +  identical series and identical labels.                      
+      211 +- **FR-005**: Each generated case MUST carry a machine-readabl
+          +e ground-truth label record                                   
+      212 +  containing at minimum: the **drift flavor**, the **onset** l
+          +ocation, the **transition width**,                            
+      213 +  and the **affected component** — sufficient to compute detec
+          +tion precision/recall.                                        
+      214 +- **FR-006**: The system MUST support generating a case with *
+          +*exactly one** injected flavor                                
+      215 +  (clean ground truth for metrics).                           
+      216 +- **FR-007**: The system MUST support generating **combined-fl
+          +avor** cases (more than one                                   
+      217 +  injected flavor in a single series) as harder stretch cases,
+          + with every injected flavor                                   
+      218 +  represented in the labels.                                  
+      219 +- **FR-008**: The transition width (Δt) MUST be an explicit, c
+          +ontrollable parameter spanning                                
+      220 +  from narrow (changepoint-like) to wide (clearly gradual), so
+          + deliberately **ambiguous                                     
+      221 +  middle-ground** cases can be generated on demand.           
+      222 +- **FR-009**: The system MUST validate knob combinations and r
+          +efuse to emit a case whose labels                             
+      223 +  would contradict the produced series (see Edge Cases), faili
+          +ng clearly rather than silently                               
+      224 +  mislabeling.                                                
+      225  
+       98 -- **FR-006**: System MUST authenticate users via [NEEDS CLARIF
+          -ICATION: auth method not specified - email/password, SSO, OAut
+          -h?]                                                           
+       99 -- **FR-007**: System MUST retain user data for [NEEDS CLARIFIC
+          -ATION: retention period not specified]                        
+      226 +**Eval corpus**                                               
+      227  
+      101 -### Key Entities *(include if feature involves data)*         
+      228 +- **FR-010**: The system MUST provide a step that materializes
+          + a canonical eval corpus to disk:                             
+      229 +  approximately **25 single-flavor cases per flavor** (≈100 to
+          +tal across the four flavors) plus                             
+      230 +  approximately **10 combined-flavor** stretch cases, each per
+          +sisted with its series and its                                
+      231 +  ground-truth label record.                                  
+      232 +- **FR-011**: The on-disk corpus MUST be regenerable to an ide
+          +ntical state from a committed                                 
+      233 +  seed/knob configuration (reproducibility of the whole corpus
+          +, not just individual cases).                                 
+      234 +- **FR-012**: The corpus MUST be enumerable by consumers such 
+          +that each case's series and its                               
+      235 +  labels are retrievable together without bespoke per-case han
+          +dling.                                                        
+      236 +- **FR-013**: The generator MUST also be usable to return case
+          +s as **in-memory typed objects**                              
+      237 +  (series + labels) without requiring disk persistence, for di
+          +rect use in unit tests.                                       
+      238  
+      103 -- **[Entity 1]**: [What it represents, key attributes without 
+          -implementation]                                               
+      104 -- **[Entity 2]**: [What it represents, relationships to other 
+          -entities]                                                     
+      239 +**Real datasets**                                             
+      240  
+      106 -## Success Criteria *(mandatory)*                             
+      241 +- **FR-014**: The system MUST provide approximately **two** cu
+          +rated real univariate series that                             
+      242 +  genuinely exhibit gradual drift, loadable through the **same
+          + interface shape** as synthetic                               
+      243 +  cases.                                                      
+      244 +- **FR-015**: Real series MUST be explicitly marked as having 
+          +**no ground-truth drift onset**,                              
+      245 +  and therefore excluded from precision/recall evaluation; the
+          +y exist for qualitative demo and                              
+      246 +  forecast-degradation reproduction only.                     
+      247 +- **FR-016**: Each curated real series MUST be documented as t
+          +o which drift behavior it                                     
+      248 +  qualitatively exhibits (e.g. growing seasonal amplitude; slo
+          +w rising level with seasonality).                             
+      249  
+      108 -<!--                                                          
+      109 -  ACTION REQUIRED: Define measurable success criteria.        
+      110 -  These must be technology-agnostic and measurable.           
+      111 --->                                                           
+      250 +**Visualization**                                             
+      251  
+      252 +- **FR-017**: The system MUST be able to produce a standard vi
+          +sual-confirmation overlay for any                             
+      253 +  case — the series, a rolling mean, and a rolling standard-de
+          +viation indication — reproducing                              
+      254 +  the proposal's drift illustration.                          
+      255 +- **FR-018**: For synthetic cases, the overlay MUST mark the i
+          +njected drift onset; for real                                 
+      256 +  series (no onset label), the overlay MUST render without an 
+          +onset marker.                                                 
+      257 +                                                              
+      258 +### Key Entities                                              
+      259 +                                                              
+      260 +- **Drift Case**: A single generated or curated unit of data. 
+          +Holds one univariate time series                              
+      261 +  plus its ground-truth label record (which may be empty/marke
+          +d-unlabeled for real series).                                 
+      262 +- **Ground-Truth Label Record**: The machine-readable descript
+          +ion of what was injected — drift                              
+      263 +  flavor(s), onset location(s), transition width(s), affected 
+          +Prophet component(s) — that                                   
+      264 +  downstream detection metrics are scored against.            
+      265 +- **Drift Flavor**: One of the four supported injected drift t
+          +ypes, each bound to a Prophet                                 
+      266 +  component (trend-slope `g(t)`, mean-level `g(t)`, variance `
+          +ε`, seasonal-amplitude `s(t)`).                               
+      267 +- **Generator Configuration / Knobs**: The reproducible parame
+          +ter set (onset, magnitude,                                    
+      268 +  transition width, duration, base noise, seasonality, seed) t
+          +hat determines a case.                                        
+      269 +- **Eval Corpus**: The named, versioned, on-disk collection of
+          + cases (single-flavor +                                       
+      270 +  combined-flavor) consumed by tool tests, agent evals, and th
+          +e LLM judge.                                                  
+      271 +- **Real Demo Series**: A curated real univariate series exhib
+          +iting gradual drift, with no                                  
+      272 +  onset label, loadable through the same interface as syntheti
+          +c cases.                                                      
+      273 +                                                              
+      274 +## Success Criteria *(mandatory)*                             
+      275 +                                                              
+      276  ### Measurable Outcomes
+      277  
+      115 -- **SC-001**: [Measurable metric, e.g., "Users can complete ac
+          -count creation in under 2 minutes"]                           
+      116 -- **SC-002**: [Measurable metric, e.g., "System handles 1000 c
+          -oncurrent users without degradation"]                         
+      117 -- **SC-003**: [User satisfaction metric, e.g., "90% of users s
+          -uccessfully complete primary task on first attempt"]          
+      118 -- **SC-004**: [Business metric, e.g., "Reduce support tickets 
+          -related to [X] by 50%"]                                       
+      278 +- **SC-001**: All four drift flavors can be generated, each fu
+          +lly parameterized by the required                             
+      279 +  knobs and reproducible from seed + knobs (identical output o
+          +n repeat).                                                    
+      280 +- **SC-002**: 100% of synthetic cases carry a machine-readable
+          + ground-truth label record                                    
+      281 +  sufficient to compute detection precision, recall, and false
+          +-positive rate.                                               
+      282 +- **SC-003**: The canonical eval corpus contains the agreed co
+          +mposition — roughly 25                                        
+      283 +  single-flavor cases per flavor (≈100 total) plus ≈10 combine
+          +d-flavor cases — and can be                                   
+      284 +  regenerated to an identical state from committed configurati
+          +on.                                                           
+      285 +- **SC-004**: Ambiguous (mid-transition-width) cases can be ge
+          +nerated on demand, and a small                                
+      286 +  transition width versus a large one demonstrably differ in h
+          +ow concentrated the change is.                                
+      287 +- **SC-005**: Approximately two real demo series load through 
+          +the same interface as synthetic                               
+      288 +  cases and are clearly flagged as unlabeled (excluded from pr
+          +ecision/recall).                                              
+      289 +- **SC-006**: For any case, the standard visual overlay (serie
+          +s + rolling mean + rolling spread,                            
+      290 +  with onset marked for synthetic cases) can be produced and v
+          +isually confirms drift presence.                              
+      291 +- **SC-007**: A reviewer can reproduce any reported corpus or 
+          +case from the repository alone,                               
+      292 +  using the committed seed and configuration, with no external
+          + state.                                                       
+      293  
+      294  ## Assumptions
+      295  
+      122 -<!--                                                          
+      123 -  ACTION REQUIRED: The content in this section represents plac
+          -eholders.                                                     
+      124 -  Fill them out with the right assumptions based on reasonable
+          - defaults                                                     
+      125 -  chosen when the feature description did not specify certain 
+          -details.                                                      
+      126 --->                                                           
+      296 +- **Univariate, gradual only**: All series are single-variable
+          +; only *gradual* drift is in                                  
+      297 +  scope. Abrupt/localized breaks (changepoints) and isolated o
+          +utliers are explicitly other                                  
+      298 +  teams' domains and out of scope here.                       
+      299 +- **Drift framing**: "Drift" follows the proposal's univariate
+          +, forecasting-flavored definition                             
+      300 +  (a gradual shift in the target's level/slope/spread/seasonal
+          +-amplitude with no single obvious                             
+      301 +  break date), not the streaming-ML `P(y|X)` concept-drift sen
+          +se.                                                           
+      302 +- **Corpus composition default**: Absent a stricter mandate, t
+          +he eval corpus targets ≈25                                    
+      303 +  single-flavor cases per flavor plus ≈10 combined-flavor case
+          +s; exact counts may be tuned as                               
+      304 +  long as they remain sufficient for meaningful precision/reca
+          +ll and stay reproducible.                                     
+      305 +- **Delivery model**: Cases are available both as in-memory ty
+          +ped objects (for unit tests) and                              
+      306 +  as a materialized on-disk corpus (for shared, reproducible e
+          +vals).                                                        
+      307 +- **Δt threshold deferred**: The transition width is exposed a
+          +s an explicit knob with sensible                              
+      308 +  defaults per regime (narrow / gradual / ambiguous), but the 
+          +exact numeric threshold that                                  
+      309 +  *demarcates* drift from a changepoint is NOT fixed in this f
+          +eature — it is a cross-team                                   
+      310 +  agreement to be ratified separately (see Dependencies).     
+      311 +- **Real series candidates**: The growing-seasonal-amplitude a
+          +ir-passengers series and a                                    
+      312 +  slow-rising-level CO₂ series are the leading candidates for 
+          +the ≈2 real demo series; the final                            
+      313 +  pick may change as long as each genuinely exhibits gradual d
+          +rift.                                                         
+      314 +- **Tooling context**: Synthetic generation builds on the proj
+          +ect's time-series tooling (Darts)                             
+      315 +  and lives in the drift pipeline directory; generic, reusable
+          + plumbing belongs in the shared                               
+      316 +  core datasets module, consistent with the shared-core/indepe
+          +ndent-pipelines structure.                                    
+      317 +- **No detection here**: This feature does not implement or as
+          +sume any particular drift                                     
+      318 +  *detection* method; it only guarantees the data and its grou
+          +nd truth.                                                     
+      319  
+      128 -- [Assumption about target users, e.g., "Users have stable int
+          -ernet connectivity"]                                          
+      129 -- [Assumption about scope boundaries, e.g., "Mobile support is
+          - out of scope for v1"]                                        
+      130 -- [Assumption about data/environment, e.g., "Existing authenti
+          -cation system will be reused"]                                
+      131 -- [Dependency on existing system/service, e.g., "Requires acce
+          -ss to the existing user profile API"]                         
+      320 +## Dependencies                                               
+      321 +                                                              
+      322 +- **Cross-team Δt convention**: The drift and changepoint team
+          +s MUST agree on the                                           
+      323 +  transition-width convention (where gradual drift ends and an
+          + abrupt changepoint begins) so                                
+      324 +  generated cases do not ambiguously overlap and the agent has
+          + a consistent labeling rule. This                             
+      325 +  feature makes Δt explicit so the boundary is controllable, b
+          +ut the ratified threshold value is                            
+      326 +  an external decision this feature depends on, not one it set
+          +s.                                                            
+      327 +- **Shared interface shape**: The same case/loader interface i
+          +s intended to serve synthetic and                             
+      328 +  real series and to feed the downstream drift-detection tool 
+          +tests and agent evals; its shape                              
+      329 +  should be coordinated with the shared core datasets module. 
+
+⏺ Now I'll write the spec quality checklist and validate.
+
+⏺ Write(specs/002-drift-dataset-generation/checklists/requirements.md)
+  ⎿  Wrote 40 lines to
+     specs/002-drift-dataset-generation/checklists/requirements.md
+         ocurementcation Quality Checklist: Drift Dataset Generation & Pr
+       2 
+       3 **Purpose**: Validate specification completeness and quality bef
+         ore proceeding to planning
+       4 **Created**: 2026-06-13
+       6 **Feature**: [spec.md](../spec.md)
+       7 ## Content Quality
+       8 
+       9 - [x] No implementation details (languages, frameworks, APIs)
+      10 - [x] Focused on user value and business needs
+     … +39 lines (ctrl+o to expand)
+
+⏺ Validation passed on all items. The spec has no [NEEDS CLARIFICATION] markers
+  since the three scope decisions were resolved up front.
+
+  Extension Hooks
+
+  Optional Hook: agent-context
+  Command: /speckit-agent-context-update
+  Description: Refresh agent context after specification
+
+  Prompt: Execute speckit.agent-context.update?
+  To execute: /speckit-agent-context-update
+
+  Completion Report
+
+  Specification created and validated.
+
+  - SPECIFY_FEATURE_DIRECTORY: specs/002-drift-dataset-generation
+  - SPEC_FILE: specs/002-drift-dataset-generation/spec.md
+  - Checklist: specs/002-drift-dataset-generation/checklists/requirements.md —
+  all items pass
+  - Branch: 002-drift-dataset-generation (created and checked out; numbered 002
+  to avoid colliding with the existing 001-project-foundation)
+
+  What the spec captures: a drift data layer — primary deliverable is a seeded,
+  parameterized synthetic generator across four Prophet-mapped drift flavors
+  (trend-slope, mean-level ramp, variance inflation, seasonal-amplitude)
+  emitting machine-readable ground-truth labels; secondary is ~2 unlabeled real
+  demo series behind the same interface; plus a rolling-mean/std
+  visual-confirmation overlay. 18 functional requirements, 7 measurable success
+  criteria, 5 prioritized user stories (two P1, two P2, one P3), edge cases,
+  assumptions, and dependencies.
+
+  Three scope decisions you made, now encoded:
+  - Eval corpus = ≈25 single-flavor cases/flavor (≈100) + ≈10 combined-flavor
+  (FR-010, SC-003)
+  - Dual delivery: in-memory typed objects + materialized on-disk corpus
+  (FR-010/FR-013)
+  - Δt exposed as a knob; the drift-vs-changepoint threshold deferred to a
+  cross-team agreement (FR-008, Dependencies)
+
+  Readiness: Ready for /speckit-plan (or /speckit-clarify first if you want to
+  tighten anything). Two things worth a deliberate call during planning: whether
+   the real-series loader truly shares one interface with synthetic cases, and
+  coordinating the case/label interface shape with the shared core/datasets
+  module per Principle VII.
+
+  One note: I did not commit anything — the new spec files and the untracked
+  sessions/harish1/drift_dataset_research.txt are unstaged. Tell me if you'd
+  like a commit.
+
+✻ Crunched for 5m 53s
+
+※ recap: I created the drift dataset generation feature spec at specs/002-drift-dataset-generation/spec.md on branch 002-drift-dataset-generation, validated against the quality checklist with all items passing. Next: run /speckit-plan, or commit the new files first. (disable recaps in /config)
+
+❯ /git-commit                                                                   
+
+⏺ I'll gather git context before committing.
+
+⏺ Bash(git status && echo "===DIFF===" && git diff HEAD && echo "===LOG===" &&
+      git log --oneline -10 && echo "===CACHED===" && git diff --cached)
+  ⎿  On branch 002-drift-dataset-generation
+     Untracked files:
+       (use "git add <file>..." to include in what will be committed)
+     … +21 lines (ctrl+o to expand)
+
+⏺ All untracked, no secrets. Staging and committing.
+
+⏺ Bash(git add -A && git diff --cached --stat)
+  ⎿   .specify/feature.json                              |   1 +
+      sessions/harish1/drift_dataset_research.txt        | 529 ++++++++++++
+     +++++++++
+     … +4 lines (ctrl+o to expand)
+
+⏺ Bash(git commit -m "$(cat <<'EOF'
+      Add drift dataset generation feature spec…)
+  ⎿  [002-drift-dataset-generation 36dc9e9] Add drift dataset generation fe
+     ature spec
+      4 files changed, 899 insertions(+)
+     … +6 lines (ctrl+o to expand)
+
+⏺ Committed 36dc9e9 on branch 002-drift-dataset-generation:
+
+  ▎ Add drift dataset generation feature spec
+
+  4 files, 899 insertions — the spec, its quality checklist, the spec-kit
+  feature.json pointer, and the research session export. Co-authored with
+  Claude; nothing pushed.
+
+✻ Worked for 23s
+
+❯ /speckit-agent-context-update                                                 
+
+⏺ Bash(cd
+      "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting" &&
+       cat .specify/extensions/agent-context/agent-context-config.yml && echo
+      "===RUN==="…)
+  ⎿  context_file: CLAUDE.md
+     context_markers:
+       start: <!-- SPECKIT START -->
+     … +3 lines (ctrl+o to expand)
+
+⏺ Let me verify the managed block that was written into CLAUDE.md.
+
+⏺ Bash(cd
+      "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting" &&
+       git diff --stat && echo "===BLOCK===" && grep -n -A6 "SPECKIT START"
+      CLAUDE.md)  ⎿  ===BLOCK===
+     45:<!-- SPECKIT START -->
+     46-For additional context about technologies to be used, project struc
+     … +4 lines (ctrl+o to expand)
+
+⏺ The agent-context update ran successfully, but the managed <!-- SPECKIT -->
+  block in CLAUDE.md is unchanged — git diff shows no modification.
+
+  That's expected: the script points the block at the most recent
+  specs/*/plan.md, but no plan exists yet (we've only run /speckit-specify, not
+  /speckit-plan). So the block keeps its generic "read the current plan" text.
+  It'll get a concrete plan path once you run /speckit-plan.
+
+  Nothing to commit. Ready for /speckit-plan (or /speckit-clarify) whenever you
+  want to proceed.
+
+✻ Sautéed for 20s
+
+❯ /speckit-plan                                                                 
+
+⏺ I'll start by running the setup script and checking for any before_plan hooks.
+
+⏺ Bash(cd
+      "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting" &&
+       bash .specify/scripts/bash/setup-plan.sh --json 2>&1)
+  ⎿  Copied plan template to /Users/hbalakr2/Documents/Learning/IISc/agent-
+     in-the-loop-forecasting/specs/002-drift-dataset-generation/plan.md
+     {
+     … +8 lines (ctrl+o to expand)
+
+⏺ before_plan hooks: extensions.yml only defines after_specify and after_plan
+  (verified earlier), so no pre-plan hooks. Let me read the plan template and
+  re-check the relevant existing code stubs.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Let me look at the cross-team stubs and POC area for interface coordination,
+  plus check the Darts version available.
+
+⏺ Bash(cd
+      "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting" &&
+       echo "===changepoint datasets===" && cat
+      src/ailf/pipelines/changepoint/datasets.p…)
+  ⎿  ===changepoint datasets===
+     """Changepoint dataset generation.
+     … +72 lines (ctrl+o to expand)
+
+⏺ Let me verify the environment (Darts availability, data dirs) so the plan's
+  Technical Context is grounded.
+
+⏺ Bash(cd
+      "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting" &&
+       echo "===data dirs===" && ls -la data/ reports/ 2>&1; echo "===darts in
+      lock===" &…)
+  ⎿  ===data dirs===
+     ls: data/: No such file or directory
+     ls: reports/: No such file or directory
+     … +15 lines (ctrl+o to expand)
+
+⏺ Darts 0.44.1 is available with generation utilities. Let me confirm the
+  real-dataset loaders and TimeSeries metadata capability.
+
+⏺ Bash(cd
+      "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting" &&
+       uv run python -c "
+      import darts.datasets as d…)
+  ⎿  datasets: ['AirPassengersDataset', 'AusBeerDataset', 'AustralianTouris
+     mDataset', 'ETTh1Dataset', 'ETTh2Dataset', 'ETTm1Dataset', 'ETTm2Datas
+     et', 'ElectricityConsumptionZurichDataset', 'ElectricityDataset', 'Ene
+     … +8 lines (ctrl+o to expand)
+
+⏺ Let me check whether statsmodels (Mauna Loa CO₂ source) is available, since
+  Darts has no built-in CO₂ level series.
+
+⏺ Bash(cd
+      "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting" &&
+       uv run python -c "
+      import statsmodels…)
+  ⎿  statsmodels 0.14.6
+     co2 loader available
+     ===pytest?===
+     … +3 lines (ctrl+o to expand)
+
+⏺ Darts, statsmodels (for Mauna Loa CO₂), numpy/pandas/matplotlib are all
+  present; pytest is in the dev extra (run via uv run --extra dev pytest). I
+  have enough to write the plan and design artifacts. Writing plan.md.
+
+⏺ Write(specs/002-drift-dataset-generation/plan.md)
+  ⎿  Added 97 lines, removed 70 lines
+        1 -# Implementation Plan: [FEATURE]                              
+        1 +# Implementation Plan: Drift Dataset Generation & Procurement 
+        2  
+        3 -**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**
+          -: [link]                                                      
+        3 +**Branch**: `002-drift-dataset-generation` | **Date**: 2026-06
+          +-13 | **Spec**: [spec.md](./spec.md)                          
+        4  
+        5 -**Input**: Feature specification from `/specs/[###-feature-nam
+          -e]/spec.md`                                                   
+        5 +**Input**: Feature specification from `/specs/002-drift-datase
+          +t-generation/spec.md`                                         
+        6  
+        7 -**Note**: This template is filled in by the `/speckit-plan` co
+          -mmand. See `.specify/templates/plan-template.md` for the execu
+          -tion workflow.                                                
+        8 -                                                              
+        7  ## Summary
+        8  
+       11 -[Extract from feature spec: primary requirement + technical ap
+          -proach from research]                                         
+        9 +Build the drift track's data layer: a seeded, parameterized sy
+          +nthetic generator that emits                                  
+       10 +univariate `TimeSeries` with machine-readable ground-truth dri
+          +ft labels across four                                         
+       11 +Prophet-component flavors (trend-slope, mean-level ramp, varia
+          +nce inflation,                                                
+       12 +seasonal-amplitude), plus a reproducible on-disk eval corpus, 
+          +~2 unlabeled real demo series                                 
+       13 +behind the same interface, and a rolling-mean/std visual-confi
+          +rmation overlay.                                              
+       14  
+       15 +Technical approach: drift-specific generation, the `DriftCase`
+          +/`DriftLabel` schema, flavor                                  
+       16 +injectors, real-series loaders, and the corpus builder live in
+          + `src/ailf/pipelines/drift/`.                                 
+       17 +Generic, domain-agnostic plumbing reused by all three tracks —
+          + the serializable case container,                             
+       18 +corpus persistence/enumeration, and the rolling-stats overlay 
+          +plot — lives in                                               
+       19 +`src/ailf/core/datasets/` (a review-gated shared-core touch). 
+          +Everything is built test-first                                
+       20 +against synthetic series with known injected ground truth.    
+       21 +                                                              
+       22  ## Technical Context
+       23  
+       15 -<!--                                                          
+       16 -  ACTION REQUIRED: Replace the content in this section with th
+          -e technical details                                           
+       17 -  for the project. The structure here is presented in advisory
+          - capacity to guide                                            
+       18 -  the iteration process.                                      
+       19 --->                                                           
+       24 +**Language/Version**: Python ≥3.11 (single `uv` workspace, loc
+          +kfile committed)                                              
+       25  
+       21 -**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75
+          - or NEEDS CLARIFICATION]                                      
+       26 +**Primary Dependencies**: Darts 0.44.1 (`darts.utils.timeserie
+          +s_generation` for base series +                               
+       27 +`darts.datasets.AirPassengersDataset`), numpy, pandas, matplot
+          +lib (overlay), statsmodels 0.14.6                             
+       28 +(`statsmodels.datasets.co2` for the Mauna Loa CO₂ demo series 
+          +— Darts has no built-in CO₂ level                             
+       29 +series). All already in `uv.lock`.                            
+       30  
+       23 -**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS
+          - CLARIFICATION]                                               
+       31 +**Storage**: On-disk eval corpus under `data/synthetic/drift/`
+          + (gitignored bulk dir). Each case                             
+       32 += a series file + a JSON label sidecar; corpus driven by a com
+          +mitted seed/knob config so it is                              
+       33 +regenerable. In-memory typed objects available without touchin
+          +g disk.                                                       
+       34  
+       25 -**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files
+          - or N/A]                                                      
+       35 +**Testing**: pytest (in the `dev` optional-dependency group). 
+          +Run with                                                      
+       36 +`uv run --extra dev pytest tests/pipelines/drift`.            
+       37  
+       27 -**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIF
+          -ICATION]                                                      
+       38 +**Target Platform**: Local dev / CI (Linux + macOS); importabl
+          +e library, no runtime service.                                
+       39  
+       29 -**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEE
+          -DS CLARIFICATION]                                             
+       40 +**Project Type**: Importable Python library (shared core + thi
+          +n per-use-case pipelines).                                    
+       41  
+       31 -**Project Type**: [e.g., library/cli/web-service/mobile-app/co
+          -mpiler/desktop-app or NEEDS CLARIFICATION]                    
+       42 +**Performance Goals**: Not latency-sensitive. The full ~110-ca
+          +se corpus must generate in                                    
+       43 +seconds (synthetic series of low-thousands of points). No thro
+          +ughput targets.                                               
+       44  
+       33 -**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k
+          - lines/sec, 60 fps or NEEDS CLARIFICATION]                    
+       45 +**Constraints**: Deterministic — identical seed + knobs ⇒ iden
+          +tical series and labels. Public                               
+       46 +generator/loader API and label records MUST be plain serializa
+          +ble data (Principle I). Must not                              
+       47 +import other pipelines (Principle VII).                       
+       48  
+       35 -**Constraints**: [domain-specific, e.g., <200ms p95, <100MB me
+          -mory, offline-capable or NEEDS CLARIFICATION]                 
+       49 +**Scale/Scope**: ~100 single-flavor cases (≈25 × 4 flavors) + 
+          +≈10 combined-flavor cases; 2 real                             
+       50 +demo series; series length on the order of a few hundred to a 
+          +few thousand points each.                                     
+       51  
+       37 -**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50
+          - screens or NEEDS CLARIFICATION]                              
+       38 -                                                              
+       52  ## Constitution Check
+       53  
+       54  *GATE: Must pass before Phase 0 research. Re-check after Phase
+            1 design.*
+       55  
+       43 -[Gates determined based on constitution file]                 
+       56 +- **I. Importable Core (Serializable Boundary)** — PASS. The g
+          +enerator and loaders are pure                                 
+       57 +  library functions; `DriftCase`/`DriftLabel` serialize to pla
+          +in dicts/JSON. No UI/front-end                                
+       58 +  types. Series persisted as plain CSV/records, labels as JSON
+          +.                                                             
+       59 +- **II. Test-First for Deterministic Logic (NON-NEGOTIABLE)** 
+          +— APPLIES, PASS-by-plan. The                                  
+       60 +  generator is deterministic logic, so it is built test-first:
+          + failing tests assert injected                                
+       61 +  ground truth (correct flavor/onset/transition-width/componen
+          +t), reproducibility (same                                     
+       62 +  seed ⇒ identical output), and knob-validation rejections, be
+          +fore implementation. Tests live in                            
+       63 +  `tests/pipelines/drift/` and `tests/core/` (for the generic 
+          +plumbing).                                                    
+       64 +- **III. Agent Quality Through Golden-Set Evaluation** — INDIR
+          +ECT. No LLM in this feature, but                              
+       65 +  this is precisely the labeled substrate the drift golden set
+          + will rest on; labels are designed                            
+       66 +  to be sufficient for precision/recall/FPR scoring.          
+       67 +- **IV. Bounded Interventions, Backtest-Gated (NON-NEGOTIABLE)
+          +** — N/A. No agent, no                                        
+       68 +  interventions, no backtest in this feature.                 
+       69 +- **V. Reproducible & Honest Evaluation** — PASS. Seeds fixed 
+          +and recorded in the committed                                 
+       70 +  corpus config; `uv` lockfile current; the exact corpus is re
+          +generable from the repository.                                
+       71 +- **VI. Transparent, Explainable Outputs** — PARTIAL/SUPPORTIN
+          +G. No agent report here, but the                              
+       72 +  rolling-stats overlay is the human-inspectable acceptance ai
+          +d (reproduces proposal Figure 3).                             
+       73 +- **VII. Shared Core, Independent Pipelines** — PASS-with-flag
+          +. Drift-specific logic stays in                               
+       74 +  `pipelines/drift/`. Generic case container, corpus IO, and o
+          +verlay go in `core/datasets/` —                               
+       75 +  a deliberate, review-gated shared-core change that keeps cor
+          +e tests green and adds no                                     
+       76 +  pipeline-to-pipeline imports. See Complexity Tracking.      
+       77  
+       78 +**Gate result: PASS.** No NON-NEGOTIABLE violations. One justi
+          +fied shared-core touch tracked below.                         
+       79 +                                                              
+       80  ## Project Structure
+       81  
+       82  ### Documentation (this feature)
+       83  
+       84  ```text
+       50 -specs/[###-feature]/                                          
+       85 +specs/002-drift-dataset-generation/                           
+       86  ├── plan.md              # This file (/speckit-plan command ou
+           tput)
+       52 -├── research.md          # Phase 0 output (/speckit-plan comma
+          -nd)                                                           
+       53 -├── data-model.md        # Phase 1 output (/speckit-plan comma
+          -nd)                                                           
+       54 -├── quickstart.md        # Phase 1 output (/speckit-plan comma
+          -nd)                                                           
+       55 -├── contracts/           # Phase 1 output (/speckit-plan comma
+          -nd)                                                           
+       56 -└── tasks.md             # Phase 2 output (/speckit-tasks comm
+          -and - NOT created by /speckit-plan)                           
+       87 +├── research.md          # Phase 0 output                     
+       88 +├── data-model.md        # Phase 1 output                     
+       89 +├── quickstart.md        # Phase 1 output                     
+       90 +├── contracts/           # Phase 1 output                     
+       91 +│   ├── generator-api.md                                      
+       92 +│   └── corpus-format.md                                      
+       93 +├── checklists/                                               
+       94 +│   └── requirements.md  # from /speckit-specify              
+       95 +└── tasks.md             # Phase 2 output (/speckit-tasks — NO
+          +T created here)                                               
+       96  ```
+       97  
+       98  ### Source Code (repository root)
+       60 -<!--                                                          
+       61 -  ACTION REQUIRED: Replace the placeholder tree below with the
+          - concrete layout                                              
+       62 -  for this feature. Delete unused options and expand the chose
+          -n structure with                                              
+       63 -  real paths (e.g., apps/admin, packages/something). The deliv
+          -ered plan must                                                
+       64 -  not include Option labels.                                  
+       65 --->                                                           
+       99  
+      100  ```text
+       68 -# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)       
+       69 -src/                                                          
+       70 -├── models/                                                   
+       71 -├── services/                                                 
+       72 -├── cli/                                                      
+       73 -└── lib/                                                      
+      101 +src/ailf/                                                     
+      102 +├── core/                                                     
+      103 +│   └── datasets/                                             
+      104 +│       ├── __init__.py        # (exists) shared dataset utili
+          +ties — to be filled                                           
+      105 +│       ├── case.py            # NEW: generic serializable Cas
+          +e container (series + label record)                           
+      106 +│       ├── corpus.py          # NEW: write/read/enumerate an 
+          +on-disk case corpus (series + JSON sidecar)                   
+      107 +│       └── viz.py             # NEW: rolling-mean/std overlay
+          + (domain-agnostic, optional onset markers)                    
+      108 +└── pipelines/                                                
+      109 +    └── drift/                                                
+      110 +        ├── __init__.py        # (exists)                     
+      111 +        ├── datasets.py        # (exists, stub) drift flavors,
+          + DriftLabel/DriftFlavor, knobs,                               
+      112 +        │                      #   single + combined generatio
+          +n, real-series loaders                                        
+      113 +        ├── corpus.py          # NEW: drift corpus build confi
+          +g + CLI entry (materialize ≈110 cases)                        
+      114 +        ├── tools.py           # (exists, stub) NOT touched by
+          + this feature                                                 
+      115 +        ├── pipeline.py        # (exists, stub) NOT touched by
+          + this feature                                                 
+      116 +        └── prompts/           # NOT touched by this feature  
+      117  
+      118  tests/
+       76 -├── contract/                                                 
+       77 -├── integration/                                              
+       78 -└── unit/                                                     
+      119 +├── core/                                                     
+      120 +│   └── datasets/              # NEW: tests for case/corpus/vi
+          +z generic plumbing                                            
+      121 +└── pipelines/                                                
+      122 +    └── drift/                 # NEW: tests for flavors, label
+          +s, reproducibility, validation, loaders                       
+      123  
+       80 -# [REMOVE IF UNUSED] Option 2: Web application (when "frontend
+          -" + "backend" detected)                                       
+       81 -backend/                                                      
+       82 -├── src/                                                      
+       83 -│   ├── models/                                               
+       84 -│   ├── services/                                             
+       85 -│   └── api/                                                  
+       86 -└── tests/                                                    
+       87 -                                                              
+       88 -frontend/                                                     
+       89 -├── src/                                                      
+       90 -│   ├── components/                                           
+       91 -│   ├── pages/                                                
+       92 -│   └── services/                                             
+       93 -└── tests/                                                    
+       94 -                                                              
+       95 -# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android
+          -" detected)                                                   
+       96 -api/                                                          
+       97 -└── [same as backend above]                                   
+       98 -                                                              
+       99 -ios/ or android/                                              
+      100 -└── [platform-specific structure: feature modules, UI flows, p
+          -latform tests]                                                
+      124 +data/                                                         
+      125 +└── synthetic/                                                
+      126 +    └── drift/                 # generated corpus output (giti
+          +gnored bulk dir)                                              
+      127  ```
+      128  
+      103 -**Structure Decision**: [Document the selected structure and r
+          -eference the real                                             
+      104 -directories captured above]                                   
+      129 +**Structure Decision**: Library layout from decision 0001 (sha
+          +red core + independent pipelines).                            
+      130 +Drift-owned code is confined to `src/ailf/pipelines/drift/` an
+          +d `tests/pipelines/drift/`. The                               
+      131 +generic, reusable trio (`case.py`, `corpus.py`, `viz.py`) goes
+          + in `src/ailf/core/datasets/`                                 
+      132 +because the changepoint and anomaly stubs explicitly defer gen
+          +eric Darts plumbing to core and                               
+      133 +all three tracks need the same container/IO/overlay — duplicat
+          +ing it three times would violate                              
+      134 +"no triplicated logic." This core touch is review-gated per Pr
+          +inciple VII.                                                  
+      135  
+      136  ## Complexity Tracking
+      137  
+      108 -> **Fill ONLY if Constitution Check has violations that must b
+          -e justified**                                                 
+      109 -                                                              
+      138  | Violation | Why Needed | Simpler Alternative Rejected Becaus
+           e |
+      139  |-----------|------------|------------------------------------
+           -|
+      112 -| [e.g., 4th project] | [current need] | [why 3 projects insuf
+          -ficient] |                                                    
+      113 -| [e.g., Repository pattern] | [specific problem] | [why direc
+          -t DB access insufficient] |                                   
+      140 +| Touching shared `core/datasets/` on a drift feature branch |
+          + The case container, corpus persistence/enumeration, and rolli
+          +ng-stats overlay are domain-agnostic and needed identically by
+          + all three tracks; the existing changepoint/anomaly stubs expl
+          +icitly say generic plumbing belongs in `core.datasets`. | Defi
+          +ning these in `pipelines/drift/` would force changepoint/anoma
+          +ly to copy them (triplicated logic) or import the drift pipeli
+          +ne (forbidden cross-pipeline dependency, Principle VII). Keepi
+          +ng the *generic* parts in core with drift-specific label seman
+          +tics in the pipeline is the minimal coherent split. |         
+
+⏺ Now Phase 0 research.md. The spec had no NEEDS CLARIFICATION markers (scope
+  resolved up front), so research consolidates the technical decisions.
+
+⏺ Write(specs/002-drift-dataset-generation/research.md)
+  ⎿  Wrote 127 lines to specs/002-drift-dataset-generation/research.md
+       2 # Phase 0 Research: Drift Dataset Generation & Procurement
+       3 The spec carried no `[NEEDS CLARIFICATION]` markers — three scop
+       4 dual delivery, deferred Δt threshold) were resolved before draft
+         ing. This document records the
+         corpus, loaders, and overlay.ns needed to design the generator, 
+       6 
+       8 ## R1. Base-series construction with Darts
+       9 - **Decision**: Compose each base series from `darts.utils.times
+      10   `linear_timeseries` (trend `g(t)`), `sine_timeseries` (seasona
+         l `s(t)`), and
+     … +201 lines (ctrl+o to expand)
+  ⎿  Found 8 new diagnostic issues in 1 file (ctrl+o to expand)
+
+⏺ The cSpell warnings are dictionary misses (numpy, matplotlib, etc.) — harmless
+   for planning docs. Now Phase 1: data-model.md, contracts, quickstart.
+
+⏺ Write(specs/002-drift-dataset-generation/data-model.md)
+  ⎿  Wrote 118 lines to specs/002-drift-dataset-generation/data-model.md
+       2 # Phase 1 Data Model: Drift Dataset Generation & Procurement
+       3 Entities derived from the spec's Key Entities + Functional Requi
+         rements. The public boundary is
+         to a JSON-compatible dict.rinciple I): every entity round-trips 
+       5 
+       6 ## DriftFlavor (enum)
+       8 The four supported injected drift types, each bound to a Prophet
+          component.
+       9 
+      10 | Value | Affected component | Meaning |
+     … +154 lines (ctrl+o to expand)
+  ⎿  Found 17 new diagnostic issues in 1 file (ctrl+o to expand)
+
+⏺ Now the contracts.
+⏺ Write(specs/002-drift-dataset-generation/contracts/generator-api.md)
+  ⎿  Wrote 92 lines to
+     specs/002-drift-dataset-generation/contracts/generator-api.md
+      2 # Contract: Generator & Loader API
+      3 The library surface this feature exposes. Signatures are illustra
+        tive (Python type intent), not
+      4 final code. The contract is: behavior, inputs, outputs, errors, a
+        nd serializability — all public
+        eries` house type.serializable data or the project's `darts.TimeS
+      6 
+      7 ## Synthetic generation (`ailf.pipelines.drift.datasets`)
+      8 
+      9 ### `generate_case(flavor, *, seed, config=None) -> Case`
+     … +117 lines (ctrl+o to expand)
+
+❯ two changes : use seed default value as 42 and use plotly for visualization   
+  better to generate both png and html images for manual inspection. If         
+  necessary, go back and change the necessary markdown files.                   
+
+⏺ Good changes. Let me check whether plotly (and kaleido for PNG export) are
+  available before wiring them into the design docs.
+
+⏺ Bash(cd
+      "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting" &&
+       echo "=== plotly in lock? ===" && grep -m1 'name = "plotly"' uv.lock &&
+      grep -A2 '…)
+  ⎿  === plotly in lock? ===
+     === kaleido in lock? ===
+     kaleido NOT in lock
+     … +7 lines (ctrl+o to expand)
+
+⏺ Neither is installed. Plotly handles HTML export natively; PNG export needs
+  kaleido. Both must be added as dependencies. I'll update the design docs to
+  reflect seed default 42 and plotly-based visualization (PNG + HTML), and
+  record the new dependency requirement. I won't run uv add during planning —
+  that belongs to the implementation tasks.
+
+  Let me update the four affected files.
+
+⏺ Update(specs/002-drift-dataset-generation/plan.md)
+  ⎿  Added 7 lines, removed 3 lines
+      24  **Language/Version**: Python ≥3.11 (single `uv` workspace, lock
+          file committed)
+      25  
+      26  **Primary Dependencies**: Darts 0.44.1 (`darts.utils.timeseries
+          _generation` for base series +
+      27 -`darts.datasets.AirPassengersDataset`), numpy, pandas, matplotl
+         -ib (overlay), statsmodels 0.14.6                               
+      27 +`darts.datasets.AirPassengersDataset`), numpy, pandas, statsmod
+         +els 0.14.6                                                     
+      28  (`statsmodels.datasets.co2` for the Mauna Loa CO₂ demo series —
+           Darts has no built-in CO₂ level
+      29 -series). All already in `uv.lock`.                             
+      29 +series), and **plotly** (interactive overlay; HTML export nativ
+         +e) + **kaleido** (static PNG                                   
+      30 +export). Darts/numpy/pandas/statsmodels are already in `uv.lock
+         +`; **plotly + kaleido are NEW deps                             
+      31 +to be added via `uv add` during implementation** (not yet in th
+         +e lockfile).                                                   
+      32  
+      33  **Storage**: On-disk eval corpus under `data/synthetic/drift/` 
+          (gitignored bulk dir). Each case
+      34  = a series file + a JSON label sidecar; corpus driven by a comm
+          itted seed/knob config so it is
+      33 -regenerable. In-memory typed objects available without touching
+         - disk.                                                         
+      35 +regenerable. In-memory typed objects available without touching
+         + disk. Visual-confirmation                                     
+      36 +overlays are written as paired `.png` + `.html` under `reports/
+         +` (gitignored) for manual                                      
+      37 +inspection.                                                    
+      38  
+      39  **Testing**: pytest (in the `dev` optional-dependency group). R
+          un with
+      40  `uv run --extra dev pytest tests/pipelines/drift`.
+  ⎿  Found 4 new diagnostic issues in 1 file (ctrl+o to expand)
+
+⏺ Update(specs/002-drift-dataset-generation/plan.md)
+  ⎿  Added 2 lines, removed 1 line
+      73  - **V. Reproducible & Honest Evaluation** — PASS. Seeds fixed a
+          nd recorded in the committed
+      74    corpus config; `uv` lockfile current; the exact corpus is reg
+          enerable from the repository.
+      75  - **VI. Transparent, Explainable Outputs** — PARTIAL/SUPPORTING
+          . No agent report here, but the
+      76 -  rolling-stats overlay is the human-inspectable acceptance aid
+         - (reproduces proposal Figure 3).                               
+      76 +  rolling-stats overlay (plotly, exported as PNG + interactive 
+         +HTML) is the human-inspectable                                 
+      77 +  acceptance aid (reproduces proposal Figure 3).               
+      78  - **VII. Shared Core, Independent Pipelines** — PASS-with-flag.
+           Drift-specific logic stays in
+      79    `pipelines/drift/`. Generic case container, corpus IO, and ov
+          erlay go in `core/datasets/` —
+      80    a deliberate, review-gated shared-core change that keeps core
+           tests green and adds no
+
+⏺ Update(specs/002-drift-dataset-generation/plan.md)
+  ⎿  Added 1 line, removed 1 line
+      109  │       ├── __init__.py        # (exists) shared dataset utili
+           ties — to be filled
+      110  │       ├── case.py            # NEW: generic serializable Cas
+           e container (series + label record)
+      111  │       ├── corpus.py          # NEW: write/read/enumerate an 
+           on-disk case corpus (series + JSON sidecar)
+      112 -│       └── viz.py             # NEW: rolling-mean/std overlay
+          - (domain-agnostic, optional onset markers)                    
+      112 +│       └── viz.py             # NEW: plotly rolling-mean/std 
+          +overlay → PNG + HTML (optional onset markers)                 
+      113  └── pipelines/
+      114      └── drift/
+      115          ├── __init__.py        # (exists)
+
+⏺ Now research.md — R8 (visualization) and R2 (seed default).
+
+⏺ Update(specs/002-drift-dataset-generation/research.md)
+  ⎿  Added 3 lines, removed 3 lines
+      20  
+      21  ## R2. Seeding & reproducibility
+      22  
+      23 -- **Decision**: Each case takes an explicit integer `seed`; the
+         - generator constructs a                                        
+      24 -  `numpy.random.Generator` (`np.random.default_rng(seed)`) used
+         - for *all* stochastic steps                                    
+      25 -  (noise, and any randomized knob draws in corpus sweeps). No r
+         -eliance on global RNG state.                                   
+      23 +- **Decision**: Each case takes an explicit integer `seed` (**d
+         +efault `42`**); the generator                                  
+      24 +  constructs a `numpy.random.Generator` (`np.random.default_rng
+         +(seed)`) used for *all* stochastic                             
+      25 +  steps (noise, and any randomized knob draws in corpus sweeps)
+         +. No reliance on global RNG state.                             
+      26    Corpus cases derive per-case seeds deterministically from a s
+          ingle base seed + case index.
+      27  - **Rationale**: Satisfies Principle V and FR-004 — identical s
+          eed + knobs ⇒ identical series
+      28    and labels. `default_rng` is the modern, isolated, reproducib
+          le numpy RNG.
+
+⏺ Update(specs/002-drift-dataset-generation/research.md)
+  ⎿  Added 13 lines, removed 7 lines
+      104  
+      105  ## R8. Visual-confirmation overlay
+      106  
+      107 -- **Decision**: A matplotlib function plotting observations + 
+          -rolling mean + rolling-std band,                              
+      107 +- **Decision**: A **plotly** function plotting observations + 
+          +rolling mean + rolling-std band,                              
+      108    with a vertical marker at the injected onset when the case i
+           s labeled (omitted for real
+      109 -  series). Returns the `Figure`/`Axes` (no forced `show`/`save
+          -`) so callers/tests can assert on                             
+      110 -  it headlessly. Lives in `core/datasets/viz.py` (domain-agnos
+          -tic).                                                         
+      111 -- **Rationale**: FR-017/FR-018, reproduces proposal Figure 3, 
+          -and is the human eyeball gate.                                
+      112 -  Returning the figure keeps it testable under a non-interacti
+          -ve backend.                                                   
+      113 -- **Alternatives considered**: Plotly — rejected; matplotlib i
+          -s already the committed dep and                               
+      114 -  sufficient for a static acceptance overlay.                 
+      109 +  series). Returns the plotly `Figure` (no forced display) and
+          + offers a helper that writes paired                           
+      110 +  artifacts for manual inspection: an **interactive `.html`** 
+          +(native `fig.write_html`) and a                               
+      111 +  **static `.png`** (`fig.write_image`, requires `kaleido`), u
+          +nder `reports/` (gitignored). Lives                           
+      112 +  in `core/datasets/viz.py` (domain-agnostic).                
+      113 +- **Rationale**: FR-017/FR-018, reproduces proposal Figure 3, 
+          +and is the human eyeball gate. The                            
+      114 +  user wants plotly with both PNG (quick glance / paste into d
+          +ocs) and HTML (zoom/hover for real                            
+      115 +  inspection). Returning the figure keeps it testable headless
+          +ly (assert on traces/shapes without                           
+      116 +  rendering).                                                 
+      117 +- **Dependency impact**: adds `plotly` (HTML export native) an
+          +d `kaleido` (PNG/static export) —                             
+      118 +  neither is currently in `uv.lock`; both added via `uv add` d
+          +uring implementation.                                         
+      119 +- **Alternatives considered**: matplotlib — rejected per user 
+          +preference for plotly's interactive                           
+      120 +  HTML. HTML-only (drop kaleido) — rejected; user explicitly w
+          +ants PNG too.                                                 
+      121  
+      122  ## R9. Test strategy (Principle II)
+      123  
+
+⏺ Now data-model.md — the seed default and the RealDemoSeries/overlay artifact
+  wording.
+
+⏺ Update(specs/002-drift-dataset-generation/data-model.md)
+  ⎿  Added 1 line, removed 1 line
+      34  | `base_noise` | float | 1.0 | Std of base Gaussian noise (ε); 
+          MUST be > 0 for `variance_inflation`. |
+      35  | `seasonality_period` | int \| None | 30 | Period of `s(t)`; r
+          equired for `seasonal_amplitude`. |
+      36  | `seasonality_amplitude` | float | 5.0 | Base amplitude of `s(
+          t)`. |
+      37 -| `seed` | int | required for reproducible output | Drives an i
+         -solated `np.random.default_rng`. |                             
+      37 +| `seed` | int | `42` | Drives an isolated `np.random.default_r
+         +ng`; identical seed ⇒ identical output. |                      
+      38  
+      39  **Validation rules** (FR-009; map to spec Edge Cases):
+      40  - `0 < onset < length`, with enough points before (`onset ≥ min
+          _reference`) and after
+
+⏺ Update(specs/002-drift-dataset-generation/data-model.md)
+  ⎿  Added 1 line, removed 1 line
+      114  GeneratorConfig ──(generate)──▶ Case(labeled, is_synthetic=Tru
+           e, labels=[DriftLabel,...])
+      115  RealDemoSeries loader ─────────▶ Case(labeled=False, is_synthe
+           tic=False, labels=[])
+      116  Case ──(persist)──▶ EvalCorpus entry (series.csv + labels.json
+            + manifest row)
+      117 -Case ──(plot)─────▶ overlay Figure (onset marker iff labeled) 
+      117 +Case ──(plot)─────▶ plotly overlay Figure (onset marker iff la
+          +beled) ──▶ paired .png + .html under reports/                 
+      118  ```
+
+⏺ Now the contract's visualization section.
+
+⏺ Update(specs/002-drift-dataset-generation/contracts/generator-api.md)
+  ⎿  Added 12 lines, removed 5 lines
+      77  
+      78  ## Visualization (`ailf.core.datasets.viz`)
+      79  
+      80 -### `plot_drift_overlay(case, *, window=None) -> (Figure, Axes)
+         -`                                                              
+      80 +### `plot_drift_overlay(case, *, window=None) -> plotly.graph_o
+         +bjects.Figure`                                                 
+      81  
+      82 -- **Output**: a matplotlib figure showing observations + rollin
+         -g mean + rolling-std band; a                                   
+      83 -  vertical onset marker iff `case.labeled` (FR-017, FR-018).   
+      84 -- **Guarantees**: returns the figure (no forced display/save) s
+         -o it is testable headlessly;                                   
+      85 -  renders for both synthetic (with marker) and real (no marker)
+         - cases.                                                        
+      82 +- **Output**: a plotly figure showing observations + rolling me
+         +an + rolling-std band; a vertical                              
+      83 +  onset marker iff `case.labeled` (FR-017, FR-018).            
+      84 +- **Guarantees**: returns the figure (no forced display) so it 
+         +is testable headlessly (assert on                              
+      85 +  traces/shapes); renders for both synthetic (with marker) and 
+         +real (no marker) cases.                                        
+      86  
+      87 +### `save_drift_overlay(case, out_dir, *, window=None) -> (png_
+         +path, html_path)`                                              
+      88 +                                                               
+      89 +- **Output**: writes the overlay as paired artifacts for manual
+         + inspection — a static `.png`                                  
+      90 +  (`fig.write_image`, via `kaleido`) and an interactive `.html`
+         + (`fig.write_html`) — under                                    
+      91 +  `out_dir` (default `reports/`, gitignored). Returns both path
+         +s.                                                             
+      92 +- **Guarantees**: both files produced for any case; filenames d
+         +erive from `case.case_id`.                                     
+      93 +                                                               
+      94  ## Generic core (`ailf.core.datasets`)
+      95  
+      96  ### `Case.to_dict()` / `Case.from_dict(d)` / `Case` round-trip
+
+⏺ Both changes are now consistent across plan, research, data-model, and
+  contract. Let me write the remaining Phase 1 artifacts: the corpus-format
+  contract and quickstart.
+
+⏺ Write(specs/002-drift-dataset-generation/contracts/corpus-format.md)
+  ⎿  Wrote 87 lines to
+     specs/002-drift-dataset-generation/contracts/corpus-format.md
+       2 # Contract: On-Disk Eval Corpus Format
+       3 The persisted, reproducible corpus consumed by downstream drift 
+       4 LLM judge (FR-010–FR-012). Plain, diffable, language-agnostic fi
+         les.
+       5 
+       7 ## Layout
+       8 ```text
+         dir)/synthetic/drift/            # corpus root (gitignored bulk 
+      10 ├── corpus.json                  # manifest: enumerates every ca
+         se
+     … +92 lines (ctrl+o to expand)
+
+⏺ Write(specs/002-drift-dataset-generation/quickstart.md)
+  ⎿  Wrote 106 lines to specs/002-drift-dataset-generation/quickstart.md
+      2 # Quickstart & Validation: Drift Dataset Generation & Procurement
+      3 Runnable scenarios that prove the feature works end-to-end. These
+         mirror the spec's acceptance
+        PI inrios and Success Criteria. Implementation lives behind the A
+      5 [contracts/generator-api.md](./contracts/generator-api.md); corpu
+        s layout in
+        ies inacts/corpus-format.md](./contracts/corpus-format.md); entit
+      7 [data-model.md](./data-model.md).
+      8 
+      9 ## Prerequisites
+     … +123 lines (ctrl+o to expand)
+
+⏺ Now the Phase 1 agent-context update — point the CLAUDE.md managed block at
+  this plan.
+
+⏺ Bash(cd
+      "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting" &&
+       bash
+      .specify/extensions/agent-context/scripts/bash/update-agent-context.sh
+      "specs…)
+  ⎿  agent-context: updated CLAUDE.md
+     ===BLOCK===
+     45:<!-- SPECKIT START -->
+     … +6 lines (ctrl+o to expand)
+
+⏺ The CLAUDE.md managed block now points at the plan.
+
+  Post-design Constitution re-check: still PASS. The design adds plotly +
+  kaleido as new dependencies but introduces no principle violation — the
+  serializable boundary holds (Case → dict/CSV/JSON), test-first applies to the
+  deterministic generator, no cross-pipeline imports, and reproducibility is
+  preserved (seed default 42, committed corpus config). The one justified
+  shared-core touch remains tracked in Complexity Tracking.
+
+  Extension Hooks
+
+  Optional Hook: agent-context
+  Command: /speckit-agent-context-update
+  Description: Refresh agent context after planning
+
+  Prompt: Execute speckit.agent-context.update?
+  To execute: /speckit-agent-context-update (already run as part of Phase 1 — 
+  the block now points at this plan)
+
+  Completion Report
+
+  Planning complete for 002-drift-dataset-generation.
+
+  - Plan: specs/002-drift-dataset-generation/plan.md
+  - Phase 0: research.md — 9 technical decisions (Darts base-series composition,
+   isolated default_rng seeding with default 42, Δt transition-shape model,
+  per-flavor injection, label sufficiency, CSV+JSON corpus, real-series loaders,
+   plotly PNG+HTML overlay, test strategy)
+  - Phase 1:
+    - data-model.md — DriftFlavor, GeneratorConfig (seed default 42),
+  DriftLabel, Case, EvalCorpus, RealDemoSeries + validation rules
+    - contracts/generator-api.md — generator/loader/corpus/viz signatures
+    - contracts/corpus-format.md — on-disk layout + reproducibility contract
+    - quickstart.md — 6 runnable validation scenarios mapped to success criteria
+  - Agent context: CLAUDE.md updated to reference the plan
+
+  Your two changes are reflected everywhere: seed default is 42 (research R2,
+  data-model, quickstart); visualization is plotly producing paired .png + .html
+   for manual inspection (research R8, data-model, both contracts, quickstart).
+
+  Two things to flag:
+  1. New dependencies — plotly (HTML export native) and kaleido (PNG export) are
+   not in uv.lock. I did not run uv add (that's an implementation step); the
+  plan and quickstart note uv add plotly kaleido is required.
+  2. Shared-core touch — the generic Case/corpus/overlay live in core/datasets/
+  (review-gated per Principle VII), justified in Complexity Tracking because all
+   three tracks need them identically.
+
+  Ready for /speckit-tasks.
+
+✻ Baked for 6m 56s
+※ recap: We're building the drift dataset generation feature for the agent-in-the-loop forecasting project. The spec and implementation plan (with design artifacts) are complete on branch 002-drift-dataset-generation. Next action: run /speckit-tasks to generate the task breakdown. (disable recaps in /config)
