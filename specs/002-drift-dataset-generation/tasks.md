@@ -37,9 +37,9 @@ reproducibility, and knob-validation rejections MUST be written and fail before 
 
 **Purpose**: Project initialization, dependencies, and gitignored output dirs
 
-- [ ] T001 Add the visual-overlay dependencies with `uv add plotly kaleido` (updates `pyproject.toml` and commits the refreshed `uv.lock`); confirm import with `uv run python -c "import plotly, kaleido"`
-- [ ] T002 [P] Ensure the bulk output dirs `data/synthetic/` and `reports/` are gitignored in `/Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting/.gitignore` (add entries if missing)
-- [ ] T003 [P] Create the test package dirs `tests/core/datasets/` and confirm `tests/pipelines/drift/` exists (remove the `.gitkeep` placeholders once real test files land)
+- [X] T001 Add the visual-overlay dependencies with `uv add plotly kaleido` (updates `pyproject.toml` and commits the refreshed `uv.lock`); confirm import with `uv run python -c "import plotly, kaleido"`
+- [X] T002 [P] Ensure the bulk output dirs `data/synthetic/` and `reports/` are gitignored in `/Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting/.gitignore` (add entries if missing)
+- [X] T003 [P] Create the test package dirs `tests/core/datasets/` and confirm `tests/pipelines/drift/` exists (remove the `.gitkeep` placeholders once real test files land)
 
 ---
 
@@ -49,9 +49,9 @@ reproducibility, and knob-validation rejections MUST be written and fail before 
 
 **⚠️ CRITICAL**: No user story work can begin until the `Case` container exists and round-trips.
 
-- [ ] T004 [P] Write FAILING test for `Case` serialization round-trip (`to_dict`/`from_dict` preserve series values + labels + flags exactly; univariate `darts.TimeSeries` rehydration) in `tests/core/datasets/test_case.py`
-- [ ] T005 Implement the generic `Case` container (fields: `case_id`, `series`, `labels`, `is_synthetic`, `labeled`, `config`, `metadata`; `to_dict()`/`from_dict()` to plain JSON-compatible data; series ↔ timestamp/value records) in `src/ailf/core/datasets/case.py`
-- [ ] T006 Export `Case` from `src/ailf/core/datasets/__init__.py`
+- [X] T004 [P] Write FAILING test for `Case` serialization round-trip (`to_dict`/`from_dict` preserve series values + labels + flags exactly; univariate `darts.TimeSeries` rehydration) in `tests/core/datasets/test_case.py`
+- [X] T005 Implement the generic `Case` container (fields: `case_id`, `series`, `labels`, `is_synthetic`, `labeled`, `config`, `metadata`; `to_dict()`/`from_dict()` to plain JSON-compatible data; series ↔ timestamp/value records) in `src/ailf/core/datasets/case.py`
+- [X] T006 Export `Case` from `src/ailf/core/datasets/__init__.py`
 
 **Checkpoint**: `Case` round-trips losslessly — generation, corpus, loaders, and viz can now build on it.
 
@@ -65,18 +65,18 @@ reproducibility, and knob-validation rejections MUST be written and fail before 
 
 ### Tests for User Story 1 (write FIRST, ensure they FAIL) ⚠️
 
-- [ ] T007 [P] [US1] Test case structure + reproducibility (same `(flavor, seed, config)` ⇒ identical series & labels; different seeds ⇒ same flavor/onset semantics, different noise) in `tests/pipelines/drift/test_generate_case.py`
-- [ ] T008 [P] [US1] Test per-flavor injection correctness — the realized series actually exhibits the change over `[onset, onset+Δt]` (rolling-mean step for `mean_level`, slope bend for `trend_slope`, rolling-std growth for `variance_inflation`, seasonal-amplitude growth for `seasonal_amplitude`) in `tests/pipelines/drift/test_flavors.py`
-- [ ] T009 [P] [US1] Test label correctness — `flavor`, `affected_component` (trend/seasonality/noise), `onset_index`, `onset_time`, `transition_width`, `magnitude` populated and consistent with config for each of the four flavors in `tests/pipelines/drift/test_labels.py`
-- [ ] T010 [P] [US1] Test knob-validation rejections (FR-009 edge cases) — each raises a clear validation error, never a silently mislabeled/clamped case: onset too near either boundary, `transition_width < 1`, `onset+width` past end (rejected, NOT clamped), `magnitude == 0`, `variance_inflation` with `base_noise <= 0`, `seasonal_amplitude` without seasonality in `tests/pipelines/drift/test_validation.py`
+- [X] T007 [P] [US1] Test case structure + reproducibility (same `(flavor, seed, config)` ⇒ identical series & labels; different seeds ⇒ same flavor/onset semantics, different noise) in `tests/pipelines/drift/test_generate_case.py`
+- [X] T008 [P] [US1] Test per-flavor injection correctness — the realized series actually exhibits the change over `[onset, onset+Δt]` (rolling-mean step for `mean_level`, slope bend for `trend_slope`, rolling-std growth for `variance_inflation`, seasonal-amplitude growth for `seasonal_amplitude`) in `tests/pipelines/drift/test_flavors.py`
+- [X] T009 [P] [US1] Test label correctness — `flavor`, `affected_component` (trend/seasonality/noise), `onset_index`, `onset_time`, `transition_width`, `magnitude` populated and consistent with config for each of the four flavors in `tests/pipelines/drift/test_labels.py`
+- [X] T010 [P] [US1] Test knob-validation rejections (FR-009 edge cases) — each raises a clear validation error, never a silently mislabeled/clamped case: onset too near either boundary, `transition_width < 1`, `onset+width` past end (rejected, NOT clamped), `magnitude == 0`, `variance_inflation` with `base_noise <= 0`, `seasonal_amplitude` without seasonality in `tests/pipelines/drift/test_validation.py`
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Implement `DriftFlavor` enum (4 values bound to Prophet components) and the `DriftLabel` record (`to_dict`/`from_dict`, derives `affected_component` from flavor) in `src/ailf/pipelines/drift/datasets.py`
-- [ ] T012 [US1] Implement `GeneratorConfig` (knobs + defaults from data-model.md) and the validation rules that reject contradictory knob combinations (FR-009) in `src/ailf/pipelines/drift/datasets.py`
-- [ ] T013 [US1] Implement base-series composition (`linear_timeseries` + `sine_timeseries` + `gaussian_timeseries` from `darts.utils.timeseries_generation` via an isolated `np.random.default_rng(seed)`) and the clamped-linear/smoothstep transition-ramp helper (0 before onset → full magnitude across Δt → held for duration) in `src/ailf/pipelines/drift/datasets.py`
-- [ ] T014 [US1] Implement the four per-flavor injectors (trend-slope ramp, mean-level ramp, variance-inflation noise scaling, seasonal-amplitude multiplier) operating on the ramp + base series in `src/ailf/pipelines/drift/datasets.py`
-- [ ] T015 [US1] Implement `generate_case(flavor, *, seed=42, config=None) -> Case` wiring validation → base series → injector → `Case(is_synthetic=True, labeled=True, labels=[DriftLabel], config=…)` in `src/ailf/pipelines/drift/datasets.py`
+- [X] T011 [US1] Implement `DriftFlavor` enum (4 values bound to Prophet components) and the `DriftLabel` record (`to_dict`/`from_dict`, derives `affected_component` from flavor) in `src/ailf/pipelines/drift/datasets.py`
+- [X] T012 [US1] Implement `GeneratorConfig` (knobs + defaults from data-model.md) and the validation rules that reject contradictory knob combinations (FR-009) in `src/ailf/pipelines/drift/datasets.py`
+- [X] T013 [US1] Implement base-series composition (`linear_timeseries` + `sine_timeseries` + `gaussian_timeseries` from `darts.utils.timeseries_generation` via an isolated `np.random.default_rng(seed)`) and the clamped-linear/smoothstep transition-ramp helper (0 before onset → full magnitude across Δt → held for duration) in `src/ailf/pipelines/drift/datasets.py`
+- [X] T014 [US1] Implement the four per-flavor injectors (trend-slope ramp, mean-level ramp, variance-inflation noise scaling, seasonal-amplitude multiplier) operating on the ramp + base series in `src/ailf/pipelines/drift/datasets.py`
+- [X] T015 [US1] Implement `generate_case(flavor, *, seed=42, config=None) -> Case` wiring validation → base series → injector → `Case(is_synthetic=True, labeled=True, labels=[DriftLabel], config=…)` in `src/ailf/pipelines/drift/datasets.py`
 
 **Checkpoint**: MVP — single-flavor labeled cases generate reproducibly with correct ground truth. SC-001, SC-002 satisfied. STOP and VALIDATE before proceeding.
 
@@ -90,16 +90,16 @@ reproducibility, and knob-validation rejections MUST be written and fail before 
 
 ### Tests for User Story 2 (write FIRST, ensure they FAIL) ⚠️
 
-- [ ] T016 [P] [US2] Test generic corpus persistence — write → read → enumerate identity for a `Case` (series.csv + labels.json + manifest row round-trip preserves series & labels) in `tests/core/datasets/test_corpus.py`
-- [ ] T017 [P] [US2] Test `build_corpus` composition against the build config's declared counts (exactly 25 cases per flavor → 100 single-flavor split 25/25/25/25, plus 10 combined = 110 total; manifest lists every case) and full-corpus reproducibility (delete-and-rebuild with same `base_seed` + config ⇒ byte-identical `series.csv`/`labels.json`) in `tests/pipelines/drift/test_corpus.py`
-- [ ] T018 [P] [US2] Test `generate_combined_case` — multiple injected flavors each represented by a distinct `DriftLabel`, coherent on overlapping onsets/components (FR-007) in `tests/pipelines/drift/test_combined.py`
+- [X] T016 [P] [US2] Test generic corpus persistence — write → read → enumerate identity for a `Case` (series.csv + labels.json + manifest row round-trip preserves series & labels) in `tests/core/datasets/test_corpus.py`
+- [X] T017 [P] [US2] Test `build_corpus` composition against the build config's declared counts (exactly 25 cases per flavor → 100 single-flavor split 25/25/25/25, plus 10 combined = 110 total; manifest lists every case) and full-corpus reproducibility (delete-and-rebuild with same `base_seed` + config ⇒ byte-identical `series.csv`/`labels.json`) in `tests/pipelines/drift/test_corpus.py`
+- [X] T018 [P] [US2] Test `generate_combined_case` — multiple injected flavors each represented by a distinct `DriftLabel`, coherent on overlapping onsets/components (FR-007) in `tests/pipelines/drift/test_combined.py`
 
 ### Implementation for User Story 2
 
-- [ ] T019 [P] [US2] Implement generic corpus persistence — `write_case`, `load_corpus(root) -> Iterable[Case]`, manifest read/write/enumerate per corpus-format.md — in `src/ailf/core/datasets/corpus.py`
-- [ ] T020 [US2] Export the corpus helpers from `src/ailf/core/datasets/__init__.py` (after T019, sequential with T006)
-- [ ] T021 [US2] Implement `generate_combined_case(flavors, *, seed, configs=None) -> Case` (applies multiple injectors, one `DriftLabel` per flavor) in `src/ailf/pipelines/drift/datasets.py`
-- [ ] T022 [US2] Implement the committed drift build config — the single source of truth for corpus composition: a knob sweep producing **exactly 25 cases per flavor (100 single-flavor) + 10 combined = 110 total**, with per-case onset/magnitude/Δt varied deterministically by case index — plus `build_corpus(root, *, base_seed, overwrite=False)` with deterministic per-case seeds, a `load_corpus` re-export, and the `__main__` CLI entry in `src/ailf/pipelines/drift/corpus.py` (depends on T019, T021)
+- [X] T019 [P] [US2] Implement generic corpus persistence — `write_case`, `load_corpus(root) -> Iterable[Case]`, manifest read/write/enumerate per corpus-format.md — in `src/ailf/core/datasets/corpus.py`
+- [X] T020 [US2] Export the corpus helpers from `src/ailf/core/datasets/__init__.py` (after T019, sequential with T006)
+- [X] T021 [US2] Implement `generate_combined_case(flavors, *, seed, configs=None) -> Case` (applies multiple injectors, one `DriftLabel` per flavor) in `src/ailf/pipelines/drift/datasets.py`
+- [X] T022 [US2] Implement the committed drift build config — the single source of truth for corpus composition: a knob sweep producing **exactly 25 cases per flavor (100 single-flavor) + 10 combined = 110 total**, with per-case onset/magnitude/Δt varied deterministically by case index — plus `build_corpus(root, *, base_seed, overwrite=False)` with deterministic per-case seeds, a `load_corpus` re-export, and the `__main__` CLI entry in `src/ailf/pipelines/drift/corpus.py` (depends on T019, T021)
 
 **Checkpoint**: The reproducible on-disk corpus exists and is enumerable. SC-003, SC-007 satisfied.
 
@@ -113,11 +113,11 @@ reproducibility, and knob-validation rejections MUST be written and fail before 
 
 ### Tests for User Story 3 (write FIRST, ensure they FAIL) ⚠️
 
-- [ ] T023 [P] [US3] Test ambiguous-band generation and narrow-vs-wide change concentration (label records the given `transition_width`; measurable difference in how concentrated the transition is) in `tests/pipelines/drift/test_ambiguous.py`
+- [X] T023 [P] [US3] Test ambiguous-band generation and narrow-vs-wide change concentration (label records the given `transition_width`; measurable difference in how concentrated the transition is) in `tests/pipelines/drift/test_ambiguous.py`
 
 ### Implementation for User Story 3
 
-- [ ] T024 [US3] Add named transition-width bands (e.g. `narrow` / `gradual` / `ambiguous`) as documented constants/helper without hard-committing the cross-team Δt threshold (spec Dependencies), in `src/ailf/pipelines/drift/datasets.py`
+- [X] T024 [US3] Add named transition-width bands (e.g. `narrow` / `gradual` / `ambiguous`) as documented constants/helper without hard-committing the cross-team Δt threshold (spec Dependencies), in `src/ailf/pipelines/drift/datasets.py`
 
 **Checkpoint**: Ambiguous cases controllable on demand. SC-004 satisfied.
 
@@ -131,11 +131,11 @@ reproducibility, and knob-validation rejections MUST be written and fail before 
 
 ### Tests for User Story 4 (write FIRST, ensure they FAIL) ⚠️
 
-- [ ] T025 [P] [US4] Test real-loader shape/flags (univariate `Case`, `labeled=False`, `labels==[]`, `metadata["qualitative_drift"]` set), CO₂ regular-monthly frequency (no gaps), and `list_real_series()` enumerates ≈2 in `tests/pipelines/drift/test_real_series.py`
+- [X] T025 [P] [US4] Test real-loader shape/flags (univariate `Case`, `labeled=False`, `labels==[]`, `metadata["qualitative_drift"]` set), CO₂ regular-monthly frequency (no gaps), and `list_real_series()` enumerates ≈2 in `tests/pipelines/drift/test_real_series.py`
 
 ### Implementation for User Story 4
 
-- [ ] T026 [US4] Implement `load_air_passengers()` (Darts `AirPassengersDataset`), `load_mauna_loa_co2()` (`statsmodels.datasets.co2`, resampled to regular monthly), and `list_real_series()` returning `Case`s with `labeled=False` and documented `metadata.qualitative_drift`, in `src/ailf/pipelines/drift/datasets.py`
+- [X] T026 [US4] Implement `load_air_passengers()` (Darts `AirPassengersDataset`), `load_mauna_loa_co2()` (`statsmodels.datasets.co2`, resampled to regular monthly), and `list_real_series()` returning `Case`s with `labeled=False` and documented `metadata.qualitative_drift`, in `src/ailf/pipelines/drift/datasets.py`
 
 **Checkpoint**: Real demo series load via the shared interface, clearly unlabeled. SC-005 satisfied.
 
@@ -149,12 +149,12 @@ reproducibility, and knob-validation rejections MUST be written and fail before 
 
 ### Tests for User Story 5 (write FIRST, ensure they FAIL) ⚠️
 
-- [ ] T027 [P] [US5] Test overlay structure headlessly — figure contains observations + rolling-mean + rolling-std traces, onset marker present iff `case.labeled` (synthetic vs real), asserting on traces/shapes without rendering — in `tests/core/datasets/test_viz.py`
+- [X] T027 [P] [US5] Test overlay structure headlessly — figure contains observations + rolling-mean + rolling-std traces, onset marker present iff `case.labeled` (synthetic vs real), asserting on traces/shapes without rendering — in `tests/core/datasets/test_viz.py`
 
 ### Implementation for User Story 5
 
-- [ ] T028 [US5] Implement `plot_drift_overlay(case, *, window=None) -> plotly.graph_objects.Figure` and `save_drift_overlay(case, out_dir="reports/", *, window=None) -> (png_path, html_path)` (HTML via `write_html`, PNG via `write_image`/kaleido) in `src/ailf/core/datasets/viz.py`
-- [ ] T029 [US5] Export the viz functions from `src/ailf/core/datasets/__init__.py` (sequential with T006, T020)
+- [X] T028 [US5] Implement `plot_drift_overlay(case, *, window=None) -> plotly.graph_objects.Figure` and `save_drift_overlay(case, out_dir="reports/", *, window=None) -> (png_path, html_path)` (HTML via `write_html`, PNG via `write_image`/kaleido) in `src/ailf/core/datasets/viz.py`
+- [X] T029 [US5] Export the viz functions from `src/ailf/core/datasets/__init__.py` (sequential with T006, T020)
 
 **Checkpoint**: Any case is visually confirmable. SC-006 satisfied.
 
@@ -162,9 +162,9 @@ reproducibility, and knob-validation rejections MUST be written and fail before 
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T030 [P] Add concise module docstrings to `src/ailf/core/datasets/{case,corpus,viz}.py` and `src/ailf/pipelines/drift/{datasets,corpus}.py` documenting the public surface (only where the WHY is non-obvious)
-- [ ] T031 Run the full quickstart.md scenarios end-to-end (§2–§6) and confirm each behaves as documented (generate, ambiguous, build+load corpus, real loaders, overlay artifacts)
-- [ ] T032 Run `uv run --extra dev pytest tests/pipelines/drift tests/core/datasets` and confirm green; keep existing core tests green (Principle VII)
+- [X] T030 [P] Add concise module docstrings to `src/ailf/core/datasets/{case,corpus,viz}.py` and `src/ailf/pipelines/drift/{datasets,corpus}.py` documenting the public surface (only where the WHY is non-obvious)
+- [X] T031 Run the full quickstart.md scenarios end-to-end (§2–§6) and confirm each behaves as documented (generate, ambiguous, build+load corpus, real loaders, overlay artifacts)
+- [X] T032 Run `uv run --extra dev pytest tests/pipelines/drift tests/core/datasets` and confirm green; keep existing core tests green (Principle VII)
 
 ---
 
