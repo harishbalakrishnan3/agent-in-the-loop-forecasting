@@ -21,7 +21,7 @@ Generate one single-flavor labeled drift case.
   - `affected_component` on the label matches the flavor's Prophet component (FR-002).
 - **Errors** (raise a validation error, do not emit a mislabeled case — FR-009):
   - onset too close to either boundary (no reference regime / no room for drift);
-  - `transition_width < 1` or `onset + transition_width` past end (reject or clamp-and-relabel);
+  - `transition_width < 1` or `onset + transition_width` past end (reject — no silent clamp);
   - `magnitude == 0`;
   - `variance_inflation` with `base_noise <= 0`;
   - `seasonal_amplitude` without seasonality configured.

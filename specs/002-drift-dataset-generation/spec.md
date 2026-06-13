@@ -172,8 +172,10 @@ series and confirm the same overlay renders without an onset marker.
   points before it (no stable reference regime) or too few after it (drift cannot develop)? The
   generator MUST reject or clearly constrain such requests rather than emit a mislabeled case.
 - **Transition width exceeding remaining length**: What happens when transition width + onset
-  runs past the end of the series? The generator MUST handle this deterministically (reject or
-  clamp, with the label reflecting the actual realized transition).
+  runs past the end of the series? The generator MUST **reject** such a request with a clear
+  validation error rather than silently clamping — a clamp would make the label's realized width
+  disagree with the requested `transition_width`, exactly the label/config contradiction FR-009
+  exists to prevent.
 - **Zero / negative magnitude**: A drift magnitude of zero would yield a series with no actual
   drift but a label claiming drift. The generator MUST prevent a label that contradicts the
   produced series.

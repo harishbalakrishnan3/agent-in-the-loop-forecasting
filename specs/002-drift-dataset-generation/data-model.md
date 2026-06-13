@@ -39,8 +39,8 @@ defaults.
 **Validation rules** (FR-009; map to spec Edge Cases):
 - `0 < onset < length`, with enough points before (`onset ≥ min_reference`) and after
   (`length - onset ≥ min_drift`) — else reject (no reference / no room for drift).
-- `transition_width ≥ 1` and `onset + transition_width ≤ length` (reject or clamp; if clamped,
-  label records the realized width).
+- `transition_width ≥ 1` and `onset + transition_width ≤ length` — else reject (a clamp would
+  desync the label's realized width from `config.transition_width`).
 - `magnitude != 0` (a zero-magnitude case would contradict a drift label).
 - `variance_inflation` ⇒ `base_noise > 0`.
 - `seasonal_amplitude` ⇒ `seasonality_period` is set and `seasonality_amplitude > 0`.
