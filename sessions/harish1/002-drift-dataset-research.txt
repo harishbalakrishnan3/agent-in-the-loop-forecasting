@@ -1,0 +1,529 @@
+ ▐▛███▜▌   Claude Code v2.1.153
+▝▜█████▛▘  claude-opus-4-8 · Amazon Bedrock
+  ▘▘ ▝▝    ~/Documents/Learning/IISc/agent-in-the-loop-forecasting
+
+
+❯ /model                                                                        
+  ⎿  Set model to global.anthropic.claude-opus-4-8 and saved as your default for
+     new sessions
+
+❯ I am working on timeseries drift - I want you to search the web and help me   
+  with figuring out standard datasets out there for timeseries drift.           
+  I also want to visualize these datasets so that I can visually confirm these  
+  are good. Are there any python libraries can help with identifying drift ?    
+                                                                                
+  Don't code yet, lets have a conversation first.                               
+
+⏺ I'll research standard time-series drift datasets and Python libraries for
+  you. Let me load the web tools first.
+
+⏺ Let me research datasets and drift-detection libraries in parallel.
+
+⏺ Fetch(https://www.google.com/search?q=standard+benchmark+datasets+time+series+
+       concept+drift+changepoint+detection)
+  ⎿  Received 88.1KB (200 OK)
+
+⏺ Fetch(https://github.com/alipsgh/data-streams)
+  ⎿  Received 260.6KB (200 OK)
+
+⏺ Fetch(https://www.google.com/search?q=python+libraries+concept+drift+detection
+       +time+series+river+alibi-detect+frouros)
+  ⎿  Received 88.6KB (200 OK)
+
+⏺ Google search blocks WebFetch. Let me go directly to the library docs.
+
+⏺ Fetch(https://riverml.xyz/latest/api/drift/ADWIN/)
+  ⎿  Received 440.9KB (200 OK)
+
+⏺ Fetch(https://frouros.readthedocs.io/en/latest/)
+  ⎿  Received 27.5KB (200 OK)
+
+⏺ Fetch(https://github.com/TimeEval/TimeEval)
+  ⎿  Received 343.1KB (200 OK)
+
+⏺ I've got a good picture. Let me share what I found, framed around your
+  project's needs.
+
+  First, a key distinction for your project
+
+  Your CLAUDE.md says tools are tested against synthetic data with KNOWN 
+  injected ground truth, and the agent's job is to diagnose
+  drift/changepoints/outliers, not forecast. That actually splits your dataset
+  needs into two buckets:
+
+  1. Synthetic generators (for unit-testing the diagnostic tool) — you inject
+  drift at a known index, then assert the tool finds it. This is where most of
+  your test value lives.
+  2. Real-world / benchmark datasets (for end-to-end demos + the eval/LLM-judge)
+   — messier, no perfect ground truth, but they prove the agent works on
+  realistic data.
+
+  Worth being clear which one you care about more right now.
+
+  Standard datasets I found
+
+  Real-world concept-drift classics (from streaming-ML literature):
+  - Electricity (ELEC2) — ~45k rows, price-up/down; the canonical drift
+  benchmark. Has real seasonal + gradual drift.
+  - Forest CoverType — 581k rows, gradual drift.
+  - Poker Hand — 1M rows.
+  - NOAA Weather, Airlines, Nursery, Adult — other commonly-cited evolving
+  streams.
+
+  Changepoint-specific:
+  - TCPD (Turing Change Point Dataset) — 37 real time series curated
+  specifically for changepoint detection, with human-annotated ground truth.
+  Probably the best "real but labeled" option for your changepoint angle.
+
+  Anomaly/outlier (and drift-adjacent):
+  - NAB (Numenta Anomaly Benchmark) — 58 labeled real+artificial streams with
+  anomaly windows.
+  - TimeEval — a huge harness wrapping 700+ datasets with labels; heavyweight
+  (Docker-based) but comprehensive.
+
+  Synthetic drift generators (you control the ground truth):
+  - Sine1/Sine2, STAGGER, Mixed, LED, Circles, Agrawal, SEA, Hyperplane — the
+  standard textbook generators for abrupt vs. gradual drift. river ships several
+   of these built-in.
+
+  Python libraries for drift detection
+
+  - River — streaming-first. ADWIN, KSWIN, Page-Hinkley, DDM/EDDM/HDDM. Also has
+   the synthetic drift generators above. Great fit since you're diagnosing
+  incrementally.
+  - Frouros — the most complete drift toolkit: concept-drift (CUSUM, BOCD,
+  ADWIN, DDM family, STEPD) and data-drift (KS, MMD, PSI, Jensen-Shannon, energy
+   distance, etc.). Single-purpose, well-documented.
+  - ruptures — the library for offline changepoint detection (PELT, BinSeg,
+  Window, Dynp). Directly maps to your "changepoint" failure mode.
+  - alibi-detect — drift + outlier detection, more ML/production-monitoring
+  flavored.
+
+  For visualization, there's no need for anything exotic — matplotlib/plotly
+  with the series plus vertical lines at the known/detected change indices is
+  the standard eyeball check. The point is to overlay injected ground truth
+  against detected points.
+
+  A couple of questions before we go further
+
+  1. Which bucket matters most right now — nailing the synthetic generators (for
+   tool unit tests), or picking 1-2 real datasets for the demo/eval?
+  2. What flavors of drift are in scope for your tool — abrupt changepoints,
+  gradual concept drift, distributional/covariate drift, or all three? They need
+   different detectors and different datasets.
+  3. Do you want me to put together a visualization notebook/script that loads a
+   few candidate datasets and overlays drift markers, so you can eyeball them —
+  or stay research-only for now?
+
+  What's your instinct on these?
+
+✻ Baked for 57s
+
+❯ What is "streaming data" or "streaming-first"? Isn't abrupt drift technically 
+   called "changepoint" ?                                                       
+
+⏺ Good questions, both get at terminology that's used loosely in this field.
+
+  "Streaming data" / "streaming-first"
+
+  Streaming = data arrives one observation at a time, in order, and you process
+  each point as it comes — you don't have the whole series in memory. Think of a
+   live sensor feed or stock ticks: you see x_t, react, then see x_{t+1}. The
+  opposite is batch/offline, where you have the entire array up front and can
+  look forwards and backwards freely.
+
+  So a streaming-first library (like river) is built around the assumption that
+  you feed it points one at a time and it updates its internal state
+  incrementally — detector.update(x) returns "drift / no drift" right now, using
+   only what it's seen so far. It can't peek at the future.
+
+  An offline library (like ruptures) takes the whole series at once and finds
+  the best split points by considering all the data globally.
+
+  This matters for your project: if your diagnostic tool gets a finished CSV,
+  you're in the offline world (ruptures, Frouros' batch detectors). If it's
+  meant to mimic monitoring a live pipeline, you're streaming (river). Most
+  "junior analyst diagnoses a dataset handed to them" framings are offline.
+
+  "Isn't abrupt drift just a changepoint?"
+
+  You're basically right, and the sloppiness is real. The distinction is about
+  what changed, and the two communities use different words:
+
+  - Changepoint detection (statistics/signal processing) cares about a change in
+   the distribution of the observed series itself — usually a shift in mean or
+  variance of x_t. Abrupt, instantaneous. "The sensor reading jumped at t=500."
+  - Concept drift (streaming ML) cares about a change in the relationship P(y | 
+  X) — the mapping from features to target. The input may look identical, but
+  the correct label changed. "Same weather features, but now they predict rain
+  instead of sun."
+
+  So:
+  - An abrupt changepoint in a univariate series ≈ abrupt drift. Same thing,
+  different vocabulary.
+  - But concept drift is broader — it can be gradual (slow rotation of a
+  decision boundary over thousands of points), or it can happen with no visible 
+  change in the raw series at all, which a changepoint detector would completely
+   miss.
+
+  A rough map:
+
+  ┌───────────────────────┬────────────────────┬───────────┬────────────────┐
+  │         Term          │    What shifts     │ Typical   │    Tooling     │
+  │                       │                    │   shape   │                │
+  ├───────────────────────┼────────────────────┼───────────┼────────────────┤
+  │ Changepoint           │ distribution of    │ abrupt    │ ruptures, BOCD │
+  │                       │ x_t (mean/var)     │           │                │
+  ├───────────────────────┼────────────────────┼───────────┼────────────────┤
+  │ Abrupt concept drift  │ P(y|X) suddenly    │ abrupt    │ DDM, ADWIN     │
+  ├───────────────────────┼────────────────────┼───────────┼────────────────┤
+  │ Gradual/incremental   │ P(y|X) slowly      │ gradual   │ EDDM,          │
+  │ drift                 │                    │           │ Page-Hinkley   │
+  ├───────────────────────┼────────────────────┼───────────┼────────────────┤
+  │ Covariate/data drift  │ P(X)               │ any       │ KS test, MMD,  │
+  │                       │                    │           │ PSI            │
+  └───────────────────────┴────────────────────┴───────────┴────────────────┘
+
+  For your tool, the practical takeaway: decide whether you're diagnosing the 
+  raw series (changepoint framing — simpler, univariate, ruptures-friendly) or a
+   feature→target relationship (concept-drift framing — needs labels,
+  river/Frouros). They're genuinely different problems and pull in different
+  datasets.
+
+  Which framing fits what you're picturing for the tool?
+
+✻ Baked for 18s
+
+※ recap: We're choosing datasets and Python libraries for your time-series drift diagnostic tool, and just clarified streaming vs. offline and changepoint vs. concept drift. Next: decide whether the tool diagnoses the raw series or a feature-to-target relationship, since that drives dataset and library choices. (disable recaps in /config)
+
+❯ Read the project proposal in docs/ directory. We are dealing with univariate  
+  timeseries only.                                                              
+
+  Read 2 files, listed 1 directory (ctrl+o to expand)
+
+⏺ This changes my earlier framing in one important way — let me recalibrate,
+  because the proposal defines "drift" more narrowly than the generic
+  streaming-ML sense I described earlier.
+
+  What "drift" means in your project (§2.5.1 + Figure 3)
+
+  Your drift is univariate, forecasting-flavored: a shift in the target's
+  distribution, the residual distribution, or a deterioration in forecast error 
+  after some date. Crucially, Figure 3 vs Figure 4 draws the line you asked
+  about last time:
+
+  - Drift (your task, with Sowmya) = the series gradually moves to a new
+  range/level/slope, with no single obvious break date.
+  - Changepoint (Goutham/Meena/Dinesh's task) = an abrupt, localizable break.
+
+  So in this project's own vocabulary, your earlier instinct is explicitly
+  resolved: abrupt = changepoint, gradual = drift, and they're deliberately
+  split across two teams. Your scope is the gradual, no-clean-break case. (And
+  forget my earlier P(y|X)/needs-labels tangent — that's not your setting. You
+  have no feature matrix; it's one column of values over time.)
+
+  This also reshapes the dataset question: because the agent is graded on
+  diagnostic correctness with known injected ground truth (§4.2), your primary
+  deliverable is a synthetic generator with knobs, not a found dataset. Real
+  datasets are secondary — they're for the "reproduce the issue" step (§2 of the
+   plan) and the demo, where there's no labeled drift-onset.
+
+  Datasets, split by purpose
+
+  Synthetic (your main job — Darts is the house tool, per the plan):
+  Darts' utils.timeseries_generation gives you the building blocks —
+  linear_timeseries, sine_timeseries, gaussian_timeseries,
+  random_walk_timeseries — which you compose into a base series and then inject
+  drift: a slow trend-slope change, a gradual mean ramp, or a slow variance
+  inflation, starting at a known index. The "knobs" the proposal asks for: drift
+   onset, drift magnitude/slope, drift duration (gradual vs steeper), noise
+  level, seasonality, seed.
+
+  Real univariate series that genuinely exhibit gradual drift (for the demo /
+  reproducing forecast degradation):
+  - Air Passengers — textbook upward trend + growing seasonal amplitude
+  (multiplicative drift). In Darts' built-in datasets.
+  - Mauna Loa CO₂ — slow rising level + seasonality.
+  - M3 / M4 / M5 competition series — large pools; many have trend drift and
+  regime shifts.
+  - Tourism, Australian energy demand — also in Darts datasets.
+  - ELEC2 (Electricity) — the classic drift benchmark, but it's framed for
+  streaming classification (price up/down), so it's a slightly awkward fit for
+  univariate forecasting. I'd mention it but not lead with it.
+
+  The honest caveat: none of these real ones come with "drift starts at t=X"
+  labels — which is exactly why the proposal leans on synthetic for evals.
+
+  Libraries for detecting univariate drift
+
+  Given the proposal's definition (reference regime vs current regime, or
+  residual-error degradation), the natural methods are:
+
+  - scipy.stats — two-sample KS test / Mann-Whitney between a reference window
+  and a recent window. Often sufficient for univariate distributional drift, and
+   dependency-free.
+  - Frouros — batch data-drift via distances (PSI, Jensen-Shannon, KS) between
+  reference vs current window. Maps almost 1:1 onto Figure 3's two shaded
+  regimes.
+  - river — streaming Page-Hinkley and ADWIN run nicely on a single signal (or
+  on the forecast residual stream); Page-Hinkley in particular is built for
+  gradual drift in a 1-D signal.
+  - alibi-detect — KS/MMD reference-window drift detectors.
+  - statsmodels — CUSUM on recursive residuals for structural-stability testing;
+   relevant if you define drift via forecast-residual degradation.
+  - ruptures — really the changepoint team's tool, but worth knowing so your
+  drift tool can differentiate gradual drift from an abrupt break (the proposal
+  stresses that distinction).
+
+  My instinct: build the tool around windowed two-sample distance/test
+  (reference vs recent) plus a rolling-residual-error trend signal — that's the
+  most defensible match to your definition, and it's easy to unit-test against
+  injected ground truth.
+
+  On visualization
+
+  To "visually confirm the datasets are good" (i.e., they actually contain
+  drift), the standard eyeball check is: plot the series + rolling mean +
+  rolling std, and shade/mark the injected drift onset — basically reproducing
+  Figure 3 for each generated case. For real datasets, the same rolling-stats
+  overlay shows whether the level/spread genuinely wanders. That's plain
+  matplotlib; nothing exotic needed.
+
+  A few things to pin down before any code
+
+  1. Drift definition for the tool — target-distribution shift,
+  residual-distribution shift, or forecast-error degradation after a date? (The
+  proposal lists all three; picking one as primary shapes the detector and the
+  generator.)
+  2. Synthetic-first? — I'd treat the Darts generator as the deliverable and
+  pick ~2 real series (Air Passengers + one more) just for the demo. Agree?
+  3. Drift flavors to generate — slow trend-slope change, gradual mean ramp,
+  variance inflation — all three, or start with one?
+
+  Want to talk through the generator design and the detection approach next, or
+  should I sketch the candidate real datasets into a quick visualization plan
+  first?
+
+✻ Cogitated for 1m 28s
+
+※ recap: We're scoping the drift use-case: deciding datasets and detection libraries for a synthetic-first drift generator built on Darts. Next, you need to confirm the drift definition, whether to go synthetic-first with two real demo series, and which drift flavors to generate. (disable recaps in /config)
+❯ 1. Forecast error degradation happens for both changepoint and drift. So how  
+  to differentiate between a drift and a changepoint i.e., abrupt versus        
+  gradual ? 2. Yes syntheti first and real for demo 3. All three, plus does it  
+  make sense to have gradual seasonality change as well ? Don't write any code  
+  yet, just have a conversation                                                 
+
+⏺ Good questions. Let me take them in turn — #1 is the conceptually important
+  one.
+
+  1. Drift vs changepoint — how to tell abrupt from gradual
+
+  You're right that forecast-error degradation is a shared symptom — it can't be
+   the discriminator. The distinction has to come from the temporal profile of 
+  the change itself, not from the fact that error went up. A few complementary
+  ways to separate them:
+
+  (a) The shape of the transition. This is the core signal.
+  - A changepoint is localized: the level/slope jumps within a narrow window,
+  and before/after it the series is stable. If you compute a rolling mean, you
+  see a step.
+  - Drift is distributed: the level/slope moves continuously over many points
+  with no single break. The rolling mean ramps.
+
+  So the question becomes "is the change concentrated at one index, or spread
+  across an interval?" — and that's measurable.
+
+  (b) How error degrades over time, not just that it does.
+  - After a changepoint, forecast error jumps then plateaus (the model is wrong
+  by a fixed offset until refit). A step in the residual mean.
+  - Under drift, error grows progressively — the gap between the stale model and
+   the moving series widens monotonically. A ramp/trend in the residuals.
+
+  So the temporal profile of the residual error is itself the discriminator,
+  even though both "degrade."
+
+  (c) Detector behavior / cross-checking. This is the pragmatic version, and it
+  fits your two-team split nicely:
+  - A changepoint detector (ruptures/PELT, BOCD) will return a confident single 
+  index with a sharp penalty drop for an abrupt break, but will either return
+  nothing or smear many weak candidates across a gradual drift.
+  - A windowed two-sample drift test (KS/PSI, reference vs recent) fires for
+  both — but if you slide the reference window, an abrupt break flips the test
+  statistic suddenly at one boundary, whereas drift makes it climb gradually.
+
+  So you can diagnose by agreement: changepoint detector fires sharply +
+  residual steps → changepoint. Drift test climbs gradually + changepoint
+  detector is unconfident + residual ramps → drift.
+
+  The honest caveat — it's a spectrum, not a binary. A "fast drift" over 5
+  points and a "soft changepoint" smeared over 5 points are genuinely the same
+  thing; the label depends on a window/timescale threshold you choose. This
+  matters for your project in two ways:
+  - Your generator should parameterize the transition width (Δt). Δt ≈ 1 →
+  changepoint; Δt large → drift; and you can deliberately generate the ambiguous
+   middle to test whether the agent (and the tools) handle it gracefully.
+  - The proposal already nods at this (§2.5.3: "a single extreme point may
+  justify outlier treatment; a persistent shift should be treated as drift or a
+  changepoint"). The agent's interpretation of which one it is — and admitting
+  uncertainty in the boundary cases — is part of what the evals grade.
+
+  This is also a natural coordination point with the changepoint team: you two
+  should agree on the transition-width convention so your synthetic cases don't
+  overlap ambiguously, and so the agent has a consistent rule for labeling.
+
+  2. Synthetic-first, real-for-demo
+
+  Agreed and noted. Air Passengers as the anchor demo series (clean
+  multiplicative drift everyone recognizes), plus one more — I'd lean Mauna Loa
+  CO₂ for a slow-level-drift contrast. We'll firm that up when we get there.
+
+  3. The three flavors + gradual seasonality
+
+  All three — slow trend-slope change, gradual mean ramp, gradual variance
+  inflation — yes.
+
+  On gradual seasonality change: it makes strong sense, and arguably it's the
+  most forecasting-relevant flavor of the four for this project. Here's why:
+
+  - The Prophet decomposition the proposal centers on is y = g(t) + s(t) + h(t) 
+  + ε. Drift can occur in any component. Trend drift hits g(t); seasonal drift 
+  hits s(t) — and Prophet has a specific intervention for it (§2.5.5: "switch
+  additive↔multiplicative seasonality," "add/adjust seasonality"). So a
+  seasonal-drift case gives the agent a meaningful, distinct intervention to
+  choose, rather than always landing on "retrain on recent window."
+  - It maps cleanly onto a real dataset you already have: Air Passengers is
+  growing seasonal amplitude — i.e., multiplicative seasonality, which is
+  gradual seasonal drift. So your synthetic seasonal-drift case has a real-world
+   demo twin.
+
+  Two sub-flavors worth distinguishing when you design it:
+  - Amplitude drift — seasonal swings grow/shrink over time (the Air Passengers
+  case; tests additive vs multiplicative).
+  - Phase/period drift — the seasonal pattern shifts or its period changes
+  (rarer, harder, probably out of scope unless you want a stretch case).
+
+  So I'd say: four flavors — trend-slope drift, mean-level ramp, variance
+  inflation, and seasonal-amplitude drift — with transition-width as a shared
+  knob across all of them. That covers each Prophet component and gives the
+  agent a distinct intervention per flavor.
+
+  One framing question before we design the generator: do you want each
+  synthetic case to contain exactly one injected drift flavor (cleanest for
+  precision/recall evals — you know exactly what to detect), or should some
+  cases combine flavors (more realistic, but messier ground truth)? My instinct
+  is single-flavor for the core eval set, with a few combined cases as harder
+  stretch tests — but what's your lean?
+
+✻ Churned for 34s
+
+❯ Okay, Summarize this into a spec-kit-ready feature brief. Keep it focused on  
+  WHAT and WHY, not implementation code. We are going to focus only on dataset  
+  procurement and generation.                                                   
+
+⏺ Here's a spec-kit-ready feature brief, scoped to dataset procurement and 
+  generation only. It's written as WHAT/WHY so you can hand it to
+  /speckit.specify.
+
+  ---
+  Feature Brief: Drift Dataset Generation & Procurement
+
+  Why
+
+  The agent-in-the-loop system is graded on diagnostic correctness
+  (precision/recall/false-positive rate) for drift, which requires test cases
+  with known injected ground truth — something no real dataset provides. This
+  feature delivers the drift-team's data layer: a parameterized synthetic
+  generator (the primary deliverable, for tool unit tests and agent evals) plus
+  a small set of curated real univariate series (for the demo and the "reproduce
+   the issue" step). Without labeled drift onsets, none of the downstream
+  diagnostic evals are measurable, so this is foundational.
+
+  Scope
+
+  In scope: univariate time series only; gradual drift (the abrupt/localized
+  case is the changepoint team's domain). Dataset generation and procurement —
+  not detection tools, not the agent, not forecasting.
+
+  Out of scope: changepoints, outliers, multivariate series, the diagnostic
+  tools themselves.
+
+  What — Synthetic Generator (primary)
+
+  A seeded, parameterized generator producing univariate series with injected,
+  ground-truth-labeled drift. It must support four drift flavors, each mapping
+  to a distinct Prophet component (y = g(t) + s(t) + h(t) + ε) and thus a
+  distinct downstream intervention:
+
+  1. Trend-slope drift — gradual change in trend slope (g(t)).
+  2. Mean-level ramp — gradual shift in level (g(t)).
+  3. Variance inflation — gradual growth in noise spread (ε).
+  4. Seasonal-amplitude drift — seasonal swings grow/shrink over time, i.e.
+  additive→multiplicative (s(t)).
+
+  Required knobs (per the proposal's "knobs/parameters" requirement):
+  - drift onset (start index/date)
+  - drift magnitude
+  - transition width (Δt) — the gradual-vs-abrupt control; this is the shared
+  parameter that distinguishes drift from a changepoint, and lets us generate
+  deliberately ambiguous middle-ground cases
+  - drift duration
+  - base noise level
+  - seasonality (period, base amplitude)
+  - random seed (reproducibility is mandatory)
+
+  Ground-truth labels emitted with each case: drift flavor, onset index,
+  transition width, affected component — sufficient to compute detection
+  precision/recall.
+
+  Case composition: core eval set = one injected flavor per case (clean ground
+  truth for metrics); plus a small set of combined-flavor cases as harder
+  stretch tests.
+
+  What — Real Datasets (secondary, demo only)
+
+  Curate ~2 real univariate series that genuinely exhibit gradual drift, for the
+   demo and forecast-degradation reproduction. Candidates:
+  - Air Passengers — growing seasonal amplitude (real-world twin of synthetic
+  seasonal-amplitude drift).
+  - Mauna Loa CO₂ — slow rising level + seasonality.
+
+  Accepted caveat: real series have no labeled drift onset, so they are excluded
+   from precision/recall evals — they exist only for qualitative demonstration.
+
+  Key cross-team decision to encode
+
+  Drift and changepoints differ only by transition width; the boundary is a
+  chosen threshold, not a natural binary. The drift and changepoint teams must
+  agree on the transition-width convention so generated cases don't ambiguously
+  overlap and the agent has a consistent labeling rule. The generator must make
+  Δt explicit precisely so this boundary is controllable and testable.
+
+  Visual confirmation (acceptance aid)
+
+  Each generated/curated series should be visually verifiable as actually
+  containing drift via a standard overlay: series + rolling mean + rolling std,
+  with the injected onset marked (reproducing Figure 3 of the proposal). This is
+   the eyeball gate for "is this dataset good?"
+
+  Success criteria
+
+  - Generator produces all four flavors, fully parameterized and seeded
+  (reproducible).
+  - Every synthetic case carries machine-readable ground-truth labels usable for
+   precision/recall.
+  - Ambiguous (mid-Δt) cases can be generated on demand.
+  - ~2 real demo series are loadable through the same interface.
+  - A visualization confirms drift presence for any case.
+
+  ---
+  Two open items I'd flag inside the spec rather than decide for you: (a) the
+  exact transition-width threshold — needs the changepoint team's sign-off; (b)
+  whether real datasets load through the identical interface as synthetic
+  (cleaner for the agent) or a separate loader.
+
+  Want me to also capture the drift-vs-changepoint convention as a project
+  memory so it persists across sessions, since it's a cross-team agreement?
+
+✻ Cogitated for 31s
+
+※ recap: We're scoping the drift team's data layer: a seeded synthetic generator with four labeled drift flavors plus two real demo series. I've drafted a spec-kit-ready feature brief; next action is feeding it to /speckit.specify. (disable recaps in /config)

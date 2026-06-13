@@ -1,0 +1,1936 @@
+ ▐▛███▜▌   Claude Code v2.1.153
+▝▜█████▛▘  claude-opus-4-8 · Amazon Bedrock
+  ▘▘ ▝▝    ~/Documents/Learning/IISc/agent-in-the-loop-forecasting
+
+
+❯ /model                                                                        
+  ⎿  Set model to global.anthropic.claude-opus-4-8 and saved as your default for
+     new sessions
+
+❯ /effort                                                                       
+  ⎿  Set effort level to max (this session only): Maximum capability with deepest
+      reasoning
+
+❯ /speckit-tasks                                                                
+
+⏺ I'll generate the tasks.md for the drift dataset generation feature. Let me
+  start with the setup script and design documents.
+
+⏺ Bash(.specify/scripts/bash/setup-tasks.sh --json)
+  ⎿  {
+       "FEATURE_DIR": "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the
+     -loop-forecasting/specs/002-drift-dataset-generation",
+     … +9 lines (ctrl+o to expand)
+
+⏺ Let me load the design documents and template in parallel.
+
+  Read 6 files, listed 1 directory (ctrl+o to expand)
+
+⏺ Let me read the two contract files to complete the picture.
+
+  Searched for 1 pattern, read 2 files (ctrl+o to expand)
+
+⏺ I have everything I need. No before_tasks/after_tasks hooks are registered
+  (only after_specify/after_plan), so no pre/post task hooks apply. The spec
+  mandates test-first (Principle II, NON-NEGOTIABLE; research R9), so I'll
+  include test tasks. Writing tasks.md now.
+
+⏺ Write(specs/002-drift-dataset-generation/tasks.md)
+  ⎿  Wrote 234 lines to specs/002-drift-dataset-generation/tasks.md
+      2 description: "Task list for Drift Dataset Generation & Procuremen
+        t"
+      3 ---
+      4 
+      5 # Tasks: Drift Dataset Generation & Procurement
+      7 **Input**: Design documents from `/specs/002-drift-dataset-genera
+        tion/`
+      8 
+      9 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, 
+        contracts/ (generator-api.md, corpus-format.md), quickstart.md
+     … +401 lines (ctrl+o to expand)
+
+⏺ Created specs/002-drift-dataset-generation/tasks.md.
+
+  Extension hooks: .specify/extensions.yml registers only after_specify and
+  after_plan hooks — there are no before_tasks or after_tasks hooks, so none
+  were dispatched.
+
+  Completion Report
+
+  - Total tasks: 32 (T001–T032)
+  - Per user story:
+    - Setup: 3 (T001–T003)
+    - Foundational (Case container): 3 (T004–T006)
+    - US1 — single-flavor labeled generation (P1, 🎯 MVP): 9 (T007–T015)
+    - US2 — reproducible eval corpus (P1): 7 (T016–T022)
+    - US3 — ambiguous mid-Δt cases (P2): 2 (T023–T024)
+    - US4 — real demo series loaders (P2): 2 (T025–T026)
+    - US5 — visual-confirmation overlay (P3): 3 (T027–T029)
+    - Polish: 3 (T030–T032)
+  - Parallel opportunities: all per-story test files are [P] (T007–T010,
+  T016–T018, T023, T025, T027); generic-core T019 can run alongside US1; Setup
+  T002/T003 parallel. Key constraint flagged: US1, US2(T021), US3, and US4 all
+  edit src/ailf/pipelines/drift/datasets.py, so those implementation tasks are
+  deliberately not parallel and are sequenced.
+  - Independent test criteria: stated per phase (e.g. US1 = reproducible labeled
+   case for all four flavors; US2 = byte-identical corpus on re-run +
+  enumerable; US5 = traces/marker assertable headlessly), mirroring quickstart
+  §2–§6.
+  - Suggested MVP: User Story 1 (Phases 1–3) — satisfies SC-001/SC-002 and
+  unblocks the future drift-detection tool's unit tests.
+  - Format validation: all 32 tasks use - [ ] T### [P?] [US#?] description + 
+  file path; story labels appear only on US phases (Setup/Foundational/Polish
+  carry none), per the required checklist format.
+
+  Tests are included because Constitution Principle II (test-first for
+  deterministic logic) is NON-NEGOTIABLE and research R9 mandates it. Next step:
+   /speckit.analyze for cross-artifact consistency, or start implementing at
+  T001.
+
+✻ Cooked for 2m 45s
+
+※ recap: Goal: build the drift dataset generation feature. I just generated tasks.md (32 tasks across setup, foundational, and 5 user stories). Next: run /speckit.analyze for consistency, or start implementing at T001. (disable recaps in /config)
+
+❯  /speckit.analyze                                                             
+  ⎿  Found 19 new diagnostic issues in 1 file (ctrl+o to expand)
+
+⏺ Skill(speckit-analyze)
+  ⎿  Successfully loaded skill
+
+⏺ I'll run the analysis. Starting with prerequisites and loading the
+  constitution (I already have spec/plan/tasks in context).
+
+⏺ Bash(.specify/scripts/bash/check-prerequisites.sh --json --require-tasks
+      --include-tasks)
+  ⎿  {
+       "FEATURE_DIR": "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the
+     -loop-forecasting/specs/002-drift-dataset-generation",
+     … +8 lines (ctrl+o to expand)
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ No before_analyze or after_analyze hooks are registered in
+  .specify/extensions.yml (only after_specify/after_plan), so none apply. All
+  artifacts loaded. Here's the analysis.
+
+  Specification Analysis Report
+
+  ID: I1
+  Category: Inconsistency / Ambiguity
+  Severity: MEDIUM
+  Location(s): spec.md:174-176 (edge case); data-model.md:43-44;
+    contracts/generator-api.md:25; tasks.md T010/T012
+  Summary: The Δt-overflow edge case is specified as "reject or
+    clamp-and-relabel" — an unresolved either/or. Test T010 only asserts the
+    reject path; the clamp-and-relabel-to-realized-width behavior (which
+    data-model and the contract explicitly allow) has no task or test.
+  Recommendation: Decide one behavior. If clamp-and-relabel is kept as an
+  option,
+    add a test asserting the label records the realized width; otherwise drop
+    "clamp" from data-model.md:43 and the contract so all three agree on
+    "reject".
+  ────────────────────────────────────────
+  ID: A1
+  Category: Ambiguity (by design)
+  Severity: LOW
+  Location(s): spec.md:307-310, 322-326; research.md:45-47; tasks.md T024
+  Summary: The numeric Δt threshold demarcating drift vs changepoint is
+    deliberately deferred to a cross-team agreement. T024 only adds named  bands
+
+    without committing a value — consistent with intent, but downstream
+  consumers
+     have no concrete boundary yet.
+  Recommendation: None required now; tracked as an external Dependency. Ensure
+    the future cross-team ratification updates T024's band constants.
+  ────────────────────────────────────────
+  ID: U1
+  Category: Underspecification
+  Severity: LOW
+  Location(s): spec.md FR-013 (L237); tasks.md
+  Summary: FR-013 (cases available as in-memory typed objects without disk) has
+    no dedicated task — it is satisfied implicitly because generate_case returns
+
+    an in-memory Case (T015) exercised by T007.
+  Recommendation: Acceptable as-is; optionally add an explicit assertion in T007
+
+    that no disk write occurs, to make FR-013 traceable.
+  ────────────────────────────────────────
+  ID: L1
+  Category: Inconsistency (tooling)
+  Severity: LOW
+  Location(s): tasks.md:40,77,87,128-138,146-156,165 (cSpell diagnostics)
+  Summary: Domain terms (plotly, kaleido, statsmodels, Mauna, smoothstep,
+    regenerable, headlessly, docstrings) trip the repo's cSpell dictionary;
+  these
+     will recur in real code/docs and may fail a spell-check gate.
+  Recommendation: Add the recurring real terms (plotly, kaleido, statsmodels,
+    mauna) to the project cSpell dictionary during T001/T030 (the repo already
+    curates this dictionary).
+  ────────────────────────────────────────
+  ID: L2
+  Category: Ambiguity (by design)
+  Severity: LOW
+  Location(s): spec.md:300-304 (Assumptions); FR-010; tasks.md T017/T022
+  Summary: Corpus counts ("≈25 per flavor", "≈10 combined") are approximate.
+  Test
+    T017 must pick concrete numbers to assert composition.
+  Recommendation: When implementing T017, fix exact counts (e.g. 25/25/25/25 +
+    10) and record them in the committed build config so the test and config
+    agree.
+
+  Coverage Summary Table:
+
+  ┌──────────────────────────┬──────────┬────────────────┬─────────────────┐
+  │       Requirement        │   Has    │    Task IDs    │      Notes      │
+  │                          │  Task?   │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-001 deterministic     │ ✅       │ T013–T015,     │                 │
+  │ gradual drift            │          │ T007–T008      │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-002 four flavors ↔    │ ✅       │ T011, T014,    │                 │
+  │ Prophet components       │          │ T008–T009      │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-003 knobs + defaults  │ ✅       │ T012           │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-004 reproducibility   │ ✅       │ T007, T015     │                 │
+  │ (seed+knobs)             │          │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-005 machine-readable  │ ✅       │ T011, T009     │                 │
+  │ label record             │          │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-006 single-flavor     │ ✅       │ T015           │                 │
+  │ case                     │          │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-007 combined-flavor   │ ✅       │ T021, T018     │                 │
+  │ case                     │          │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-008 Δt narrow→wide    │ ✅       │ T024, T023     │                 │
+  │ (ambiguous)              │          │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-009 validate / refuse │ ✅       │ T012, T010     │ See I1 (clamp   │
+  │  contradictory           │          │                │ path untested)  │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-010 materialize       │ ✅       │ T022, T017     │ See L2 (exact   │
+  │ corpus (~100+10)         │          │                │ counts)         │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-011 corpus            │ ✅       │ T022, T017     │                 │
+  │ regenerable identical    │          │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-012 corpus enumerable │ ✅       │ T019, T016     │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-013 in-memory typed   │ ⚠️       │ T015, T007     │ See U1          │
+  │ objects                  │ implicit │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-014 ~2 real series,   │ ✅       │ T026, T025     │                 │
+  │ same interface           │          │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-015 real marked       │ ✅       │ T026, T025     │                 │
+  │ unlabeled / excluded     │          │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-016 real              │          │                │                 │
+  │ qualitative-drift        │ ✅       │ T026, T025     │                 │
+  │ documented               │          │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-017 overlay           │ ✅       │ T028, T027     │                 │
+  │ series+rolling mean+std  │          │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ FR-018 onset marker iff  │ ✅       │ T028, T027     │                 │
+  │ labeled                  │          │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ SC-001 four flavors      │ ✅       │ US1            │                 │
+  │ reproducible             │          │ (T007–T015)    │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ SC-002 100% labeled      │ ✅       │ T009, T015     │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ SC-003 corpus            │          │                │                 │
+  │ composition +            │ ✅       │ T017, T022     │                 │
+  │ regenerable              │          │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ SC-004 ambiguous cases   │ ✅       │ T023, T024     │                 │
+  │ on demand                │          │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ SC-005 ~2 real series    │ ✅       │ T025, T026     │                 │
+  │ unlabeled                │          │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ SC-006 visual overlay    │ ✅       │ T027, T028     │                 │
+  │ confirms drift           │          │                │                 │
+  ├──────────────────────────┼──────────┼────────────────┼─────────────────┤
+  │ SC-007 reproduce from    │ ✅       │ T022, T032     │                 │
+  │ repo alone               │          │                │                 │
+  └──────────────────────────┴──────────┴────────────────┴─────────────────┘
+
+  Constitution Alignment Issues: None. Principle II (test-first) is honored —
+  every story writes failing tests before implementation (T004 before T005;
+  T007–T010 before T011–T015; etc.). Principle VII (shared-core touch) is the
+  one flagged area: tasks T005/T006, T019/T020, T028/T029 modify
+  src/ailf/core/datasets/; this is justified in plan.md's Complexity Tracking,
+  the touch is review-gated, and T032 keeps core tests green. Principles III/IV
+  are correctly N/A (no LLM/intervention in this feature).
+
+  Unmapped Tasks: None. Setup (T001–T003), Foundational (T004–T006), and Polish
+  (T030–T032) are infrastructure/cross-cutting and correctly carry no story
+  label; all map to enabling work or quality gates.
+
+  Metrics:
+  - Total Requirements: 25 (18 FR + 7 SC)
+  - Total Tasks: 32
+  - Coverage: 100% (every FR/SC has ≥1 task; FR-013 implicit)
+  - Ambiguity Count: 3 (I1, A1, L2 — two are deferred-by-design)
+  - Duplication Count: 0
+  - Critical Issues Count: 0
+
+  Next Actions
+
+  No CRITICAL or HIGH issues — you may proceed to /speckit.implement. Suggested
+  improvements before/while implementing:
+
+  1. Resolve I1 (MEDIUM) — pick reject vs clamp-and-relabel for Δt-overflow and
+  make data-model.md, the contract, and T010 agree. This is the only finding
+  that affects correctness of the generator's contract.
+  2. L2 — lock exact corpus counts in the T022 build config so T017's
+  composition assertion is deterministic.
+  3. L1 — add plotly, kaleido, statsmodels, mauna to the cSpell dictionary as
+  part of T001.
+
+  Would you like me to suggest concrete remediation edits for the top issues
+  (I1, L2, L1)? I won't apply anything without your approval.
+
+✻ Sautéed for 1m 19s
+
+❯ Yes, suggest recommendations and related reasoning                            
+
+⏺ Here are concrete remediation suggestions for the three actionable findings,
+  with reasoning. These are proposals — I won't apply any without your go-ahead.
+
+  ---
+  I1 (MEDIUM) — Resolve the Δt-overflow "reject or clamp" ambiguity
+
+  The problem: Three artifacts describe what happens when onset + 
+  transition_width runs past the end of the series, but they don't agree on a
+  single behavior:
+  - spec.md:175-176 — "MUST handle this deterministically (reject or clamp, with
+   the label reflecting the actual realized transition)"
+  - data-model.md:43-44 — "reject or clamp; if clamped, label records the
+  realized width"
+  - contracts/generator-api.md:25 — "reject or clamp-and-relabel"
+  - tasks.md T010 — tests only the reject path
+
+  An either/or in a contract is a latent bug: a future implementer can pick
+  either path and still "comply," but a consumer (the downstream detection
+  tool's tests) can't predict which. The realized transition_width in the label
+  is what precision/recall scoring keys off (data-model.md:61) — so silently
+  clamping while the config still says the original width would produce a case
+  whose label and config disagree.
+
+  My recommendation: choose reject, not clamp. Reasoning:
+  - It's consistent with how every other invalid-knob case is handled (T010,
+  FR-009): the generator's stated philosophy is "fail clearly rather than
+  silently mislabel." Clamping is the one place that philosophy wobbles.
+  - Clamp-and-relabel introduces a second source of truth (config says width=X,
+  label says realized width=Y). That's exactly the "labels contradict the
+  produced series/config" failure FR-009 exists to prevent.
+  - The corpus build (T022) controls its own knobs, so it can simply never
+  request an overflowing width — clamping buys nothing for the canonical corpus.
+
+  Proposed edits:
+
+  spec.md:175-176 — replace the either/or with a single behavior:
+
+  ▎ "What happens when transition width + onset runs past the end of the series?
+  ▎  The generator MUST reject such a request with a clear validation error 
+  ▎ rather than silently clamping (which would make the label's width disagree 
+  ▎ with the requested config)."
+
+  data-model.md:43-44 — change:
+
+  ▎ transition_width ≥ 1 and onset + transition_width ≤ length — else reject (a 
+  ▎ clamp would desync the label's realized width from config.transition_width).
+
+  contracts/generator-api.md:25 — change "reject or clamp-and-relabel" to
+  "reject".
+
+  tasks.md T010 — already correct (tests reject). No change needed — which is
+  itself the tell that reject is the path the tasks already assume.
+
+  ▎ If you'd rather keep clamp (e.g., you want the corpus sweep to be 
+  ▎ forgiving), then the edit flips: spec/data-model/contract keep clamp, and 
+  ▎ T010 gains an assertion that case.labels[0]["transition_width"] equals the 
+  ▎ realized (clamped) width while case.config["transition_width"] retains the 
+  ▎ request. I recommend against this only because it's more moving parts for no
+  ▎  corpus benefit.
+
+  ---
+  L2 (LOW) — Pin exact corpus counts so T017's composition assertion is 
+  deterministic
+
+  The problem: FR-010, SC-003, and the Assumptions (spec.md:300-304) all say
+  "≈25 per flavor" and "≈10 combined." Approximate is fine for a spec, but T017
+  asserts the corpus composition, and an assertion can't check "≈25." Worse,
+  "reproducible to an identical state" (FR-011) is only meaningful against fixed
+   counts — a fuzzy count is by definition not byte-reproducible.
+
+  Recommendation: Fix concrete counts in the committed build config (T022) and
+  assert those exact numbers in T017. Reasoning: the spec stays appropriately
+  approximate (it's a target), while the build config becomes the single source
+  of truth the test reads from — so the test and config can't drift. Pin 25 / 25
+   / 25 / 25 single-flavor + 10 combined = 110 (the round numbers the spec
+  already gestures at).
+
+  Proposed edits:
+
+  tasks.md T022 — make the counts explicit and the source-of-truth:
+
+  ▎ "...the committed drift build config (base_seed + a knob sweep producing 
+  ▎ exactly 25 cases per flavor (100 single-flavor) + 10 combined = 110 total, 
+  ▎ with per-case onset/magnitude/Δt varied deterministically by case index)..."
+
+  tasks.md T017 — assert against the config, not a literal:
+
+  ▎ "...assert the manifest contains exactly the counts declared by the build 
+  ▎ config (100 single-flavor split 25/25/25/25 across flavors + 10 combined), 
+  ▎ and that a delete-and-rebuild yields byte-identical series.csv/labels.json."
+
+  No spec change — leaving spec.md "≈25" intact is correct; the approximation
+  belongs at the requirement level, the exact number at the config level.
+
+  ---
+  L1 (LOW) — Add recurring domain terms to the cSpell dictionary
+
+  The problem: The IDE flagged 19 cSpell misses in tasks.md. Most are one-offs
+  (hbalakr from an absolute path, authorable), but four are real project
+  vocabulary that will recur in source, docstrings, and reports: plotly,
+  kaleido, statsmodels, mauna. The repo already curates a cSpell dictionary
+  (recent commit 8bf0581 Add "iisc" to cspell dictionary), so a spell-check gate
+   plausibly exists — these would trip it repeatedly once the code lands.
+
+  Recommendation: Add only the durable terms, not the noise. Reasoning:
+  plotly/kaleido/statsmodels are dependency names that'll appear in every import
+   and doc; mauna (Mauna Loa) names a shipped loader. The path-derived hbalakr
+  and prose words like regenerable/headlessly/smoothstep aren't worth dictionary
+   entries — reword prose if a gate complains.
+
+  Proposed action (fold into T001): locate the cSpell config (the "iisc" commit
+  shows where it lives — likely cspell.json or
+  package.json/.vscode/settings.json) and append plotly, kaleido, statsmodels,
+  mauna. I'd verify the exact file before editing rather than guess.
+
+  ---
+  Summary of what I'd change if you approve: I1 → 3 small wording edits across
+  spec/data-model/contract (converging on reject); L2 → tighten T022 + T017
+  wording to pin 110 cases; L1 → add 4 words to the cSpell dictionary (after
+  locating it). Want me to apply all three, or a subset? For I1 specifically,
+  confirm you're happy with reject over clamp before I touch the contract.
+
+✻ Churned for 35s
+
+❯ Yes, go ahead with the recommendations                                        
+
+⏺ I'll apply all three. Let me first locate the cSpell config for L1, then make
+  the I1 and L2 edits.
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ Now I'll apply all the edits. Starting with L1 (cSpell dictionary) — adding
+  the four durable dependency/domain terms.
+
+⏺ Update(cspell.json)
+  ⎿  Added 4 lines
+      18      "hatchling",
+      19      "darts",
+      20      "prophet",
+      21 +    "plotly",                                                  
+      22 +    "kaleido",                                                 
+      23 +    "statsmodels",                                             
+      24 +    "mauna",                                                   
+      25      "langgraph",
+      26      "langchain",
+      27      "langsmith",
+
+⏺ Now I1 — converging on reject across spec, data-model, and contract. Starting
+  with spec.md.
+
+⏺ Update(specs/002-drift-dataset-generation/spec.md)
+  ⎿  Added 4 lines, removed 2 lines
+      172    points before it (no stable reference regime) or too few aft
+           er it (drift cannot develop)? The
+      173    generator MUST reject or clearly constrain such requests rat
+           her than emit a mislabeled case.
+      174  - **Transition width exceeding remaining length**: What happen
+           s when transition width + onset
+      175 -  runs past the end of the series? The generator MUST handle t
+          -his deterministically (reject or                              
+      176 -  clamp, with the label reflecting the actual realized transit
+          -ion).                                                         
+      175 +  runs past the end of the series? The generator MUST **reject
+          +** such a request with a clear                                
+      176 +  validation error rather than silently clamping — a clamp wou
+          +ld make the label's realized width                            
+      177 +  disagree with the requested `transition_width`, exactly the 
+          +label/config contradiction FR-009                             
+      178 +  exists to prevent.                                          
+      179  - **Zero / negative magnitude**: A drift magnitude of zero wou
+           ld yield a series with no actual
+      180    drift but a label claiming drift. The generator MUST prevent
+            a label that contradicts the
+      181    produced series.
+
+⏺ Update(specs/002-drift-dataset-generation/data-model.md)
+  ⎿  Added 2 lines, removed 2 lines
+      39  **Validation rules** (FR-009; map to spec Edge Cases):
+      40  - `0 < onset < length`, with enough points before (`onset ≥ min
+          _reference`) and after
+      41    (`length - onset ≥ min_drift`) — else reject (no reference / 
+          no room for drift).
+      42 -- `transition_width ≥ 1` and `onset + transition_width ≤ length
+         -` (reject or clamp; if clamped,                                
+      43 -  label records the realized width).                           
+      42 +- `transition_width ≥ 1` and `onset + transition_width ≤ length
+         +` — else reject (a clamp would                                 
+      43 +  desync the label's realized width from `config.transition_wid
+         +th`).                                                          
+      44  - `magnitude != 0` (a zero-magnitude case would contradict a dr
+          ift label).
+      45  - `variance_inflation` ⇒ `base_noise > 0`.
+      46  - `seasonal_amplitude` ⇒ `seasonality_period` is set and `seaso
+          nality_amplitude > 0`.
+
+⏺ Update(specs/002-drift-dataset-generation/contracts/generator-api.md)
+  ⎿  Added 1 line, removed 1 line
+      21    - `affected_component` on the label matches the flavor's Prop
+          het component (FR-002).
+      22  - **Errors** (raise a validation error, do not emit a mislabele
+          d case — FR-009):
+      23    - onset too close to either boundary (no reference regime / n
+          o room for drift);
+      24 -  - `transition_width < 1` or `onset + transition_width` past e
+         -nd (reject or clamp-and-relabel);                              
+      24 +  - `transition_width < 1` or `onset + transition_width` past e
+         +nd (reject — no silent clamp);                                 
+      25    - `magnitude == 0`;
+      26    - `variance_inflation` with `base_noise <= 0`;
+      27    - `seasonal_amplitude` without seasonality configured.
+
+⏺ Now L2 — pinning exact corpus counts in tasks.md T022 and T017. Let me also
+  tighten T010 to make the reject decision explicit.
+
+⏺ Update(specs/002-drift-dataset-generation/tasks.md)
+  ⎿  Added 1 line, removed 1 line
+      68  - [ ] T007 [P] [US1] Test case structure + reproducibility (sam
+          e `(flavor, seed, config)` ⇒ identical series & labels; differe
+          nt seeds ⇒ same flavor/onset semantics, different noise) in `te
+          sts/pipelines/drift/test_generate_case.py`
+      69  - [ ] T008 [P] [US1] Test per-flavor injection correctness — th
+          e realized series actually exhibits the change over `[onset, on
+          set+Δt]` (rolling-mean step for `mean_level`, slope bend for `t
+          rend_slope`, rolling-std growth for `variance_inflation`, seaso
+          nal-amplitude growth for `seasonal_amplitude`) in `tests/pipeli
+          nes/drift/test_flavors.py`
+      70  - [ ] T009 [P] [US1] Test label correctness — `flavor`, `affect
+          ed_component` (trend/seasonality/noise), `onset_index`, `onset_
+          time`, `transition_width`, `magnitude` populated and consistent
+           with config for each of the four flavors in `tests/pipelines/d
+          rift/test_labels.py`
+      71 -- [ ] T010 [P] [US1] Test knob-validation rejections (FR-009 ed
+         -ge cases): onset too near either boundary, `transition_width < 
+         -1` or `onset+width` past end, `magnitude == 0`, `variance_infla
+         -tion` with `base_noise <= 0`, `seasonal_amplitude` without seas
+         -onality in `tests/pipelines/drift/test_validation.py`          
+      71 +- [ ] T010 [P] [US1] Test knob-validation rejections (FR-009 ed
+         +ge cases) — each raises a clear validation error, never a silen
+         +tly mislabeled/clamped case: onset too near either boundary, `t
+         +ransition_width < 1`, `onset+width` past end (rejected, NOT cla
+         +mped), `magnitude == 0`, `variance_inflation` with `base_noise 
+         +<= 0`, `seasonal_amplitude` without seasonality in `tests/pipel
+         +ines/drift/test_validation.py`                                 
+      72  
+      73  ### Implementation for User Story 1
+      74  
+
+⏺ Update(specs/002-drift-dataset-generation/tasks.md)
+  ⎿  Added 1 line, removed 1 line
+      91  ### Tests for User Story 2 (write FIRST, ensure they FAIL) ⚠️
+      92  
+      93  - [ ] T016 [P] [US2] Test generic corpus persistence — write → 
+          read → enumerate identity for a `Case` (series.csv + labels.jso
+          n + manifest row round-trip preserves series & labels) in `test
+          s/core/datasets/test_corpus.py`
+      94 -- [ ] T017 [P] [US2] Test `build_corpus` composition (≈25 singl
+         -e-flavor per flavor + ≈10 combined; manifest lists every case) 
+         -and full-corpus reproducibility (same `base_seed` + config ⇒ by
+         -te-identical re-run) in `tests/pipelines/drift/test_corpus.py` 
+      94 +- [ ] T017 [P] [US2] Test `build_corpus` composition against th
+         +e build config's declared counts (exactly 25 cases per flavor →
+         + 100 single-flavor split 25/25/25/25, plus 10 combined = 110 to
+         +tal; manifest lists every case) and full-corpus reproducibility
+         + (delete-and-rebuild with same `base_seed` + config ⇒ byte-iden
+         +tical `series.csv`/`labels.json`) in `tests/pipelines/drift/tes
+         +t_corpus.py`                                                   
+      95  - [ ] T018 [P] [US2] Test `generate_combined_case` — multiple i
+          njected flavors each represented by a distinct `DriftLabel`, co
+          herent on overlapping onsets/components (FR-007) in `tests/pipe
+          lines/drift/test_combined.py`
+      96  
+      97  ### Implementation for User Story 2
+
+⏺ Update(specs/002-drift-dataset-generation/tasks.md)
+  ⎿  Added 1 line, removed 1 line
+       99  - [ ] T019 [P] [US2] Implement generic corpus persistence — `w
+           rite_case`, `load_corpus(root) -> Iterable[Case]`, manifest re
+           ad/write/enumerate per corpus-format.md — in `src/ailf/core/da
+           tasets/corpus.py`
+      100  - [ ] T020 [US2] Export the corpus helpers from `src/ailf/core
+           /datasets/__init__.py` (after T019, sequential with T006)
+      101  - [ ] T021 [US2] Implement `generate_combined_case(flavors, *,
+            seed, configs=None) -> Case` (applies multiple injectors, one
+            `DriftLabel` per flavor) in `src/ailf/pipelines/drift/dataset
+           s.py`
+      102 -- [ ] T022 [US2] Implement the committed drift build config (s
+          -eed + knob sweep defining ≈100 single + ≈10 combined cases), `
+          -build_corpus(root, *, base_seed, overwrite=False)` with determ
+          -inistic per-case seeds, a `load_corpus` re-export, and the `__
+          -main__` CLI entry in `src/ailf/pipelines/drift/corpus.py` (dep
+          -ends on T019, T021)                                           
+      102 +- [ ] T022 [US2] Implement the committed drift build config — 
+          +the single source of truth for corpus composition: a knob swee
+          +p producing **exactly 25 cases per flavor (100 single-flavor) 
+          ++ 10 combined = 110 total**, with per-case onset/magnitude/Δt 
+          +varied deterministically by case index — plus `build_corpus(ro
+          +ot, *, base_seed, overwrite=False)` with deterministic per-cas
+          +e seeds, a `load_corpus` re-export, and the `__main__` CLI ent
+          +ry in `src/ailf/pipelines/drift/corpus.py` (depends on T019, T
+          +021)                                                          
+      103  
+      104  **Checkpoint**: The reproducible on-disk corpus exists and is 
+           enumerable. SC-003, SC-007 satisfied.
+      105  
+
+⏺ All edits applied. Here's what changed across four files:
+
+  I1 — Δt-overflow now uniformly "reject" (no clamp):
+  - spec.md:175 — edge case rewritten to mandate rejection, citing the FR-009
+  label/config contradiction it prevents.
+  - data-model.md:43 — validation rule changed to reject, with the desync
+  rationale.
+  - contracts/generator-api.md:25 — "reject or clamp-and-relabel" → "reject — no
+   silent clamp".
+  - tasks.md T010 — now explicitly asserts the past-end case is rejected, NOT 
+  clamped, and that every rejection raises a clear error rather than a
+  mislabeled case.
+
+  L2 — corpus counts pinned at 110:
+  - tasks.md T022 — build config is now the named single source of truth:
+  exactly 25/flavor (100 single) + 10 combined = 110.
+  - tasks.md T017 — asserts composition against the config's declared counts
+  (25/25/25/25 + 10) plus delete-and-rebuild byte-identity.
+  - spec.md left at "≈25" intentionally — approximation belongs at the
+  requirement level, exact counts at the config level.
+
+  L1 — cSpell dictionary:
+  - cspell.json — added plotly, kaleido, statsmodels, mauna. Skipped the one-off
+   noise (hbalakr, regenerable, headlessly, smoothstep, authorable) per the
+  earlier reasoning.
+
+  All three findings from the analysis are resolved, and the
+  spec/data-model/contract/tasks now agree on the generator's overflow behavior.
+   The artifacts are consistent and ready for /speckit.implement. Note these are
+   uncommitted working-tree changes — let me know if you'd like them committed.
+
+✻ Brewed for 59s
+
+❯ yes, commit                                                                   
+
+⏺ I'll commit using the git-commit skill.
+
+⏺ Skill(git-commit)
+  ⎿  Successfully loaded skill · 1 tool allowed
+
+⏺ I'll gather context first.
+
+⏺ Bash(git status && echo "===DIFF===" && git diff HEAD && echo "===LOG===" &&
+      git log --oneline -10 && echo "===CACHED===" && git diff --cached)
+  ⎿  On branch 002-drift-dataset-generation
+     Changes not staged for commit:
+       (use "git add <file>..." to update what will be committed)
+     … +84 lines (ctrl+o to expand)
+
+⏺ Clean changes, no secrets. Staging and committing.
+
+⏺ Bash(git add -A && git diff --cached --stat)
+  ⎿   cspell.json                                        |   4 +
+      .../contracts/generator-api.md                     |   2 +-
+      specs/002-drift-dataset-generation/data-model.md   |   4 +-
+     … +4 lines (ctrl+o to expand)
+
+⏺ Bash(git commit -m "$(cat <<'EOF'
+      Add drift dataset tasks and resolve cross-artifact inconsistencies…)
+  ⎿  [002-drift-dataset-generation 0efb1f5] Add drift dataset tasks and res
+     olve cross-artifact inconsistencies
+      5 files changed, 245 insertions(+), 5 deletions(-)
+     … +3 lines (ctrl+o to expand)
+
+⏺ Committed as 0efb1f5 on branch 002-drift-dataset-generation:
+
+  ▎ Add drift dataset tasks and resolve cross-artifact inconsistencies
+
+  5 files changed (245 insertions, 5 deletions) — new tasks.md plus the
+  spec/data-model/contract reject-overflow alignment, the 110-case corpus pin,
+  and the cSpell additions. Nothing pushed; let me know if you'd like to push or
+   open a PR.
+
+✻ Crunched for 18s
+
+❯ /speckit-implement                                                            
+
+⏺ I'll implement the drift dataset feature following tasks.md. Let me start with
+   prerequisites and context.
+
+⏺ Bash(.specify/scripts/bash/check-prerequisites.sh --json --require-tasks
+      --include-tasks; echo "===checklists==="; ls -la
+      specs/002-drift-dataset-generation/checklis…)  ⎿  {
+       "FEATURE_DIR": "/Users/hbalakr2/Documents/Learning/IISc/agent-in-the
+     -loop-forecasting/specs/002-drift-dataset-generation",
+     … +36 lines (ctrl+o to expand)
+
+⏺ No before_implement hooks. Let me check the checklist status.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Checklist status — all PASS:
+
+  ┌─────────────────┬───────┬───────────┬────────────┬────────┐
+  │    Checklist    │ Total │ Completed │ Incomplete │ Status │
+  ├─────────────────┼───────┼───────────┼────────────┼────────┤
+  │ requirements.md │ 16    │ 16        │ 0          │ ✓ PASS │
+  └─────────────────┴───────┴───────────┴────────────┴────────┘
+
+  Proceeding. Let me read the existing stub files and project config to
+  understand the starting point.
+
+  Read 5 files (ctrl+o to expand)
+
+⏺ Note: plotly>=6.8.0 and kaleido>=1.3.0 are already in pyproject.toml, and
+  .gitignore already covers data/synthetic/* and reports/*. Let me verify the
+  environment is synced and the key imports work, and set up task tracking.
+
+⏺ Bash(uv run python -c "import plotly, kaleido, darts, statsmodels, numpy,
+      pandas; from darts.utils import timeseries_generation as tg; from
+      darts.datasets import Air…)
+  ⎿  imports OK
+     darts 0.44.1
+
+⏺ All imports work; plotly/kaleido are already in pyproject.toml and .gitignore
+  already covers data/synthetic/* and reports/*. Let me set up progress tracking
+   and probe the CO₂ dataset structure (the one API I'm unsure about) before
+  writing code.
+
+⏺ Bash(uv run python -c "
+      from statsmodels.datasets import co2…)
+  ⎿  type <class 'pandas.DataFrame'>
+     cols ['co2']
+     index type <class 'pandas.DatetimeIndex'>
+     … +11 lines (ctrl+o to expand)
+
+⏺ CO₂ is weekly with NaNs — I'll resample to monthly and interpolate. Let me
+  verify the Darts generation API signatures and AirPassengers shape before
+  writing code.
+
+⏺ Bash(uv run python -c "
+      from darts.utils import timeseries_generation as tg…)
+  ⎿  Traceback (most recent call last):
+       File "<string>", line 12, in <module>
+     TypeError: gaussian_timeseries() got an unexpected keyword argument 's
+     … +26 lines (ctrl+o to expand)
+
+⏺ gaussian_timeseries has no seed param — I'll generate noise via an isolated
+  np.random.default_rng(seed) for full reproducibility control, and build the
+  TimeSeries directly. Let me verify the TimeSeries construction/equality API.
+
+⏺ Bash(uv run python -c "
+      import pandas as pd, numpy as np…)
+  ⎿  from_times_and_values ok [1. 2. 3. 4. 5.]
+     univariate True
+     eq True
+     … +4 lines (ctrl+o to expand)
+
+⏺ Everything verified. deps and .gitignore are already in place (T001/T002
+  satisfied). Starting Phase 1-2: creating test dirs, then test-first Case
+  container.
+
+⏺ Bash(mkdir -p tests/core/datasets && rm -f tests/core/datasets/.gitkeep
+      tests/pipelines/drift/.gitkeep tests/core/.gitkeep && touch
+      tests/core/__init__.py tests/core…)
+  ⎿  core
+     pipelines
+     test_smoke.py
+     … +20 lines (ctrl+o to expand)
+⏺ Let me match the existing test convention (no __init__.py at tests root) by
+  removing those — pytest's default import mode works with unique test
+  filenames.
+
+⏺ Bash(rm -f tests/core/__init__.py tests/core/datasets/__init__.py
+      tests/pipelines/__init__.py tests/pipelines/drift/__init__.py && find
+      tests -type f | sort)
+  ⎿  tests/pipelines/anomaly/.gitkeep
+     tests/pipelines/changepoint/.gitkeep
+     tests/test_smoke.py
+
+⏺ Now T004 — the failing test for Case serialization round-trip.
+
+⏺ Write(tests/core/datasets/test_case.py)
+  ⎿  Wrote 92 lines to tests/core/datasets/test_case.py
+      1 """Round-trip serialization tests for the generic Case container 
+        (T004)."""
+      2 
+      3 import numpy as np
+      4 import pandas as pd
+      5 import pytest
+      6 from darts import TimeSeries
+      7 
+      8 from ailf.core.datasets import Case
+      9 
+     … +88 lines (ctrl+o to expand)
+
+⏺ Bash(uv run --extra dev pytest tests/core/datasets/test_case.py -q 2>&1 | tail
+       -15)
+  ⎿  ==================================== ERRORS ==========================
+     ==========
+     ______________ ERROR collecting tests/core/datasets/test_case.py _____
+     … +14 lines (ctrl+o to expand)
+
+⏺ Test fails as expected. Now T005/T006 — implement Case and export it.
+
+⏺ Write(src/ailf/core/datasets/case.py)
+  ⎿  Wrote 75 lines to src/ailf/core/datasets/case.py
+         es.Generic, domain-agnostic case container shared by all pipelin
+       2 
+         n opaque-to-core one univariate :class:`darts.TimeSeries` plus a
+       4 label record and provenance. Its serialized form is plain JSON-c
+         ompatible data
+         s and labels exactly.ict``/``from_dict`` round-trip series value
+       6 """
+       8 from __future__ import annotations
+       9 
+      10 from dataclasses import dataclass, field
+     … +72 lines (ctrl+o to expand)
+
+⏺ Update(src/ailf/core/datasets/__init__.py)
+  ⎿  Added 4 lines
+       4  loaders reused by every pipeline. Use-case-specific generation 
+          lives in each
+       5  `ailf.pipelines.<usecase>.datasets`.
+       6  """
+       7 +                                                               
+       8 +from ailf.core.datasets.case import Case                       
+       9 +                                                               
+      10 +__all__ = ["Case"]                                             
+
+⏺ Bash(uv run --extra dev pytest tests/core/datasets/test_case.py -q 2>&1 | tail
+       -15)
+  ⎿  ....
+        [100%]
+     4 passed in 0.29s
+
+⏺ Phase 1-2 complete. Let me mark tasks off in tasks.md (T001-T006) and move to
+  Phase 3.
+
+⏺ Bash(cd specs/002-drift-dataset-generation && python3 - <<'EOF'
+      import re…)
+  ⎿  done
+     - [X] T001 Add the visual-overlay dependencies with `uv add plotly kal
+     eido` (updates `pyproject.toml` and commits the refreshed `uv.lock`);
+     … +19 lines (ctrl+o to expand)
+
+⏺ Phase 3 (US1). Writing the four failing test files first (T007-T010).
+
+⏺ Write(tests/pipelines/drift/test_generate_case.py)
+  ⎿  Wrote 54 lines to tests/pipelines/drift/test_generate_case.py
+      1 """US1: case structure + reproducibility (T007)."""
+      2 
+      3 import numpy as np
+      4 import pytest
+      5 
+      6 from ailf.core.datasets import Case
+      7 from ailf.pipelines.drift.datasets import DriftFlavor, GeneratorC
+        onfig, generate_case
+      8 
+      9 ALL_FLAVORS = list(DriftFlavor)
+     … +50 lines (ctrl+o to expand)
+
+⏺ Write(tests/pipelines/drift/test_flavors.py)
+  ⎿  Wrote 63 lines to tests/pipelines/drift/test_flavors.py
+         xhibits the change (T008)."""correctness — the realized series e
+       2 
+       3 import numpy as np
+       4 import pandas as pd
+       5 
+         Config, generate_caserift.datasets import DriftFlavor, Generator
+       7 
+       8 
+       9 def _values(case) -> np.ndarray:
+      10     return case.series.values().ravel()
+     … +66 lines (ctrl+o to expand)
+
+⏺ Write(tests/pipelines/drift/test_labels.py)
+  ⎿  Wrote 44 lines to tests/pipelines/drift/test_labels.py
+       2 """US1: label correctness for each flavor (T009)."""
+       3 import pandas as pd
+       4 import pytest
+       5 
+       6 from ailf.pipelines.drift.datasets import DriftFlavor, Generator
+         Config, generate_case
+       7 
+       8 EXPECTED_COMPONENT = {
+       9     DriftFlavor.trend_slope: "trend",
+      10     DriftFlavor.mean_level: "trend",
+     … +39 lines (ctrl+o to expand)
+
+⏺ Write(tests/pipelines/drift/test_validation.py)
+  ⎿  Wrote 53 lines to tests/pipelines/drift/test_validation.py
+         l (T010, FR-009)."""ion rejections — fail clearly, never mislabe
+       2 
+       3 import pytest
+       5 from ailf.pipelines.drift.datasets import DriftFlavor, Generator
+         Config, generate_case
+       6 
+       8 def test_onset_too_near_start_rejected() -> None:
+       9     cfg = GeneratorConfig(length=400, onset=2, transition_width=
+         20, seed=42)
+      10     with pytest.raises(ValueError):
+     … +53 lines (ctrl+o to expand)
+
+⏺ Bash(uv run --extra dev pytest tests/pipelines/drift -q 2>&1 | tail -8)
+  ⎿  ERROR: file or directory not found: tests/pipelines/drift
+
+
+     no tests ran in 0.00s
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ The Write calls reported success but the directory is gone. Let me check what
+  happened.
+
+  Searched for 1 pattern (ctrl+o to expand)
+⏺ The entire tests/ directory has vanished. Let me check the working directory
+  and git state.
+
+⏺ Bash(pwd; echo "---"; ls -la; echo "---git---"; git status)
+  ⎿  /Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting/
+     specs/002-drift-dataset-generation
+     ---
+     … +30 lines (ctrl+o to expand)
+
+⏺ Nothing vanished — my earlier cd changed the shell's working directory to the
+  specs dir, so the relative tests/... path didn't resolve. The files are all
+  there. Let me return to repo root and run the tests.
+
+⏺ Bash(cd /Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting
+      && pwd && uv run --extra dev pytest tests/pipelines/drift -q 2>&1 | tail
+      -8)
+  ⎿  /Users/hbalakr2/Documents/Learning/IISc/agent-in-the-loop-forecasting
+     E   ImportError: cannot import name 'DriftFlavor' from 'ailf.pipelines
+     .drift.datasets' (/Users/hbalakr2/Documents/Learning/IISc/agent-in-the
+     … +10 lines (ctrl+o to expand)
+
+⏺ Working directory persists across Bash calls — my earlier cd into the specs
+  dir was the culprit, and the files were fine all along. Now back at repo root,
+   tests fail as expected (test-first ✓). Implementing US1 in datasets.py
+  (T011-T015).
+
+⏺ Write(src/ailf/pipelines/drift/datasets.py)
+  ⎿  Added 244 lines, removed 3 lines
+        1  """Drift dataset generation.
+        2  
+        3 -Seeded, knob-driven synthetic series with known drift, plus lo
+          -aders for standard                                            
+        4 -drift datasets. Build generic Darts plumbing in `ailf.core.dat
+          -asets`; keep only                                             
+        5 -drift-specific generation here.                               
+        3 +Seeded, knob-driven synthetic series with known, injected grad
+          +ual drift, plus loaders                                       
+        4 +for standard real drift datasets. Each base series is composed
+          + from Darts primitives                                        
+        5 +(``y = g(t) + s(t) + ε``) and the chosen flavor is injected by
+          + modulating the relevant                                      
+        6 +component over a transition window. Generic Darts plumbing (th
+          +e ``Case`` container,                                         
+        7 +corpus IO) lives in ``ailf.core.datasets``; only drift-specifi
+          +c logic lives here.                                           
+        8  """
+        9 +                                                              
+       10 +from __future__ import annotations                            
+       11 +                                                              
+       12 +from dataclasses import asdict, dataclass, field              
+       13 +from enum import Enum                                         
+       14 +from typing import Any                                        
+       15 +                                                              
+       16 +import numpy as np                                            
+       17 +import pandas as pd                                           
+       18 +from darts import TimeSeries                                  
+       19 +from darts.utils.timeseries_generation import linear_timeserie
+          +s, sine_timeseries                                            
+       20 +                                                              
+       21 +from ailf.core.datasets import Case                           
+       22 +                                                              
+       23 +# Minimum points required on each side of the onset so the ref
+          +erence regime is stable                                       
+       24 +# and the drift has room to develop (FR-009 / spec Edge Cases)
+          +.                                                             
+       25 +_MIN_REFERENCE = 10                                           
+       26 +_MIN_DRIFT = 10                                               
+       27 +                                                              
+       28 +# Base trend the synthetic series rides on (gentle upward slop
+          +e) before any injection.                                      
+       29 +_BASE_TREND_RISE = 10.0                                       
+       30 +                                                              
+       31 +                                                              
+       32 +class DriftFlavor(str, Enum):                                 
+       33 +    """The four supported injected drift types, each bound to 
+          +a Prophet component."""                                       
+       34 +                                                              
+       35 +    trend_slope = "trend_slope"                               
+       36 +    mean_level = "mean_level"                                 
+       37 +    variance_inflation = "variance_inflation"                 
+       38 +    seasonal_amplitude = "seasonal_amplitude"                 
+       39 +                                                              
+       40 +    @property                                                 
+       41 +    def affected_component(self) -> str:                      
+       42 +        return {                                              
+       43 +            DriftFlavor.trend_slope: "trend",                 
+       44 +            DriftFlavor.mean_level: "trend",                  
+       45 +            DriftFlavor.variance_inflation: "noise",          
+       46 +            DriftFlavor.seasonal_amplitude: "seasonality",    
+       47 +        }[self]                                               
+       48 +                                                              
+       49 +                                                              
+       50 +# Flavor-specific default drift magnitude (data-model.md: "mag
+          +nitude default flavor-specific").                             
+       51 +_DEFAULT_MAGNITUDE = {                                        
+       52 +    DriftFlavor.trend_slope: 0.05,                            
+       53 +    DriftFlavor.mean_level: 10.0,                             
+       54 +    DriftFlavor.variance_inflation: 2.0,                      
+       55 +    DriftFlavor.seasonal_amplitude: 2.0,                      
+       56 +}                                                             
+       57 +                                                              
+       58 +                                                              
+       59 +@dataclass                                                    
+       60 +class GeneratorConfig:                                        
+       61 +    """Reproducible knob set determining one synthetic case (F
+          +R-003). All have defaults."""                                 
+       62 +                                                              
+       63 +    length: int = 365                                         
+       64 +    start: pd.Timestamp = field(default_factory=lambda: pd.Tim
+          +estamp("2015-01-01"))                                         
+       65 +    freq: str = "D"                                           
+       66 +    onset: int | None = None  # defaults to length // 2 when r
+          +esolved                                                       
+       67 +    magnitude: float | None = None  # defaults to flavor-speci
+          +fic when resolved                                             
+       68 +    transition_width: int | None = None  # defaults to length 
+          +// 5 when resolved                                            
+       69 +    duration: int | None = None  # None => drifted regime pers
+          +ists to end of series                                         
+       70 +    base_noise: float = 1.0                                   
+       71 +    seasonality_period: int | None = 30                       
+       72 +    seasonality_amplitude: float = 5.0                        
+       73 +    seed: int = 42                                            
+       74 +                                                              
+       75 +    def to_dict(self) -> dict[str, Any]:                      
+       76 +        d = asdict(self)                                      
+       77 +        d["start"] = pd.Timestamp(self.start).isoformat()     
+       78 +        return d                                              
+       79 +                                                              
+       80 +                                                              
+       81 +@dataclass                                                    
+       82 +class DriftLabel:                                             
+       83 +    """One injected drift's ground truth (FR-005). A case hold
+          +s a list of these."""                                         
+       84 +                                                              
+       85 +    flavor: DriftFlavor                                       
+       86 +    affected_component: str                                   
+       87 +    onset_index: int                                          
+       88 +    onset_time: pd.Timestamp                                  
+       89 +    transition_width: int                                     
+       90 +    magnitude: float                                          
+       91 +                                                              
+       92 +    def to_dict(self) -> dict[str, Any]:                      
+       93 +        return {                                              
+       94 +            "flavor": self.flavor.value,                      
+       95 +            "affected_component": self.affected_component,    
+       96 +            "onset_index": int(self.onset_index),             
+       97 +            "onset_time": pd.Timestamp(self.onset_time).isofor
+          +mat(),                                                        
+       98 +            "transition_width": int(self.transition_width),   
+       99 +            "magnitude": float(self.magnitude),               
+      100 +        }                                                     
+      101 +                                                              
+      102 +    @classmethod                                              
+      103 +    def from_dict(cls, d: dict[str, Any]) -> DriftLabel:      
+      104 +        return cls(                                           
+      105 +            flavor=DriftFlavor(d["flavor"]),                  
+      106 +            affected_component=d["affected_component"],       
+      107 +            onset_index=int(d["onset_index"]),                
+      108 +            onset_time=pd.Timestamp(d["onset_time"]),         
+      109 +            transition_width=int(d["transition_width"]),      
+      110 +            magnitude=float(d["magnitude"]),                  
+      111 +        )                                                     
+      112 +                                                              
+      113 +                                                              
+      114 +def _resolve(flavor: DriftFlavor, seed: int, config: Generator
+          +Config | None) -> GeneratorConfig:                            
+      115 +    """Apply defaults (seed param wins) and validate; raise Va
+          +lueError on contradictions."""                                
+      116 +    cfg = config or GeneratorConfig()                         
+      117 +    length = cfg.length                                       
+      118 +    onset = cfg.onset if cfg.onset is not None else length // 
+          +2                                                             
+      119 +    width = cfg.transition_width if cfg.transition_width is no
+          +t None else length // 5                                       
+      120 +    magnitude = cfg.magnitude if cfg.magnitude is not None els
+          +e _DEFAULT_MAGNITUDE[flavor]                                  
+      121 +                                                              
+      122 +    if length <= 0:                                           
+      123 +        raise ValueError(f"length must be positive, got {lengt
+          +h}.")                                                         
+      124 +    if width < 1:                                             
+      125 +        raise ValueError(f"transition_width must be >= 1, got 
+          +{width}.")                                                    
+      126 +    if not (0 < onset < length):                              
+      127 +        raise ValueError(f"onset must satisfy 0 < onset < leng
+          +th; got onset={onset}, length={length}.")                     
+      128 +    if onset < _MIN_REFERENCE:                                
+      129 +        raise ValueError(                                     
+      130 +            f"onset={onset} leaves too few reference points (<
+          + {_MIN_REFERENCE}) before the drift."                         
+      131 +        )                                                     
+      132 +    if length - onset < _MIN_DRIFT:                           
+      133 +        raise ValueError(                                     
+      134 +            f"onset={onset} leaves too little room (< {_MIN_DR
+          +IFT} points) for the drift to develop."                       
+      135 +        )                                                     
+      136 +    if onset + width > length:                                
+      137 +        # I1 decision: reject, never silently clamp (would des
+          +ync label width from config).                                 
+      138 +        raise ValueError(                                     
+      139 +            f"onset+transition_width ({onset}+{width}={onset +
+          + width}) exceeds length ({length}); "                         
+      140 +            "rejected rather than clamped."                   
+      141 +        )                                                     
+      142 +    if magnitude == 0:                                        
+      143 +        raise ValueError("magnitude must be non-zero (a zero-m
+          +agnitude case would contradict its label).")                  
+      144 +    if flavor is DriftFlavor.variance_inflation and cfg.base_n
+          +oise <= 0:                                                    
+      145 +        raise ValueError("variance_inflation requires base_noi
+          +se > 0.")                                                     
+      146 +    if flavor is DriftFlavor.seasonal_amplitude and (         
+      147 +        cfg.seasonality_period is None or cfg.seasonality_ampl
+          +itude <= 0                                                    
+      148 +    ):                                                        
+      149 +        raise ValueError("seasonal_amplitude requires a season
+          +ality_period and positive amplitude.")                        
+      150 +    if cfg.duration is not None and cfg.duration < 1:         
+      151 +        raise ValueError(f"duration must be >= 1 when set, got
+          + {cfg.duration}.")                                            
+      152 +                                                              
+      153 +    return GeneratorConfig(                                   
+      154 +        length=length,                                        
+      155 +        start=pd.Timestamp(cfg.start),                        
+      156 +        freq=cfg.freq,                                        
+      157 +        onset=onset,                                          
+      158 +        magnitude=magnitude,                                  
+      159 +        transition_width=width,                               
+      160 +        duration=cfg.duration,                                
+      161 +        base_noise=cfg.base_noise,                            
+      162 +        seasonality_period=cfg.seasonality_period,            
+      163 +        seasonality_amplitude=cfg.seasonality_amplitude,      
+      164 +        seed=seed,                                            
+      165 +    )                                                         
+      166 +                                                              
+      167 +                                                              
+      168 +def _ramp(length: int, onset: int, width: int) -> np.ndarray: 
+      169 +    """Clamped linear ramp: 0 before onset, rising to 1 across
+          + [onset, onset+width], held after."""                         
+      170 +    t = np.arange(length)                                     
+      171 +    return np.clip((t - onset) / width, 0.0, 1.0)             
+      172 +                                                              
+      173 +                                                              
+      174 +def _base_components(cfg: GeneratorConfig) -> tuple[np.ndarray
+          +, np.ndarray, np.ndarray]:                                    
+      175 +    """Return (trend, seasonal, raw_noise) arrays composed fro
+          +m Darts primitives."""                                        
+      176 +    trend = linear_timeseries(                                
+      177 +        start_value=0.0, end_value=_BASE_TREND_RISE,          
+      178 +        length=cfg.length, start=cfg.start, freq=cfg.freq,    
+      179 +    ).values().ravel()                                        
+      180 +                                                              
+      181 +    if cfg.seasonality_period:                                
+      182 +        seasonal = sine_timeseries(                           
+      183 +            value_frequency=1.0 / cfg.seasonality_period,     
+      184 +            value_amplitude=cfg.seasonality_amplitude,        
+      185 +            length=cfg.length, start=cfg.start, freq=cfg.freq,
+      186 +        ).values().ravel()                                    
+      187 +    else:                                                     
+      188 +        seasonal = np.zeros(cfg.length)                       
+      189 +                                                              
+      190 +    rng = np.random.default_rng(cfg.seed)                     
+      191 +    raw_noise = cfg.base_noise * rng.standard_normal(cfg.lengt
+          +h)                                                            
+      192 +    return trend, seasonal, raw_noise                         
+      193 +                                                              
+      194 +                                                              
+      195 +def _inject(flavor: DriftFlavor, cfg: GeneratorConfig) -> np.n
+          +darray:                                                       
+      196 +    """Compose the base series and inject one flavor's drift o
+          +ver the transition window."""                                 
+      197 +    trend, seasonal, noise = _base_components(cfg)            
+      198 +    ramp = _ramp(cfg.length, cfg.onset, cfg.transition_width) 
+      199 +    mag = cfg.magnitude                                       
+      200 +                                                              
+      201 +    if flavor is DriftFlavor.trend_slope:                     
+      202 +        # Extra per-step slope ramps in; cumulative sum bends 
+          +the trajectory.                                               
+      203 +        trend = trend + np.cumsum(mag * ramp)                 
+      204 +    elif flavor is DriftFlavor.mean_level:                    
+      205 +        # Level offset ramps from 0 to magnitude and holds.   
+      206 +        trend = trend + mag * ramp                            
+      207 +    elif flavor is DriftFlavor.variance_inflation:            
+      208 +        noise = noise * (1.0 + mag * ramp)                    
+      209 +    elif flavor is DriftFlavor.seasonal_amplitude:            
+      210 +        seasonal = seasonal * (1.0 + mag * ramp)              
+      211 +                                                              
+      212 +    return trend + seasonal + noise                           
+      213 +                                                              
+      214 +                                                              
+      215 +def _make_case(flavor: DriftFlavor, cfg: GeneratorConfig, case
+          +_id: str | None) -> Case:                                     
+      216 +    values = _inject(flavor, cfg)                             
+      217 +    index = pd.date_range(start=cfg.start, periods=cfg.length,
+          + freq=cfg.freq)                                               
+      218 +    series = TimeSeries.from_times_and_values(index, values)  
+      219 +    label = DriftLabel(                                       
+      220 +        flavor=flavor,                                        
+      221 +        affected_component=flavor.affected_component,         
+      222 +        onset_index=cfg.onset,                                
+      223 +        onset_time=index[cfg.onset],                          
+      224 +        transition_width=cfg.transition_width,                
+      225 +        magnitude=cfg.magnitude,                              
+      226 +    )                                                         
+      227 +    return Case(                                              
+      228 +        case_id=case_id or f"drift-{flavor.value}",           
+      229 +        series=series,                                        
+      230 +        labels=[label.to_dict()],                             
+      231 +        is_synthetic=True,                                    
+      232 +        labeled=True,                                         
+      233 +        config=cfg.to_dict(),                                 
+      234 +        metadata={},                                          
+      235 +    )                                                         
+      236 +                                                              
+      237 +                                                              
+      238 +def generate_case(                                            
+      239 +    flavor: DriftFlavor,                                      
+      240 +    *,                                                        
+      241 +    seed: int = 42,                                           
+      242 +    config: GeneratorConfig | None = None,                    
+      243 +    case_id: str | None = None,                               
+      244 +) -> Case:                                                    
+      245 +    """Generate one single-flavor labeled drift case (FR-001, 
+          +FR-004, FR-006)."""                                           
+      246 +    cfg = _resolve(flavor, seed, config)                      
+      247 +    return _make_case(flavor, cfg, case_id)                   
+
+⏺ Bash(uv run --extra dev pytest tests/pipelines/drift tests/core/datasets -q
+      2>&1 | tail -25)
+  ⎿  ...............................
+        [100%]
+     31 passed in 0.36s
+
+⏺ All 31 pass. Let me verify the reproducibility quickstart snippet (series
+  equality + label match) end-to-end, then mark US1 tasks done.
+
+⏺ Bash(uv run python -c "
+      from ailf.pipelines.drift.datasets import generate_case, DriftFlavor,
+      GeneratorConfig…)
+  ⎿  US1 quickstart OK; narrow/wide widths 3 120
+
+⏺ US1 (MVP) checkpoint passes. Marking T007-T015 done.
+
+⏺ Bash(python3 - <<'EOF'
+      import re…)
+  ⎿  marked T007-T015
+
+⏺ Phase 4 (US2). Writing the three failing test files first (T016-T018).
+
+⏺ Write(tests/core/datasets/test_corpus.py)
+  ⎿  Wrote 58 lines to tests/core/datasets/test_corpus.py
+        (T016)."""neric corpus persistence write/read/enumerate identity 
+      2 
+      3 import numpy as np
+      4 import pandas as pd
+      5 from darts import TimeSeries
+      6 
+      7 from ailf.core.datasets import Case
+      8 from ailf.core.datasets.corpus import load_corpus, read_manifest,
+         write_case, write_manifest
+      9 
+     … +59 lines (ctrl+o to expand)
+
+⏺ Write(tests/pipelines/drift/test_corpus.py)
+  ⎿  Wrote 64 lines to tests/pipelines/drift/test_corpus.py
+       1 """US2: build_corpus composition + reproducibility (T017)."""
+       2 
+       3 import json
+       4 
+       5 from ailf.core.datasets.corpus import load_corpus
+       6 from ailf.pipelines.drift.corpus import build_corpus
+       7 
+       8 EXPECTED_SINGLE_PER_FLAVOR = 25
+       9 EXPECTED_COMBINED = 10
+      10 EXPECTED_TOTAL = 110
+     … +60 lines (ctrl+o to expand)
+
+⏺ Write(tests/pipelines/drift/test_combined.py)
+  ⎿  Wrote 41 lines to tests/pipelines/drift/test_combined.py
+         018, FR-007)."""-flavor cases — every injected flavor labeled (T
+       2 
+       3 import numpy as np
+       4 import pytest
+       5 
+       6 from ailf.pipelines.drift.datasets import (
+       7     DriftFlavor,
+       8     GeneratorConfig,
+       9     generate_combined_case,
+      10 )
+     … +37 lines (ctrl+o to expand)
+  ⎿  Found 4 new diagnostic issues in 1 file (ctrl+o to expand)
+
+⏺ Pylance import warnings are just the IDE not pointing at the uv venv (tests
+  resolve fine). Running the US2 tests — expect failure since corpus modules
+  don't exist yet.
+
+⏺ Bash(uv run --extra dev pytest tests/pipelines/drift/test_corpus.py
+      tests/pipelines/drift/test_combined.py tests/core/datasets/test_corpus.py
+      -q 2>&1 | tail -10)
+  ⎿             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     tests/core/datasets/test_corpus.py:8: in <module>
+         from ailf.core.datasets.corpus import load_corpus, read_manifest,
+     … +10 lines (ctrl+o to expand)
+
+⏺ Failing as expected. Now T019 — generic corpus persistence in core. I'll write
+   CSV deterministically (fixed float formatting) for byte-identical
+  reproducibility.
+
+⏺ Write(src/ailf/core/datasets/corpus.py)
+  ⎿  Wrote 104 lines to src/ailf/core/datasets/corpus.py
+        ate cases., domain-agnostic on-disk corpus: write / read / enumer
+      2 
+        amp,value) plusrsisted as ``<root>/<case_id>/series.csv`` (timest
+      4 ``labels.json``; a top-level ``corpus.json`` manifest enumerates 
+        every case so consumers
+        ic (Principle I). CSVs (FR-012). Plain, diffable, language-agnost
+      6 values use a fixed float format so a rebuild from the same inputs
+      7 """ byte-identical (FR-011).
+      8 
+      9 from __future__ import annotations
+     … +108 lines (ctrl+o to expand)
+
+⏺ Now T020 — export corpus helpers from core __init__.py.
+⏺ Update(src/ailf/core/datasets/__init__.py)
+  ⎿  Added 7 lines, removed 1 line
+       6  """
+       7  
+       8  from ailf.core.datasets.case import Case
+       9 +from ailf.core.datasets.corpus import (                        
+      10 +    load_corpus,                                               
+      11 +    read_manifest,                                             
+      12 +    write_case,                                                
+      13 +    write_manifest,                                            
+      14 +)                                                              
+      15  
+      10 -__all__ = ["Case"]                                             
+      16 +__all__ = ["Case", "load_corpus", "read_manifest", "write_case"
+         +, "write_manifest"]                                            
+
+⏺ Now T021 — generate_combined_case in datasets.py. I'll add a multi-flavor
+  injector that composes onto one base series, with per-flavor onset offsets so
+  overlapping components stay coherent.
+
+⏺ Update(src/ailf/pipelines/drift/datasets.py)
+  ⎿  Added 64 lines
+      245      """Generate one single-flavor labeled drift case (FR-001, 
+           FR-004, FR-006)."""
+      246      cfg = _resolve(flavor, seed, config)
+      247      return _make_case(flavor, cfg, case_id)
+      248 +                                                              
+      249 +                                                              
+      250 +def _apply_flavor(                                            
+      251 +    flavor: DriftFlavor,                                      
+      252 +    cfg: GeneratorConfig,                                     
+      253 +    trend: np.ndarray,                                        
+      254 +    seasonal: np.ndarray,                                     
+      255 +    noise: np.ndarray,                                        
+      256 +) -> tuple[np.ndarray, np.ndarray, np.ndarray]:               
+      257 +    """Inject one flavor's drift into the (trend, seasonal, no
+          +ise) components in place-style."""                            
+      258 +    ramp = _ramp(cfg.length, cfg.onset, cfg.transition_width) 
+      259 +    mag = cfg.magnitude                                       
+      260 +    if flavor is DriftFlavor.trend_slope:                     
+      261 +        trend = trend + np.cumsum(mag * ramp)                 
+      262 +    elif flavor is DriftFlavor.mean_level:                    
+      263 +        trend = trend + mag * ramp                            
+      264 +    elif flavor is DriftFlavor.variance_inflation:            
+      265 +        noise = noise * (1.0 + mag * ramp)                    
+      266 +    elif flavor is DriftFlavor.seasonal_amplitude:            
+      267 +        seasonal = seasonal * (1.0 + mag * ramp)              
+      268 +    return trend, seasonal, noise                             
+      269 +                                                              
+      270 +                                                              
+      271 +def generate_combined_case(                                   
+      272 +    flavors: list[DriftFlavor],                               
+      273 +    *,                                                        
+      274 +    seed: int = 42,                                           
+      275 +    config: GeneratorConfig | None = None,                    
+      276 +    case_id: str | None = None,                               
+      277 +) -> Case:                                                    
+      278 +    """Generate one case with multiple injected flavors, each 
+          +individually labeled (FR-007)."""                             
+      279 +    if len(flavors) < 2:                                      
+      280 +        raise ValueError("generate_combined_case requires at l
+          +east two flavors.")                                           
+      281 +                                                              
+      282 +    # Validate each flavor against a shared config; the first 
+          +resolution fixes the base series.                             
+      283 +    resolved = [_resolve(f, seed, config) for f in flavors]   
+      284 +    base_cfg = resolved[0]                                    
+      285 +                                                              
+      286 +    trend, seasonal, noise = _base_components(base_cfg)       
+      287 +    labels: list[dict[str, Any]] = []                         
+      288 +    for flavor, cfg in zip(flavors, resolved, strict=True):   
+      289 +        trend, seasonal, noise = _apply_flavor(flavor, cfg, tr
+          +end, seasonal, noise)                                         
+      290 +        labels.append(                                        
+      291 +            DriftLabel(                                       
+      292 +                flavor=flavor,                                
+      293 +                affected_component=flavor.affected_component, 
+      294 +                onset_index=cfg.onset,                        
+      295 +                onset_time=pd.date_range(start=cfg.start, peri
+          +ods=cfg.length, freq=cfg.freq)[cfg.onset],                    
+      296 +                transition_width=cfg.transition_width,        
+      297 +                magnitude=cfg.magnitude,                      
+      298 +            ).to_dict()                                       
+      299 +        )                                                     
+      300 +                                                              
+      301 +    index = pd.date_range(start=base_cfg.start, periods=base_c
+          +fg.length, freq=base_cfg.freq)                                
+      302 +    series = TimeSeries.from_times_and_values(index, trend + s
+          +easonal + noise)                                              
+      303 +    return Case(                                              
+      304 +        case_id=case_id or f"drift-combined-{'+'.join(f.value 
+          +for f in flavors)}",                                          
+      305 +        series=series,                                        
+      306 +        labels=labels,                                        
+      307 +        is_synthetic=True,                                    
+      308 +        labeled=True,                                         
+      309 +        config=base_cfg.to_dict(),                            
+      310 +        metadata={"combined_flavors": [f.value for f in flavor
+          +s]},                                                          
+      311 +    )                                                         
+
+⏺ Now T022 — the drift build config + build_corpus CLI producing exactly 110
+  cases.
+
+⏺ Write(src/ailf/pipelines/drift/corpus.py)
+  ⎿  Wrote 125 lines to src/ailf/pipelines/drift/corpus.py
+         )."Drift eval-corpus build config + materializer (FR-010, FR-011
+       3 The committed knob sweep below is the single source of truth for
+          corpus composition:
+         110 total. Per-case seedsor (100 single-flavor) + 10 combined = 
+       5 and knobs are derived deterministically from ``base_seed`` + cas
+       6 the same config is byte-identical (SC-003). Bulk output lands un
+       7 (gitignored); reproducibility rests on this committed source, no
+         t the output.
+       9 CLI: ``uv run python -m ailf.pipelines.drift.corpus``.
+      10 """
+     … +132 lines (ctrl+o to expand)
+
+⏺ Bash(uv run --extra dev pytest tests/pipelines/drift tests/core/datasets -q
+      2>&1 | tail -20)
+  ⎿  ==================================== ERRORS ==========================
+     ==========
+     _____________ ERROR collecting tests/core/datasets/test_corpus.py ____
+     … +16 lines (ctrl+o to expand)
+
+⏺ Duplicate basename test_corpus.py in two dirs without __init__.py collides
+  under pytest's default rootdir import mode. I'll rename the drift one to a
+  unique basename.
+
+⏺ Bash(git mv tests/pipelines/drift/test_corpus.py
+      tests/pipelines/drift/test_drift_corpus.py 2>/dev/null || mv
+      tests/pipelines/drift/test_corpus.py tests/pipelines/dr…)
+  ⎿  test_combined.py
+     test_drift_corpus.py
+     test_flavors.py
+     … +3 lines (ctrl+o to expand)
+
+⏺ Bash(uv run --extra dev pytest tests/pipelines/drift tests/core/datasets -q
+      2>&1 | tail -20)
+  ⎿  ..........................................
+        [100%]
+     42 passed in 1.25s
+
+⏺ All 42 pass, including the 110-case composition and byte-identical rebuild.
+  Let me verify the CLI works end-to-end and re-run reproducibility, then mark
+  US2 done.
+
+⏺ Bash(rm -rf data/synthetic/drift && uv run python -m
+      ailf.pipelines.drift.corpus 2>&1 | tail -3 && echo "---count---" && ls
+      data/synthetic/drift | grep -c drift && e…)
+  ⎿  Built 110 cases under data/synthetic/drift (base_seed=42).
+     ---count---
+     110
+     … +6 lines (ctrl+o to expand)
+
+⏺ US2 checkpoint passes (110 cases, enumerable, reproducible). Cleaning up the
+  generated bulk dir (gitignored, regenerable) and marking T016-T022 done.
+
+⏺ Bash(rm -rf data/synthetic/drift; python3 - <<'EOF'
+      import re…)
+  ⎿  marked T016-T022
+
+⏺ Phase 5-6 (US3 + US4). Writing the two failing test files first (T023, T025).
+
+⏺ Write(tests/pipelines/drift/test_ambiguous.py)
+  ⎿  Wrote 46 lines to tests/pipelines/drift/test_ambiguous.py
+         ration (T023).""" (mid-Δt) cases + narrow-vs-wide change concent
+       2 
+       3 import numpy as np
+       4 
+       5 from ailf.pipelines.drift.datasets import (
+       6     TRANSITION_BANDS,
+       7     DriftFlavor,
+       8     GeneratorConfig,
+       9     generate_case,
+      10 )
+     … +44 lines (ctrl+o to expand)
+
+⏺ Write(tests/pipelines/drift/test_real_series.py)
+  ⎿  Wrote 42 lines to tests/pipelines/drift/test_real_series.py
+         nlabeled (T025)."""eries load through the same Case interface, u
+       2 
+       3 import pandas as pd
+       4 
+       5 from ailf.core.datasets import Case
+       6 from ailf.pipelines.drift.datasets import (
+       7     list_real_series,
+       8     load_air_passengers,
+       9     load_mauna_loa_co2,
+      10 )
+     … +35 lines (ctrl+o to expand)
+
+⏺ Bash(uv run --extra dev pytest tests/pipelines/drift/test_ambiguous.py
+      tests/pipelines/drift/test_real_series.py -q 2>&1 | tail -8)
+  ⎿  tests/pipelines/drift/test_real_series.py:6: in <module>
+         from ailf.pipelines.drift.datasets import (
+     E   ImportError: cannot import name 'list_real_series' from 'ailf.pipe
+     … +9 lines (ctrl+o to expand)
+
+⏺ Failing as expected. Now T024 (TRANSITION_BANDS) and T026 (real loaders).
+  Adding to datasets.py — bands near the top after defaults, loaders at the end.
+
+⏺ Update(src/ailf/pipelines/drift/datasets.py)
+  ⎿  Added 11 lines
+      47          }[self]
+      48  
+      49  
+      50 +# Named transition-width bands spanning changepoint-like → clea
+         +rly-gradual (FR-008). These are                                
+      51 +# advisory defaults for generating the ambiguous middle ground;
+         + the exact numeric Δt threshold                                
+      52 +# demarcating drift vs changepoint is a deferred cross-team agr
+         +eement (spec Dependencies), NOT                                
+      53 +# committed here.                                              
+      54 +TRANSITION_BANDS: dict[str, int] = {                           
+      55 +    "narrow": 5,                                               
+      56 +    "ambiguous": 40,                                           
+      57 +    "gradual": 120,                                            
+      58 +}                                                              
+      59 +                                                               
+      60 +                                                               
+      61  # Flavor-specific default drift magnitude (data-model.md: "magn
+          itude default flavor-specific").
+      62  _DEFAULT_MAGNITUDE = {
+      63      DriftFlavor.trend_slope: 0.05,
+
+⏺ Now T026 — real loaders appended to datasets.py. Let me check AirPassengers
+  freq handling for the CO₂ resample.
+
+⏺ Update(src/ailf/pipelines/drift/datasets.py)
+  ⎿  Added 54 lines
+      320          config=base_cfg.to_dict(),
+      321          metadata={"combined_flavors": [f.value for f in flavor
+           s]},
+      322      )
+      323 +                                                              
+      324 +                                                              
+      325 +# --- Real demo series (FR-014–FR-016) -----------------------
+          +--------------------------------                              
+      326 +# Curated real univariate series surfaced through the same Cas
+          +e interface as synthetic, but                                 
+      327 +# flagged unlabeled (no ground-truth onset) so they are exclud
+          +ed from precision/recall.                                     
+      328 +                                                              
+      329 +_REAL_SERIES = ("air_passengers", "mauna_loa_co2")            
+      330 +                                                              
+      331 +                                                              
+      332 +def list_real_series() -> list[str]:                          
+      333 +    """Enumerate the available real demo series (US4 scenario 
+          +3)."""                                                        
+      334 +    return list(_REAL_SERIES)                                 
+      335 +                                                              
+      336 +                                                              
+      337 +def load_air_passengers() -> Case:                            
+      338 +    """Load the Air Passengers series (growing seasonal amplit
+          +ude), unlabeled (FR-014–FR-016)."""                           
+      339 +    from darts.datasets import AirPassengersDataset           
+      340 +                                                              
+      341 +    series = AirPassengersDataset().load()                    
+      342 +    return Case(                                              
+      343 +        case_id="real-air_passengers",                        
+      344 +        series=series,                                        
+      345 +        labels=[],                                            
+      346 +        is_synthetic=False,                                   
+      347 +        labeled=False,                                        
+      348 +        config=None,                                          
+      349 +        metadata={                                            
+      350 +            "source": "darts.datasets.AirPassengersDataset",  
+      351 +            "qualitative_drift": "growing seasonal amplitude (
+          +additive→multiplicative seasonality)",                        
+      352 +        },                                                    
+      353 +    )                                                         
+      354 +                                                              
+      355 +                                                              
+      356 +def load_mauna_loa_co2() -> Case:                             
+      357 +    """Load Mauna Loa CO₂ (rising level + seasonality), resamp
+          +led to regular monthly (FR-014–FR-016)."""                    
+      358 +    from statsmodels.datasets import co2                      
+      359 +                                                              
+      360 +    df = co2.load_pandas().data  # weekly, with gaps          
+      361 +    monthly = df["co2"].resample("MS").mean().interpolate("lin
+          +ear")                                                         
+      362 +    index = pd.DatetimeIndex(monthly.index, freq="MS")        
+      363 +    series = TimeSeries.from_times_and_values(index, monthly.t
+          +o_numpy(dtype=float))                                         
+      364 +    return Case(                                              
+      365 +        case_id="real-mauna_loa_co2",                         
+      366 +        series=series,                                        
+      367 +        labels=[],                                            
+      368 +        is_synthetic=False,                                   
+      369 +        labeled=False,                                        
+      370 +        config=None,                                          
+      371 +        metadata={                                            
+      372 +            "source": "statsmodels.datasets.co2",             
+      373 +            "qualitative_drift": "slow rising level with seaso
+          +nality",                                                      
+      374 +            "preprocessing": "resampled weekly→monthly (MS) me
+          +an, linearly interpolated to fill gaps",                      
+      375 +        },                                                    
+      376 +    )                                                         
+
+⏺ Bash(uv run --extra dev pytest tests/pipelines/drift tests/core/datasets -q
+      2>&1 | tail -20)  ⎿  ................................................
+        [100%]
+     48 passed in 1.47s
+
+⏺ All 48 pass. Marking T023-T026 and advancing to the final phase.
+
+⏺ Bash(python3 - <<'EOF'
+      import re…)
+  ⎿  marked T023-T026
+
+⏺ Phase 7 (US5). Writing the failing viz test first (T027).
+
+⏺ Write(tests/core/datasets/test_viz.py)
+  ⎿  Wrote 66 lines to tests/core/datasets/test_viz.py
+      1 """US5: drift overlay structure, tested headlessly (T027)."""
+      2 
+      3 import numpy as np
+      4 import pandas as pd
+      5 import plotly.graph_objects as go
+      6 from darts import TimeSeries
+      7 
+      8 from ailf.core.datasets import Case
+      9 from ailf.core.datasets.viz import plot_drift_overlay, save_drift
+        _overlay
+     … +60 lines (ctrl+o to expand)
+
+⏺ Bash(uv run --extra dev pytest tests/core/datasets/test_viz.py -q 2>&1 | tail
+      -6)
+  ⎿      from ailf.core.datasets.viz import plot_drift_overlay, save_drift_
+     overlay
+     E   ModuleNotFoundError: No module named 'ailf.core.datasets.viz'
+     … +6 lines (ctrl+o to expand)
+
+⏺ Failing as expected. Now T028 — implement viz.py.
+
+⏺ Write(src/ailf/core/datasets/viz.py)
+  ⎿  Wrote 83 lines to src/ailf/core/datasets/viz.py
+        gure 3).l-confirmation overlay for a Case (reproduces proposal Fi
+      2 
+        ical onset marker when theng mean + rolling-std band, with a vert
+      4 case is labeled (omitted for unlabeled real series). Returns the 
+        plotly figure (no forced
+        tes paired ``.png`` + ``.html``lessly; ``save_drift_overlay`` wri
+      6 under ``reports/`` for manual inspection. Domain-agnostic — lives
+      7 """ core.
+      8 
+      9 from __future__ import annotations
+     … +86 lines (ctrl+o to expand)
+
+⏺ Now T029 — export viz functions from core __init__.py.
+
+⏺ Update(src/ailf/core/datasets/__init__.py)
+  ⎿  Added 10 lines, removed 1 line
+      12      write_case,
+      13      write_manifest,
+      14  )
+      15 +from ailf.core.datasets.viz import plot_drift_overlay, save_dri
+         +ft_overlay                                                     
+      16  
+      16 -__all__ = ["Case", "load_corpus", "read_manifest", "write_case"
+         -, "write_manifest"]                                            
+      17 +__all__ = [                                                    
+      18 +    "Case",                                                    
+      19 +    "load_corpus",                                             
+      20 +    "read_manifest",                                           
+      21 +    "write_case",                                              
+      22 +    "write_manifest",                                          
+      23 +    "plot_drift_overlay",                                      
+      24 +    "save_drift_overlay",                                      
+      25 +]                                                              
+
+⏺ Bash(uv run --extra dev pytest tests/core/datasets/test_viz.py -q 2>&1 | tail
+      -15)
+  ⎿          render_prof,
+             stepper,
+         ) -> bytes:
+     … +15 lines (ctrl+o to expand)
+
+⏺ PNG export (kaleido) chokes on pandas Timestamp x-values during serialization.
+   The 3 structure tests pass. I'll convert the time axis to native Python
+  datetimes.
+
+⏺ Update(src/ailf/core/datasets/viz.py)
+  ⎿  Added 2 lines, removed 1 line
+      26  
+      27  def plot_drift_overlay(case: Case, *, window: int | None = None
+          ) -> go.Figure:
+      28      """Return a plotly overlay: observations + rolling mean + r
+          olling-std band (FR-017, FR-018)."""
+      29 -    times = list(case.series.time_index)                       
+      29 +    # Native python datetimes: pandas Timestamps are not serial
+         +izable by kaleido's PNG export.                                
+      30 +    times = [ts.to_pydatetime() for ts in case.series.time_inde
+         +x]                                                             
+      31      values = case.series.values().ravel()
+      32      s = pd.Series(values)
+      33      win = _rolling_window(len(values), window)
+
+⏺ The add_vline onset marker also passes a Timestamp x — let me fix that too
+  before re-running.
+
+⏺ Update(src/ailf/core/datasets/viz.py)
+  ⎿  Added 1 line, removed 1 line
+      55              if onset_idx is None or onset_idx >= len(times):
+      56                  continue
+      57              fig.add_vline(
+      58 -                x=times[onset_idx],                            
+      58 +                x=times[onset_idx].timestamp() * 1000,  # plotl
+         +y datetime axis uses epoch ms                                  
+      59                  line={"color": "red", "width": 2, "dash": "dash
+          "},
+      60                  annotation_text=f"onset: {label.get('flavor', '
+          ')}",
+      61              )
+  ⎿  Found 3 new diagnostic issues in 1 file (ctrl+o to expand)
+
+⏺ Bash(uv run --extra dev pytest tests/core/datasets/test_viz.py -q 2>&1 | tail
+      -10)
+  ⎿  ....
+        [100%]
+     4 passed in 2.26s
+
+⏺ All 4 viz tests pass. Let me clean up the corpus.py diagnostics — remove the
+  unused Iterable import and make overwrite actually function rather than be
+  dead.
+
+⏺ Update(src/ailf/pipelines/drift/corpus.py)
+  ⎿  Added 1 line, removed 1 line
+      11  
+      12  from __future__ import annotations
+      13  
+      14 -from collections.abc import Iterable  # noqa: F401  (re-export 
+         -convenience)                                                   
+      14 +import shutil                                                  
+      15  from pathlib import Path
+      16  from typing import Any
+      17  
+
+⏺ Update(src/ailf/pipelines/drift/corpus.py)
+  ⎿  Added 2 lines
+      73  ) -> dict[str, Any]:
+      74      """Materialize the canonical ≈110-case corpus to disk; retu
+          rn the manifest dict."""
+      75      root = Path(root)
+      76 +    if overwrite and root.exists():                            
+      77 +        shutil.rmtree(root)                                    
+      78      root.mkdir(parents=True, exist_ok=True)
+      79  
+      80      cases: list[Case] = []
+
+⏺ Now mark T027-T029, then T030 (docstrings — modules already have them; let me
+  verify) and run the full quickstart (T031) and full suite (T032).
+
+⏺ Bash(python3 - <<'EOF'
+      import re…)
+  ⎿  marked T027-T030
+     ---run full suite (T032)---
+     ..................................................................
+     … +2 lines (ctrl+o to expand)
+⏺ Full suite green (66 passed). Now T031 — running the quickstart scenarios
+  §2-§6 end-to-end (§1 is the test suite, already green).
+
+⏺ Bash(set -e
+      echo "=== §2 single case ==="…)
+  ⎿  === §2 single case ===
+     OK
+     === §3 ambiguous ===
+     … +10 lines (ctrl+o to expand)
+
+⏺ All quickstart scenarios pass. Let me run ruff (project linter) and the full
+  suite once more to confirm everything is clean, then mark T031/T032.
+
+⏺ Bash(uv run --extra dev ruff check src/ailf/core/datasets
+      src/ailf/pipelines/drift tests 2>&1 | tail -20)
+  ⎿  3 | import numpy as np
+       |                 ^^
+     4 | import pytest
+     … +17 lines (ctrl+o to expand)
+
+⏺ Two unused imports in test files. Let me fix them.
+
+⏺ Bash(uv run --extra dev ruff check --fix src/ailf/core/datasets
+      src/ailf/pipelines/drift tests 2>&1 | tail -6)
+  ⎿  Found 2 errors (2 fixed, 0 remaining).
+
+⏺ Ruff fixed both. Let me run the full suite once more to confirm nothing broke
+  from the import removal.
+
+⏺ Bash(uv run --extra dev pytest -q 2>&1 | tail -8 && echo "---ruff clean?---"
+      && uv run --extra dev ruff check src/ailf/core/datasets
+      src/ailf/pipelines/drift tests 2…)
+  ⎿  ..................................................................
+        [100%]
+     66 passed in 4.15s
+     … +2 lines (ctrl+o to expand)
+
+⏺ All 66 tests pass and ruff is clean. Marking the final tasks complete.
+
+⏺ Bash(python3 - <<'EOF'
+      import re…)
+  ⎿  remaining unchecked: []
+
+⏺ All 32 tasks complete. Checking for after_implement hooks before reporting.
+
+  The .specify/extensions.yml (read earlier) registers only after_specify and
+  after_plan hooks — there are no after_implement hooks, so none are dispatched.
+
+  Completion Report
+
+  All 32 tasks in tasks.md are complete and marked [X]. The drift dataset
+  feature is fully implemented, test-first, with 66 tests passing and ruff 
+  clean.
+
+  What was built:
+
+  Module: src/ailf/core/datasets/case.py
+  Purpose: Generic Case container, JSON round-trip serialization (Principle I)
+  ────────────────────────────────────────
+  Module: src/ailf/core/datasets/corpus.py
+  Purpose: Generic write/read/enumerate + manifest, byte-identical persistence
+  ────────────────────────────────────────
+  Module: src/ailf/core/datasets/viz.py
+  Purpose: Plotly overlay (observations + rolling mean + std band, onset marker
+    iff labeled) → paired PNG/HTML
+  ────────────────────────────────────────
+  Module: src/ailf/pipelines/drift/datasets.py
+  Purpose: DriftFlavor, DriftLabel, GeneratorConfig (+validation),
+  generate_case,
+    generate_combined_case, TRANSITION_BANDS, real-series loaders
+  ────────────────────────────────────────
+  Module: src/ailf/pipelines/drift/corpus.py
+  Purpose: Committed build config + build_corpus CLI (exactly 110 cases)
+
+  User stories delivered:
+  - US1 (P1, MVP) — single-flavor labeled cases, 4 flavors, reproducible from
+  seed+knobs; SC-001, SC-002.
+  - US2 (P1) — reproducible 110-case corpus (25×4 single + 10 combined),
+  enumerable, byte-identical rebuild verified; SC-003, SC-007.
+  - US3 (P2) — ambiguous mid-Δt cases + named bands; narrow-vs-wide
+  concentration verified; SC-004.
+  - US4 (P2) — Air Passengers + Mauna Loa CO₂ (resampled regular monthly) via
+  same Case interface, flagged unlabeled; SC-005.
+  - US5 (P3) — visual overlay, tested headlessly, PNG+HTML export; SC-006.
+
+  Verification: All 6 quickstart scenarios ran end-to-end successfully.
+  Generated bulk artifacts under data/synthetic/drift/ and reports/ were cleaned
+   up (gitignored, regenerable from committed config).
+
+  Notable decisions during implementation:
+  - Renamed tests/pipelines/drift/test_corpus.py → test_drift_corpus.py to avoid
+   a pytest basename collision with the core corpus test.
+  - Noise is generated via an isolated np.random.default_rng(seed) (Darts'
+  gaussian_timeseries has no seed param), preserving FR-004 reproducibility.
+  - Converted plot time-axis values to native datetimes / epoch-ms so kaleido's
+  PNG export doesn't choke on pandas Timestamp.
+
+  Constitution gates honored: test-first throughout (Principle II), shared-core
+  touch confined to core/datasets/ with all tests green (Principle VII), seeds
+  fixed and corpus regenerable from committed config (Principle V). Changes are
+  uncommitted — let me know if you'd like me to commit.
+
+✻ Sautéed for 13m 46s
+
+❯ /git-commit                                                                   
+
+⏺ I'll gather git context.
+
+⏺ Bash(git status && echo "===DIFF===" && git diff HEAD --stat && echo
+      "===LOG===" && git log --oneline -10 && echo "===CACHED===" && git diff
+      --cached --stat)
+  ⎿  On branch 002-drift-dataset-generation
+     Changes not staged for commit:
+       (use "git add/rm <file>..." to update what will be committed)
+     … +43 lines (ctrl+o to expand)
+
+⏺ No secrets, all expected source/test files. Staging and committing.
+
+⏺ Bash(git add -A && git diff --cached --stat)
+  ⎿   specs/002-drift-dataset-generation/tasks.md |  64 ++---
+      src/ailf/core/datasets/__init__.py          |  19 ++
+      src/ailf/core/datasets/case.py              |  75 ++++++
+     … +18 lines (ctrl+o to expand)
+
+⏺ Bash(git commit -m "$(cat <<'EOF'
+      Implement drift dataset generation, corpus, real loaders, and overlay…)
+  ⎿  [002-drift-dataset-generation 40686df] Implement drift dataset generat
+     ion, corpus, real loaders, and overlay
+      20 files changed, 1435 insertions(+), 35 deletions(-)
+     … +17 lines (ctrl+o to expand)
+
+⏺ Committed as 40686df on branch 002-drift-dataset-generation:
+
+  ▎ Implement drift dataset generation, corpus, real loaders, and overlay
+
+  20 files changed (1,435 insertions, 35 deletions) — the full drift data layer
+  plus its test suite. Nothing pushed; let me know if you'd like to push or open
+   a PR into main.
+
+✻ Churned for 18s

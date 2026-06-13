@@ -13,6 +13,8 @@ dependencies = [
     "pandas",
     "numpy",
     "matplotlib",
+    "plotly>=6.8.0",
+    "kaleido>=1.3.0",
 ]
 
 [project.optional-dependencies]
