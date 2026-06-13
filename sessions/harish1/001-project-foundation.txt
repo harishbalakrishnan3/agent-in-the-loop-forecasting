@@ -1,0 +1,1862 @@
+ ▐▛███▜▌   Claude Code v2.1.153
+▝▜█████▛▘  claude-opus-4-8 · Amazon Bedrock
+  ▘▘ ▝▝    ~/…/Deep Learning/CourseProject/agent-in-the-loop-forecasting
+
+
+❯ /model                                                                        
+  ⎿  Set model to global.anthropic.claude-opus-4-8 and saved as your default for
+     new sessions
+
+❯ /effort                                                                       
+  ⎿  Set effort level to max (this session only): Maximum capability with deepest
+      reasoning
+
+❯ I am working a big course project with a team of 7 and the goal is to do Spec 
+   driven development using Claude code. As a team leader, my fist task is to   
+  create a skeleton for the repo so that others can start working on it. I have 
+   used spec-kit (https://github.com/github/spec-kit) to help us with spec      
+  driven development.                                                           
+                                                                                
+  Two materials you need to study first:                                        
+  1. Course project proposal: docs/agent_in_the_loop_forecasting_proposal.pdf   
+  2. High Level plan: docs/Confluence-high-level-plan-writeup.pdf               
+                                                                                
+  Here are the requirements/constraints that you need to solve:                 
+  1. This is an ambitious project and we don't know if the hypothesis will work 
+   as expected. So we need a separate directory for POCs (of drift, changepoint 
+   and anomaly detection use-cases).                                            
+                                                                                
+  2. Each sub-team: "Team Drft", "Team Changepoint", "Team Anomaly Detection"   
+  will work independently on thier own pipeline. The project sructure should be 
+   such a way that it doesn't create merge conflicts and at the same time       
+  should make sense from an overall prespective (say my prof looks at it)       
+                                                                                
+  3. We also need to export each of our claude sessions - these might be taken  
+  into consideration for grading - so a suitable obvious place/home for these   
+  sessions is preferred.                                                        
+                                                                                
+                                                                                
+  Keeping all this in mind, suggest a project structure, a skeleton CLAUDE.md,  
+  constitution and (optionally) SPEC.md.                                        
+                                                                                
+                                                                                
+  Don't assume anything, ask questions if you have doubts on any of the         
+  requirements.                                                                 
+
+⏺ I'll start by studying the two materials you mentioned, then explore the
+  current repo state.
+
+  Read 2 files (ctrl+o to expand)
+
+⏺ I've studied both documents. Now let me examine the existing repo structure,
+  especially the spec-kit setup, before forming my recommendation.
+
+⏺ Bash(cd "/Users/hbalakr2/Library/Mobile
+      Documents/com~apple~CloudDocs/IISc/Deep
+      Learning/CourseProject/agent-in-the-loop-forecasting" && echo "=== TOP
+      LEVEL ===" &&…)
+  ⎿  === TOP LEVEL ===
+     total 32
+     drwxr-xr-x@  9 hbalakr2  staff   288 Jun 12 12:46 .
+     … +54 lines (ctrl+o to expand)
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Let me look at the spec-kit constitution and the feature-creation script to
+  understand how spec-kit organizes work — this matters for the multi-team
+  structure.
+
+  Read 3 files (ctrl+o to expand)
+
+⏺ I've now studied the proposal, the high-level plan, and the spec-kit
+  scaffolding (which organizes work as specs/NNN-feature/ dirs with
+  spec.md/plan.md/tasks.md, plus the constitution at
+  .specify/memory/constitution.md).
+
+  Before I propose a structure, a few decisions genuinely shape the layout and I
+   don't want to guess wrong on them. Let me confirm the important forks.
+
+⏺ User answered Claude's questions:
+  ⎿  · The 3 use-cases (drift/changepoint/anomaly) share a LOT: forecasting 
+     models (Prophet/ARIMA/SeasonalNaive via Darts), backtesting, metrics, the 
+     ReAct agent loop, eval harness, LLM judge. How should the repo treat this 
+     shared layer vs. the per-team work? → Shared core + thin team pipelines 
+     (Recommended)
+     · Claude session exports need an obvious home (may be graded). How should 
+     they be organized and committed? → By person only
+     · What Python tooling / environment model should the skeleton assume? → uv 
+     + single workspace (Recommended)
+     · How should teams branch/PR to avoid conflicts while keeping main 
+     coherent? → spec-kit feature branches per task (Recommended)
+
+⏺ I have everything I need. Here's my proposed foundation, reflecting all four
+  of your decisions (shared core/ + thin team pipelines, sessions/<person>/, uv
+  single workspace, spec-kit feature branches).
+
+  I'll lay out the structure, then give you full drafts of CLAUDE.md,
+  constitution.md, and SPEC.md. Nothing is written to disk yet — review first,
+  then I'll scaffold it all in one go.
+
+  ---
+  1. Proposed repository structure
+
+  agent-in-the-loop-forecasting/
+  ├── CLAUDE.md                      # agent guidance (preserves spec-kit block)
+  ├── SPEC.md                        # umbrella project spec (the "First PR"
+  artifact)
+  ├── README.md                      # human onboarding
+  ├── pyproject.toml                 # single uv workspace, package = ailf
+  ├── uv.lock                        # committed lockfile
+  ├── .python-version
+  ├── .env.example                   # ANTHROPIC_API_KEY, LANGSMITH_*, etc.
+  ├── .gitignore
+  │
+  ├── .specify/                      # spec-kit (exists) — constitution lives
+  here
+  │   └── memory/constitution.md
+  ├── specs/                         # spec-kit feature dirs:
+  NNN-feature/{spec,plan,tasks}.md
+  │
+  ├── docs/
+  │   ├── agent_in_the_loop_forecasting_proposal.pdf
+  │   ├── Confluence-high-level-plan-writeup.pdf
+  │   └── decisions/                 # short ADRs (e.g. 0001-shared-core.md)
+  │
+  ├── src/ailf/                      # the one installable package
+  │   ├── core/                      # SHARED, stable, collectively owned
+  │   │   ├── datasets/              #   Darts generation utils + standard
+  loaders (knobs)
+  │   │   ├── models/                #   Prophet / AutoARIMA / SeasonalNaive
+  wrappers
+  │   │   ├── backtest/              #   rolling backtest harness
+  │   │   ├── metrics/               #   MAE/RMSE/MASE/WAPE/sMAPE/coverage
+  │   │   ├── agent/                 #   ReAct loop, tool registry, base Tool
+  interface
+  │   │   ├── prompts/               #   shared/system prompts (versioned: v1,
+  v2…)
+  │   │   ├── eval/                  #   eval harness + LLM-judge
+  │   │   └── reporting/             #   explanation-report generation
+  │   └── pipelines/                 # THIN, team-owned, isolated dirs
+  │       ├── drift/                 #   Sowmya, Harish
+  │       │   ├── datasets.py        #     drift dataset generation
+  │       │   ├── tools.py           #     drift-detection diagnostic tool
+  │       │   ├── prompts/           #     versioned drift prompts
+  │       │   └── pipeline.py        #     wires core + drift tool into the loop
+  │       ├── changepoint/           #   Goutham, Meena, Dinesh
+  │       └── anomaly/               #   Nadhiya, Amudhaval
+  │
+  ├── pocs/                          # REQ #1 — throwaway "does the hypothesis
+  hold?"
+  │   ├── drift/                     #   notebooks + scratch, not held to core
+  quality bar
+  │   ├── changepoint/
+  │   └── anomaly/
+  │
+  ├── tests/
+  │   ├── core/                      # shared-core unit/contract tests
+  │   └── pipelines/{drift,changepoint,anomaly}/   # tool unit tests w/ known
+  ground truth
+  │
+  ├── data/                          # gitignored bulk; tiny committed samples
+  only
+  │   ├── synthetic/
+  │   └── standard/
+  │
+  ├── reports/                       # generated agent reports (gitignored
+  except samples)
+  │
+  └── sessions/                      # REQ #3 — Claude session exports (graded)
+      ├── harish/  sowmya/           # drift
+      ├── goutham/ meena/ dinesh/    # changepoint
+      └── nadhiya/ amudhaval/        # anomaly
+
+  Why this satisfies your three constraints:
+
+  - REQ #1 (POCs): pocs/<usecase>/ is a first-class, explicitly throwaway zone.
+  It can import ailf (single env) but is exempt from the test/quality gates so
+  teams can fail fast without ceremony.
+  - REQ #2 (independent, conflict-free, yet coherent): Each team works almost
+  entirely inside its own src/ailf/pipelines/<usecase>/ +
+  tests/pipelines/<usecase>/ + pocs/<usecase>/ + specs/NNN-*. Those paths never
+  overlap between teams, so PRs into main won't collide. The shared core/ makes
+  it read as one coherent system to your prof — three pipelines plugging
+  diagnostic tools into a common agent/backtest/eval spine, exactly matching the
+   proposal's 5-layer architecture.
+  - REQ #3 (sessions): sessions/<person>/ is the one obvious home, easy for a
+  grader to attribute work per person.
+
+  The only coordination cost is core/ changes — handled by the constitution
+  (core is test-gated and changes go through review).
+
+  ---
+  2. Draft CLAUDE.md
+
+  ▎ Preserves the existing <!-- SPECKIT START/END --> block so spec-kit's 
+  ▎ agent-context-update keeps working; my content wraps around it.
+
+  # Agent-in-the-Loop Forecasting
+
+  An LLM agent acting as a *bounded junior forecasting analyst*. It does NOT
+  forecast
+  numerically. It uses tools to diagnose time-series failure modes (drift,
+  changepoints,
+  outliers), proposes bounded interventions, validates them via backtesting, and
+   writes
+  an explanation report. See `SPEC.md` for the full project spec and `docs/` for
+   the
+  proposal + high-level plan.
+
+  ## Golden rules for the agent we are building
+  1. The agent must use tools — never fabricate metrics or cite uncomputed
+  numbers.
+  2. No intervention is accepted unless a backtest shows it helps. Backtesting
+  is the guardrail.
+  3. Every result is compared against Seasonal Naive and Prophet-default
+  baselines.
+  4. All prompts are versioned (never edit a released prompt in place — add a
+  new version).
+
+  ## Repository map
+  - `src/ailf/core/` — SHARED, stable, collectively owned: models, backtest,
+  metrics,
+    agent (ReAct loop + tool registry), eval (+ LLM judge), reporting, prompts.
+  Test-gated.
+  - `src/ailf/pipelines/<usecase>/` — THIN, team-owned: dataset generation, the
+  diagnostic
+    tool, versioned prompts, and `pipeline.py` that wires the tool into the core
+   loop.
+  - `pocs/<usecase>/` — throwaway exploration for the fail-fast phase. Not held
+  to the
+    core quality bar. Prove the hypothesis here before promoting code into
+  `pipelines/`.
+  - `tests/` — `core/` (shared) and `pipelines/<usecase>/` (each tool needs unit
+   tests
+    against synthetic data with KNOWN injected ground truth).
+  - `specs/` — spec-kit feature dirs (`NNN-feature/{spec,plan,tasks}.md`).
+  - `sessions/<person>/` — exported Claude sessions (provenance + grading).
+  Commit yours.
+  - `data/`, `reports/` — bulk artifacts are gitignored; commit only tiny
+  samples.
+
+  ## Team ownership
+  | Pipeline      | Owners                    |
+  |---------------|---------------------------|
+  | drift         | Sowmya, Harish            |
+  | changepoint   | Goutham, Meena, Dinesh    |
+  | anomaly       | Nadhiya, Amudhaval        |
+  `core/` is shared — changes go through review and must keep tests green.
+
+  ## Environment & commands (uv, single workspace)
+  - `uv sync` — create/update the shared venv from `uv.lock`.
+  - `uv run pytest` — run all tests. `uv run pytest tests/pipelines/drift` — one
+   pipeline.
+  - `uv add <pkg>` — add a dependency (commit the updated `uv.lock`).
+  - `uv run python -m ailf.pipelines.drift.pipeline` — run a pipeline
+  end-to-end.
+  Key deps: darts (data gen + models), prophet, langgraph/langchain, anthropic,
+  langsmith.
+  Never commit secrets — copy `.env.example` to `.env` (gitignored).
+
+  ## Workflow (spec-kit, feature branches per task)
+  1. `/speckit.specify` a feature → creates `specs/NNN-<name>/` + branch
+  `NNN-<name>`.
+  2. `/speckit.plan` then `/speckit.tasks`, then implement on that branch.
+  3. Keep changes inside your pipeline's directories to avoid cross-team
+  conflicts.
+  4. PR into `main`. Touching `core/`? Flag it for review and keep `core` tests
+  green.
+
+  ## Conventions
+  - Diagnostic tools: pure, typed functions with a clear contract + unit tests
+  first.
+  - Prompts: `prompts/<name>_vN.md`; reference the version in code and in
+  reports.
+  - Seed all synthetic data generation for reproducibility.
+
+  <!-- SPECKIT START -->
+  For additional context about technologies to be used, project structure,
+  shell commands, and other important information, read the current plan
+  <!-- SPECKIT END -->
+
+  ---
+  3. Draft .specify/memory/constitution.md
+
+  # Agent-in-the-Loop Forecasting Constitution
+
+  ## Core Principles
+
+  ### I. Tool-Grounded Agent (NON-NEGOTIABLE)
+  The agent is a bounded junior analyst, not a forecaster. It must inspect
+  diagnostics and
+  metrics via tools before any recommendation; it may only choose from a
+  predefined
+  intervention menu; it must never invent evidence, cite uncomputed metrics, or
+  use tools
+  outside the allowed set. Explanations must separate evidence from speculation.
+
+  ### II. Backtest-Validated Interventions (NON-NEGOTIABLE)
+  Backtesting is the guardrail. No intervention is accepted unless a rolling
+  backtest shows
+  it improves the chosen metric (or improves reliability without unacceptable
+  accuracy loss).
+  The agent must rerun backtests after every intervention and reject its own
+  recommendation
+  when results worsen.
+
+  ### III. Shared Core, Independent Pipelines
+  `src/ailf/core/` is the common, stable spine (models, backtest, metrics,
+  agent, eval,
+  reporting). Each use-case lives in `src/ailf/pipelines/<usecase>/` and owns
+  only its
+  dataset generation, diagnostic tool, and prompts. Pipelines must not depend on
+   each other.
+  Core changes require review and must keep all core tests green.
+
+  ### IV. Test-First Diagnostic Tools
+  Every diagnostic tool (drift / changepoint / outlier) ships with unit tests
+  against
+  synthetic series with KNOWN injected ground truth
+  (precision/recall/false-positive),
+  written and passing before the tool is integrated with the agent.
+
+  ### V. Reproducibility & Versioned Prompts
+  One uv-locked environment for everyone. All synthetic data generation is
+  seeded. All
+  prompts (agent and LLM-judge) are versioned — a released prompt is never
+  edited in place;
+  a new version is added and referenced by code and reports.
+
+  ### VI. Baseline Comparison Always
+  Seasonal Naive and Prophet-default are the mandatory references. A pipeline
+  result that
+  cannot be compared against them is incomplete. Datasets where the issue does
+  not actually
+  reproduce are filtered out of the train/test set.
+
+  ### VII. Session Transparency
+  Every member exports their Claude sessions to `sessions/<person>/` for
+  provenance and
+  grading. Significant design decisions are recorded as short ADRs under
+  `docs/decisions/`.
+
+  ## Technology Constraints
+  - Python managed by uv (single workspace). Package: `ailf`.
+  - Time series & models via Darts (Prophet, AutoARIMA/ETS, Seasonal Naive);
+  Prophet as the
+    interpretable analyst-in-the-loop baseline. Chronos/TimesFM only "if time
+  permits".
+  - Agent via LangGraph/LangChain; LLM via Anthropic; eval tracing via LangSmith
+   (optional).
+  - Metrics: MAE, RMSE, MASE, WAPE, sMAPE, prediction-interval coverage.
+  - POCs in `pocs/` are exempt from these constraints to enable fast
+  experimentation.
+
+  ## Development Workflow
+  - Spec-driven: `/speckit.specify` → `/speckit.plan` → `/speckit.tasks` →
+  implement, one
+    feature branch (`NNN-<name>`) per task, PR'd into `main`.
+  - Work stays inside your pipeline's directories to avoid cross-team merge
+  conflicts.
+  - PRs must keep tests green; PRs touching `core/` get an extra review.
+  - Fail-fast: prove a use-case in `pocs/` before investing in a full pipeline.
+
+  ## Governance
+  This constitution supersedes ad-hoc practice. The two NON-NEGOTIABLE
+  principles (I and II)
+  may not be bypassed for convenience. Amendments require a PR, team agreement,
+  and a note
+  in `docs/decisions/`. Complexity must be justified against these principles.
+
+  **Version**: 1.0.0 | **Ratified**: TBD | **Last Amended**: TBD
+
+  ---
+  4. Draft SPEC.md (umbrella project spec)
+
+  # SPEC: Agent-in-the-Loop Forecasting
+
+  ## 1. Problem & Research Question
+  Automatic forecasting models fail silently on drift, changepoints, outliers,
+  and regime
+  changes; expert analysts catch these but don't scale. **Can a bounded LLM 
+  agent improve a
+  forecasting pipeline by diagnosing common failure modes, recommending 
+  interventions, and
+  validating them through backtesting?** The agent plays the analyst role only —
+   models
+  forecast, tools diagnose, the agent reasons/explains/validates. (See `docs/`
+  proposal.)
+
+  ## 2. System Architecture (5 layers)
+  1. **Data** — synthetic (seeded, knob-driven via Darts) + standard datasets.
+  2. **Forecasting models** — Seasonal Naive, Prophet, AutoARIMA/ETS
+  (Chronos/TimesFM optional).
+  3. **Diagnostics** — drift / changepoint / outlier detection tools + metric
+  computation.
+  4. **LLM analyst agent** — ReAct loop: reads diagnostics, picks tools,
+  proposes bounded
+     interventions, writes explanations.
+  5. **Evaluation** — rolling backtests accept/reject interventions; LLM judge +
+   manual evals.
+
+  ## 3. Use-cases (parallel team tracks)
+  | Track       | Owners                 | Deliverables
+                 |
+  |-------------|------------------------|--------------------------------------
+  ---------------|
+  | Drift       | Sowmya, Harish         | dataset gen, drift tool, prompts,
+  pipeline, evals   |
+  | Changepoint | Goutham, Meena, Dinesh | dataset gen, changepoint tool,
+  prompts, pipeline    |
+  | Anomaly     | Nadhiya, Amudhaval     | dataset gen, outlier tool, prompts,
+  pipeline        |
+  All three plug into the shared `core/` agent + backtest + eval spine.
+
+  ## 4. Capability roadmap (priority order, from the proposal)
+  1. Detect drift → 2. Identify changepoints → 3. Flag outliers → 4. Compare
+  baselines →
+  5. Recommend interventions (bounded menu) → 6. Validate via backtesting → 7.
+  Explanation report.
+
+  ## 5. MVP (the minimum complete loop)
+  Load dataset → fit Prophet + Seasonal Naive → backtest → detect issue → agent
+  diagnoses &
+  picks from a small intervention menu → refit → compare before/after metrics →
+  write report.
+
+  ## 6. Intervention menu (bounded)
+  Add/relax changepoints; additive↔multiplicative seasonality; add seasonality;
+  treat interval
+  as outlier-contaminated; add holidays/regressors; switch baseline; retrain on
+  recent window.
+  Each recommendation states: symptom, likely cause, intervention, deciding
+  metric.
+
+  ## 7. Evaluation
+  Diagnostic correctness (P/R/FPR on injected ground truth), tool-use
+  correctness, intervention
+  quality, backtest discipline, forecast outcome vs. baselines, constraint
+  adherence, explanation
+  quality, stability. Baselines to beat: Prophet-default, Seasonal Naive,
+  rule-based loop,
+  LLM-only (no tools). LLM-judge prompts are versioned.
+
+  ## 8. Milestones (fail-fast — fill in dates)
+  - M0 Foundation (this PR): structure, CLAUDE.md, SPEC.md, constitution. — TBD
+  - M1 POCs: each track proves its issue reproduces + is detectable in `pocs/`.
+  — TBD
+  - M2 Datasets + problem reproduction (filtered train/test). — TBD
+  - M3 Tools + unit tests; agent integration (MVP loop). — TBD
+  - M4 Evals + LLM judge; report generation. — TBD
+  - M5 (optional) extended baselines / UI / chat. — TBD
+
+  ## 9. Out of scope (unless time permits)
+  Direct numerical forecasting by the LLM; production deployment; chat UI;
+  foundation-model
+  baselines (Chronos/TimesFM). These are explicitly "extended version" items.
+
+  ---
+  A few small notes on choices I made so you can veto them:
+
+  - Package name ailf (agent-in-loop-forecasting) under a src/ layout — short
+  import path, standard packaging. Easy to rename.
+  - Dataset generation split: generic Darts knob-based utilities go in
+  core/datasets/; each team's specific generation (drift params, changepoint
+  params, outlier counts) lives in pipelines/<usecase>/datasets.py. This matches
+   the plan's "Custom dataset generation" per-team assignment while keeping the
+  Darts plumbing shared.
+  - Deadlines left as TBD — I won't invent dates; your team fills M0–M5.
+
+  Want me to scaffold all of this now — create the directory tree (with
+  .gitkeeps and stub __init__.py/READMEs), write the three documents above, and
+  add pyproject.toml + .gitignore + .env.example? Or would you rather I adjust
+  any of the structure/wording first?
+
+✻ Churned for 3m 47s
+
+※ recap: We designed a repo skeleton for your spec-driven forecasting project: shared core plus thin per-team pipelines, POCs dir, and session exports. I've drafted the structure, CLAUDE.md, constitution, and SPEC.md. Next action is scaffolding it all on disk once you approve. (disable recaps in /config)
+
+❯ I have two questions:                                                         
+
+⏺ Go ahead — what are they?
+
+✻ Churned for 6s
+
+❯ 1. There seems to be overlap between CLAUDE.md and SPEC.md. What is the right 
+   way to split it up so that information is not duplicated again and again?    
+  Also, we need not specify owner names, these are redundant for a 3rd party    
+  who is going to look at the repo. 2. This is another constitution that was    
+  created a while back in another session, how can we bring the best of both    
+  the worlds. Ask questions if you have doubts. Basically, what should a good   
+  constitution contain ? <!--                                                   
+                                                                                
+  SYNC IMPACT REPORT                                                            
+  ==================                                                            
+                                                                                
+  Version change: (template) → 1.0.0                                            
+  Rationale: Initial ratification — first concrete constitution derived from    
+  the                                                                           
+  "Agent-in-the-Loop Forecasting" proposal                                      
+  (docs/agent_in_the_loop_forecasting_proposal.pdf).                            
+                                                                                
+  Principles defined:                                                           
+    I.   UI-Agnostic Core (Library-First)                                       
+    II.  Test-First for Deterministic Logic (NON-NEGOTIABLE)                    
+    III. Agent Quality Through Golden-Set Evaluation                            
+    IV.  Bounded Interventions, Backtest-Gated (NON-NEGOTIABLE)                 
+    V.   Reproducible & Honest Evaluation                                       
+    VI.  Transparent, Explainable Outputs                                       
+                                                                                
+  Added sections:                                                               
+                                                                                
+    - Technology & Architecture Constraints                                     
+    - Development Workflow & Quality Gates                                      
+    - Governance                                                                
+                                                                                
+  Removed sections: none (initial version)                                      
+                                                                                
+  Templates requiring updates:                                                  
+    ✅ .specify/memory/constitution.md (this file)                              
+    ⚠ .specify/templates/plan-template.md — verify "Constitution Check" gate    
+  references Principles II & IV                                                 
+    ⚠ .specify/templates/spec-template.md — ensure intervention bounds / eval   
+  metrics are capturable as requirements                                        
+    ⚠ .specify/templates/tasks-template.md — ensure task categories cover       
+  golden-eval + backtest-guardrail work                                         
+                                                                                
+  Follow-up TODOs: none — all placeholders resolved.                            
+  -->                                                                           
+                                                                                
+  # Agent-in-the-Loop Forecasting Constitution                                  
+                                                                                
+  ## Core Principles                                                            
+                                                                                
+  ### I. UI-Agnostic Core (Library-First)                                       
+                                                                                
+  All forecasting, diagnostics, agent-reasoning, and evaluation logic MUST live 
+   in a                                                                         
+  standalone, importable core library with no dependency on any front-end.      
+  Front-ends are                                                                
+  thin consumers of this core: a CLI is the first consumer; a FastAPI service   
+  and a                                                                         
+  lightweight web chat UI are added later over the *same* core, never alongside 
+   duplicated                                                                   
+  logic. Any function a front-end needs MUST be reachable through the core's    
+  public API                                                                    
+  using serializable inputs/outputs (no UI types leaking into the core).        
+                                                                                
+  **Rationale**: The project is simultaneously a research deliverable and a     
+  reusable tool,                                                                
+  and a chat UI is a likely future addition. A clean, serializable core         
+  boundary is what                                                              
+  lets the CLI, a web API, and a chat front-end all atta                        
+  ──── (85 lines hidden) ────────────────────────────────────────────────────── 
+  the evaluation layer holding final authority (Principle IV).                  
+  - **Front-ends**: CLI first; FastAPI service and a lightweight web chat UI    
+  later, all as                                                                 
+    thin clients over the core (Principle I). No business logic in front-end    
+  code.                                                                         
+  - **Serialization**: Core inputs/outputs (forecasts, diagnoses, intervention  
+  proposals,                                                                    
+    eval results, reports) MUST be representable as plain serializable data so  
+  any                                                                           
+    front-end or API can consume them.                                          
+                                                                                
+  ## Development Workflow & Quality Gates                                       
+                                                                                
+  - **Scope phasing**: Deliver the MVP loop first (load data → fit Prophet +    
+  Seasonal Naive                                                                
+    → backtest → drift detection → intervention menu → explanation report),     
+  then layer on                                                                 
+    extended capabilities. Do not build extended features before the MVP loop   
+  is green.                                                                     
+  - **Per-change gates** (all MUST pass before merge):                          
+    1. Deterministic logic has failing-then-passing tests (Principle II).       
+    2. Agent-affecting changes run against the golden eval set with no          
+  unjustified                                                                   
+       regression (Principle III).                                              
+    3. Any intervention path is backtest-gated and bounds-checked (Principle    
+  IV).                                                                          
+    4. The run can still emit a complete explanation report (Principle VI).     
+    5. `uv` lockfile is current and the environment reproduces (Principle V).   
+  - **Baselines are mandatory**: no forecasting result is reported without its  
+  baseline                                                                      
+    comparison and standard metrics.                                            
+  - **Determinism discipline**: seeds fixed and logged; the config that         
+  produced any                                                                  
+    reported number is committed.                                               
+                                                                                
+  ## Governance                                                                 
+                                                                                
+  This constitution supersedes ad-hoc practices for this project. All changes — 
+   code                                                                         
+  reviews, plans, and specs — MUST verify compliance with the principles above, 
+   and the                                                                      
+  two NON-NEGOTIABLE principles (II: Test-First for Deterministic Logic, IV:    
+  Bounded                                                                       
+  Interventions, Backtest-Gated) MUST NOT be waived.                            
+                                                                                
+  **Amendments**: proposed via a documented change to this file, including      
+  rationale and,                                                                
+  where behavior changes, a migration note. Amendments take effect once merged. 
+                                                                                
+  **Versioning policy** (semantic):                                             
+                                                                                
+  - MAJOR — backward-incompatible removal or redefinition of a principle or     
+  governance rule.                                                              
+  - MINOR — a new principle/section or materially expanded guidance.            
+  - PATCH — clarifications, wording, or non-semantic refinements.               
+                                                                                
+  **Compliance review**: every plan's "Constitution Check" and every review     
+  MUST confirm                                                                  
+  the per-change gates above. Complexity or deviation MUST be justified in      
+  writing against                                                               
+  these principles; unjustified violations block merge.                         
+                                                                                
+  **Version**: 1.0.0 | **Ratified**: 2026-06-12 | **Last Amended**: 2026-06-12  
+
+⏺ Both good questions. Let me answer each, then ask you a couple of things I
+  genuinely need your call on.
+
+  Q1 — De-duplicating CLAUDE.md vs SPEC.md (and the constitution)
+
+  You're right, I leaked the same facts into multiple files. The fix is a
+  single-source-of-truth rule: each fact lives in exactly one doc, and the
+  others link to it. The clean way to think about it is that the three files
+  answer three different questions:
+
+  File: SPEC.md
+  Answers: What are we building and why?
+  Audience: Prof, new members, you
+  Changes: As scope evolves
+  ────────────────────────────────────────
+  File: constitution.md
+  Answers: What rules/principles govern how we build? What won't we compromise?
+  Audience: Reviewers, decision-making
+  Changes: Rarely
+  ────────────────────────────────────────
+  File: CLAUDE.md
+  Answers: How do I operate in this repo day-to-day?
+  Audience: Claude + active contributors
+  Changes: As tooling/layout changes
+
+  So the reallocation is:
+
+  - Project substance — architecture, capability roadmap, intervention menu,
+  eval criteria, MVP, milestones → SPEC.md only.
+  - Principles / "golden rules" (tool-grounded, backtest-gated, versioned
+  prompts, test discipline) → constitution.md only. My draft CLAUDE.md restated
+  these as "Golden rules" — that's the duplication. Replace with a 2-line
+  pointer: "You must follow the principles in .specify/memory/constitution.md; 
+  read SPEC.md for what we're building."
+  - CLAUDE.md keeps only: the repo map (as pointers, not the full architecture),
+   the actual commands (uv sync, uv run pytest …), workflow steps, and
+  conventions.
+
+  The one thing that looks like duplication but isn't: tech stack appears in
+  both the constitution and CLAUDE.md — but at different levels. The
+  constitution states the binding choice ("Python via uv, lockfile committed")
+  as a rule; CLAUDE.md gives the how-to (the literal commands). Rule vs. recipe
+  is a legitimate split.
+
+  Net effect: CLAUDE.md gets much thinner — orientation + operations + links, no
+   project substance, no principles.
+
+  On owner names: agreed, drop them from all the docs. If you still want the
+  functional benefit (auto-routing PR reviews to the right people) without
+  prose, that's exactly what a GitHub CODEOWNERS file is for — it maps
+  src/ailf/pipelines/drift/ → reviewers, and it's machine-enforced rather than
+  redundant narrative. Optional; I'd only add it if you want review-routing.
+
+  Q2 — Merging the two constitutions
+
+  First, what a good constitution should contain, in general:
+
+  1. A small set (5–7) of durable principles, each phrased as a MUST-style rule
+  plus a rationale. The rationale is what lets a future contributor judge an
+  edge case instead of lawyering the wording.
+  2. The truly inviolable ones marked NON-NEGOTIABLE — so reviewers know what
+  can never be waived "just this once."
+  3. Only slow-changing things. Architecture specifics, file paths, milestones,
+  dataset details do not belong — those live in SPEC.md / plan.md and would
+  force constant constitution edits.
+  4. It must be checkable. A PR's "Constitution Check" gate is run against it,
+  so principles should read as gates where possible.
+  5. Supporting sections: binding tech/architecture constraints, development
+  workflow & quality gates, and governance (amendment process + semantic
+  versioning).
+  6. It must NOT restate the spec. Constitution = how we work and what we won't 
+  compromise; spec = what we're building.
+
+  Verdict on the two drafts: the other one is clearly the stronger base — adopt
+  it, and graft a few things from mine. Its single best idea, which mine lacked
+  entirely:
+
+  ▎ It splits testing by determinism — strict TDD for deterministic logic 
+  ▎ (metrics, backtest, diagnostics), but golden-set regression evaluation for 
+  ▎ the non-deterministic LLM agent (Principle III). That's exactly right; 
+  ▎ asserting exact LLM wording is brittle and meaningless. Keep this.
+
+  It's also better structured: Sync Impact Report block (a spec-kit convention),
+   per-principle rationales, Library-First/UI-agnostic forward-thinking, and a
+  real semantic-versioning policy.
+
+  What it's missing that my draft had, and that your requirements need:
+
+  - Shared Core + Independent Pipelines — its "Library-First" principle is about
+   core-vs-frontend, not core-vs-pipelines. Your REQ #2 (7 people, 3 teams,
+  conflict-free) needs an explicit principle: pipelines are isolated, must not
+  depend on each other, and core/ changes require review. This is the most
+  important addition.
+  - POC / fail-fast exemption — pocs/ should be explicitly outside the
+  test/quality gates so teams can move fast (REQ #1).
+  - Explicit prompt versioning — the plan literally says "Prompts have to be 
+  versioned." Its golden-set principle implies it but doesn't state it.
+  - Session transparency — sessions/ for grading (REQ #3). Lightweight; I'd put
+  this in Governance/Workflow rather than make it a core principle.
+
+  So the merge = their 6 principles + their structure, plus a 7th principle 
+  (Shared Core/Independent Pipelines), plus POC exemption + explicit prompt 
+  versioning + session transparency folded into the workflow/governance 
+  sections.
+
+  Two things I want your call on before I write the merged version:
+
+⏺ User answered Claude's questions:
+  ⎿  · The stronger constitution has Principle I 'UI-Agnostic Core 
+     (Library-First)' mandating CLI-first with FastAPI + web chat UI as future 
+     thin clients. But the proposal lists any UI as strictly optional/'if time 
+     permits'. How should this principle be treated? → Soften to serializable 
+     boundary (Recommended)
+     · Once we agree on the principles, what should I actually produce next? → 
+     All three docs, de-duplicated (Recommended)
+
+⏺ All decided. Writing the three de-duplicated docs now: merged constitution
+  (their 6 principles + softened Principle I + new pipeline-isolation principle,
+   with POC/prompt-versioning/session-transparency folded into workflow &
+  governance), a thin pointer-based CLAUDE.md, and SPEC.md as the single home
+  for project substance.
+
+⏺ Write(.specify/memory/constitution.md)
+  ⎿  Added 179 lines, removed 35 lines
+        1 -# [PROJECT_NAME] Constitution                                 
+        2 -<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -
+          -->                                                            
+        1 +<!--                                                          
+        2  
+        3 +SYNC IMPACT REPORT                                            
+        4 +==================                                            
+        5 +                                                              
+        6 +Version change: (template) → 1.0.0                            
+        7 +Rationale: Initial ratification — merged constitution derived 
+          +from the                                                      
+        8 +"Agent-in-the-Loop Forecasting" proposal (docs/agent_in_the_lo
+          +op_forecasting_proposal.pdf)                                  
+        9 +and the team's high-level plan (docs/Confluence-high-level-pla
+          +n-writeup.pdf).                                               
+       10 +                                                              
+       11 +Principles defined:                                           
+       12 +  I.   Importable Core (Serializable Boundary)                
+       13 +  II.  Test-First for Deterministic Logic (NON-NEGOTIABLE)    
+       14 +  III. Agent Quality Through Golden-Set Evaluation            
+       15 +  IV.  Bounded Interventions, Backtest-Gated (NON-NEGOTIABLE) 
+       16 +  V.   Reproducible & Honest Evaluation                       
+       17 +  VI.  Transparent, Explainable Outputs                       
+       18 +  VII. Shared Core, Independent Pipelines                     
+       19 +                                                              
+       20 +Added sections:                                               
+       21 +  - Technology & Architecture Constraints                     
+       22 +  - Development Workflow & Quality Gates                      
+       23 +  - Governance                                                
+       24 +                                                              
+       25 +Removed sections: none (initial version)                      
+       26 +                                                              
+       27 +Templates requiring updates:                                  
+       28 +  ✅ .specify/memory/constitution.md (this file)              
+       29 +  ⚠ .specify/templates/plan-template.md — verify "Constitution
+          + Check" gate references Principles II, IV & VII               
+       30 +  ⚠ .specify/templates/spec-template.md — ensure intervention 
+          +bounds / eval metrics are capturable as requirements          
+       31 +  ⚠ .specify/templates/tasks-template.md — ensure task categor
+          +ies cover golden-eval + backtest-guardrail work               
+       32 +                                                              
+       33 +Follow-up TODOs: none — all placeholders resolved.            
+       34 +-->                                                           
+       35 +                                                              
+       36 +# Agent-in-the-Loop Forecasting Constitution                  
+       37 +                                                              
+       38  ## Core Principles
+       39  
+        6 -### [PRINCIPLE_1_NAME]                                        
+        7 -<!-- Example: I. Library-First -->                            
+        8 -[PRINCIPLE_1_DESCRIPTION]                                     
+        9 -<!-- Example: Every feature starts as a standalone library; Li
+          -braries must be self-contained, independently testable, docume
+          -nted; Clear purpose required - no organizational-only librarie
+          -s -->                                                         
+       40 +### I. Importable Core (Serializable Boundary)                
+       41  
+       11 -### [PRINCIPLE_2_NAME]                                        
+       12 -<!-- Example: II. CLI Interface -->                           
+       13 -[PRINCIPLE_2_DESCRIPTION]                                     
+       14 -<!-- Example: Every library exposes functionality via CLI; Tex
+          -t in/out protocol: stdin/args → stdout, errors → stderr; Suppo
+          -rt JSON + human-readable formats -->                          
+       42 +All forecasting, diagnostics, agent-reasoning, and evaluation 
+          +logic MUST live in a                                          
+       43 +standalone, importable core library whose public API takes and
+          + returns plain serializable                                   
+       44 +data (no front-end or UI types leaking in). Front-ends are opt
+          +ional and, if built, MUST be                                  
+       45 +thin clients over this core — never a place for business logic
+          +, and never a source of                                       
+       46 +duplicated core behavior.                                     
+       47  
+       16 -### [PRINCIPLE_3_NAME]                                        
+       17 -<!-- Example: III. Test-First (NON-NEGOTIABLE) -->            
+       18 -[PRINCIPLE_3_DESCRIPTION]                                     
+       19 -<!-- Example: TDD mandatory: Tests written → User approved → T
+          -ests fail → Then implement; Red-Green-Refactor cycle strictly 
+          -enforced -->                                                  
+       48 +**Rationale**: The project is both a research deliverable and 
+          +a reusable tool. A clean,                                     
+       49 +serializable core boundary keeps the logic testable in isolati
+          +on and lets any future                                        
+       50 +consumer (a script, a notebook, an API, or a chat UI) attach c
+          +heaply — without committing                                   
+       51 +the team to building front-ends the proposal treats as optiona
+          +l.                                                            
+       52  
+       21 -### [PRINCIPLE_4_NAME]                                        
+       22 -<!-- Example: IV. Integration Testing -->                     
+       23 -[PRINCIPLE_4_DESCRIPTION]                                     
+       24 -<!-- Example: Focus areas requiring integration tests: New lib
+          -rary contract tests, Contract changes, Inter-service communica
+          -tion, Shared schemas -->                                      
+       53 +### II. Test-First for Deterministic Logic (NON-NEGOTIABLE)   
+       54  
+       26 -### [PRINCIPLE_5_NAME]                                        
+       27 -<!-- Example: V. Observability, VI. Versioning & Breaking Chan
+          -ges, VII. Simplicity -->                                      
+       28 -[PRINCIPLE_5_DESCRIPTION]                                     
+       29 -<!-- Example: Text I/O ensures debuggability; Structured loggi
+          -ng required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, Y
+          -AGNI principles -->                                           
+       55 +Every deterministic component — data loading, the forecasting-
+          +model layer, drift /                                          
+       56 +changepoint / outlier diagnostics, metric computation (MAE, RM
+          +SE, MASE, WAPE, sMAPE,                                        
+       57 +PI-coverage), and the backtest guardrail — MUST be built test-
+          +first: write a failing                                        
+       58 +test, confirm it captures intent, watch it fail, implement to 
+          +green, then refactor. No                                      
+       59 +deterministic logic merges without tests that fail before and 
+          +pass after the change.                                        
+       60 +Diagnostic tools in particular MUST be tested against syntheti
+          +c series with KNOWN injected                                  
+       61 +ground truth (precision / recall / false-positive rate).      
+       62  
+       31 -## [SECTION_2_NAME]                                           
+       32 -<!-- Example: Additional Constraints, Security Requirements, P
+          -erformance Standards, etc. -->                                
+       63 +**Rationale**: These components are the trustworthy substrate 
+          +the agent and guardrail                                       
+       64 +stand on. If metrics or backtesting are wrong, every downstrea
+          +m recommendation is wrong.                                    
+       65 +Strict TDD here is cheap insurance on the parts that must be e
+          +xactly correct.                                               
+       66  
+       34 -[SECTION_2_CONTENT]                                           
+       35 -<!-- Example: Technology stack requirements, compliance standa
+          -rds, deployment policies, etc. -->                            
+       67 +### III. Agent Quality Through Golden-Set Evaluation          
+       68  
+       37 -## [SECTION_3_NAME]                                           
+       38 -<!-- Example: Development Workflow, Review Process, Quality Ga
+          -tes, etc. -->                                                 
+       69 +The LLM analyst layer is NOT unit-TDD'd on exact outputs (it i
+          +s non-deterministic).                                         
+       70 +Its quality MUST instead be governed by a versioned golden eva
+          +luation set: time series                                      
+       71 +with known, injected issues plus the expected diagnosis and ac
+          +ceptable intervention(s).                                     
+       72 +Changes to prompts, models, or agent code MUST be measured aga
+          +inst this set, and quality                                    
+       73 +metrics MUST NOT regress without explicit, documented sign-off
+          +. The plumbing *around* the                                   
+       74 +LLM (parsing, bounds-checking, menu enforcement, error handlin
+          +g) is still covered by                                        
+       75 +Principle II.                                                 
+       76  
+       40 -[SECTION_3_CONTENT]                                           
+       41 -<!-- Example: Code review requirements, testing gates, deploym
+          -ent approval process, etc. -->                                
+       77 +**Rationale**: Asserting exact LLM wording is brittle and mean
+          +ingless. A labeled golden                                     
+       78 +set turns "is the agent good?" into a measurable, regression-g
+          +uarded question while                                         
+       79 +keeping the deterministic scaffolding under strict tests.     
+       80  
+       81 +### IV. Bounded Interventions, Backtest-Gated (NON-NEGOTIABLE)
+       82 +                                                              
+       83 +The agent MAY ONLY propose interventions drawn from a fixed, e
+          +xplicit menu, and every                                       
+       84 +proposal MUST stay within declared numeric bounds. NO proposed
+          + intervention is applied to                                   
+       85 +the chosen forecast unless a rolling backtest demonstrates it 
+          +does not worsen the selected                                  
+       86 +primary metric. An intervention that fails or skips backtestin
+          +g MUST be rejected. The                                       
+       87 +agent never silently mutates the pipeline; it proposes, the gu
+          +ardrail disposes.                                             
+       88 +                                                              
+       89 +**Rationale**: This is the safety thesis of the project — an L
+          +LM is a fallible junior                                       
+       90 +analyst, so its suggestions must clear an objective, empirical
+          + gate before they affect                                      
+       91 +results. This principle is what makes "agent in the loop" trus
+          +tworthy rather than dangerous.                                
+       92 +                                                              
+       93 +### V. Reproducible & Honest Evaluation                       
+       94 +                                                              
+       95 +Environments MUST be reproducible via `uv` with a committed lo
+          +ckfile; random seeds MUST be                                  
+       96 +fixed and recorded for any stochastic step. Evaluation MUST al
+          +ways compare against honest                                   
+       97 +baselines (at minimum Seasonal Naive, plus Prophet / AutoARIMA
+          + / ETS as applicable) over                                    
+       98 +rolling-origin backtests, and MUST report standard metrics rat
+          +her than cherry-picked ones.                                  
+       99 +Results, datasets (or their generators), and the exact config 
+          +that produced them MUST be                                    
+      100 +recoverable from the repository.                              
+      101 +                                                              
+      102 +**Rationale**: As a research deliverable, the project's credib
+          +ility rests on results                                        
+      103 +others can reproduce and on comparisons that don't flatter the
+          + system. Beating a naive                                      
+      104 +baseline on a fixed protocol is the bar; reproducibility is wh
+          +at makes the claim defensible.                                
+      105 +                                                              
+      106 +### VI. Transparent, Explainable Outputs                      
+      107 +                                                              
+      108 +Every run MUST be able to produce a concise, human-readable re
+          +port covering: the dataset                                    
+      109 +and forecast horizon, the baseline comparison, detected issues
+          +, recommended and                                             
+      110 +backtest-accepted interventions (with before/after metric delt
+          +as), the final                                                
+      111 +recommendation, and the agent's stated limitations / open ques
+          +tions. The agent's reasoning                                  
+      112 +and the guardrail's accept/reject decisions MUST be inspectabl
+          +e, not opaque.                                                
+      113 +                                                              
+      114 +**Rationale**: The workflow exists to help a human analyst tru
+          +st and act on forecasts. An                                   
+      115 +accepted change that can't be explained, or a decision a human
+          + can't audit, defeats the                                     
+      116 +purpose of keeping a human in the loop.                       
+      117 +                                                              
+      118 +### VII. Shared Core, Independent Pipelines                   
+      119 +                                                              
+      120 +The shared core is collectively owned, stable, and review-gate
+          +d; changes to it MUST keep                                    
+      121 +all core tests green. Each use-case (drift, changepoint, anoma
+          +ly) lives in its own pipeline                                 
+      122 +directory and owns only its dataset generation, diagnostic too
+          +l, and prompts. Pipelines                                     
+      123 +MUST NOT import or depend on one another. Work MUST stay insid
+          +e a pipeline's own directories                                
+      124 +so that parallel teams do not collide.                        
+      125 +                                                              
+      126 +**Rationale**: Seven people across three sub-teams need to mov
+          +e in parallel without merge                                   
+      127 +conflicts, while the project must still read as one coherent s
+          +ystem. Directory-level                                        
+      128 +isolation plus a single shared spine delivers both: independen
+          +ce in the leaves, coherence                                   
+      129 +at the trunk.                                                 
+      130 +                                                              
+      131 +## Technology & Architecture Constraints                      
+      132 +                                                              
+      133 +- **Language & tooling**: Python, managed exclusively with `uv
+          +` (single workspace,                                          
+      134 +  lockfile committed). No competing environment managers in th
+          +e repo.                                                       
+      135 +- **Forecasting stack**: Prophet and Seasonal Naive for the MV
+          +P; AutoARIMA / ETS and                                        
+      136 +  optional foundation models (Chronos / TimesFM) in the extend
+          +ed version, all behind a                                      
+      137 +  uniform model interface so they are interchangeable. Time-se
+          +ries handling and dataset                                     
+      138 +  generation use Darts.                                       
+      139 +- **Agent / LLM access**: Anthropic Claude is the primary mode
+          +l, accessed through a thin                                    
+      140 +  internal wrapper (prompt in → validated, menu-constrained pr
+          +oposal out). The wrapper is                                   
+      141 +  the only place that talks to the provider SDK, so the model 
+          +is swappable and mockable.                                    
+      142 +- **Layered architecture** (per the proposal): (1) data, (2) f
+          +orecasting models,                                            
+      143 +  (3) diagnostics, (4) LLM analyst, (5) evaluation/guardrail —
+          + with the agent confined to                                   
+      144 +  proposing and the evaluation layer holding final authority (
+          +Principle IV).                                                
+      145 +- **Prompt versioning**: all agent and LLM-judge prompts MUST 
+          +be versioned. A released                                      
+      146 +  prompt is never edited in place; a new version is added and 
+          +referenced by code and reports.                               
+      147 +- **POC exemption**: throwaway exploration lives in a dedicate
+          +d POC area and is exempt from                                 
+      148 +  the test and quality gates below, to enable fail-fast experi
+          +mentation. Code is held to the                                
+      149 +  full standards only once it is promoted out of the POC area 
+          +into a pipeline or the core.                                  
+      150 +                                                              
+      151 +## Development Workflow & Quality Gates                       
+      152 +                                                              
+      153 +- **Spec-driven**: features flow `/speckit.specify` → `/specki
+          +t.plan` → `/speckit.tasks` →                                  
+      154 +  implement, one feature branch per task, PR'd into `main`.   
+      155 +- **Scope phasing**: deliver the MVP loop first (load data → f
+          +it Prophet + Seasonal Naive →                                 
+      156 +  backtest → detect issue → intervention menu → explanation re
+          +port), then layer on extended                                 
+      157 +  capabilities. Do not build extended features before the MVP 
+          +loop is green.                                                
+      158 +- **Per-change gates** (all MUST pass before merge):          
+      159 +  1. Deterministic logic has failing-then-passing tests (Princ
+          +iple II).                                                     
+      160 +  2. Agent-affecting changes run against the golden eval set w
+          +ith no unjustified                                            
+      161 +     regression (Principle III).                              
+      162 +  3. Any intervention path is backtest-gated and bounds-checke
+          +d (Principle IV).                                             
+      163 +  4. The run can still emit a complete explanation report (Pri
+          +nciple VI).                                                   
+      164 +  5. `uv` lockfile is current and the environment reproduces (
+          +Principle V).                                                 
+      165 +  6. Changes touching the shared core get an extra review and 
+          +keep core tests green                                         
+      166 +     (Principle VII).                                         
+      167 +- **Baselines are mandatory**: no forecasting result is report
+          +ed without its baseline                                       
+      168 +  comparison and standard metrics.                            
+      169 +- **Determinism discipline**: seeds fixed and logged; the conf
+          +ig that produced any reported                                 
+      170 +  number is committed.                                        
+      171 +- **Session transparency**: each contributor exports their Cla
+          +ude sessions to the                                           
+      172 +  repository's session area for provenance and grading.       
+      173 +                                                              
+      174  ## Governance
+       44 -<!-- Example: Constitution supersedes all other practices; Ame
+          -ndments require documentation, approval, migration plan -->   
+      175  
+       46 -[GOVERNANCE_RULES]                                            
+       47 -<!-- Example: All PRs/reviews must verify compliance; Complexi
+          -ty must be justified; Use [GUIDANCE_FILE] for runtime developm
+          -ent guidance -->                                              
+      176 +This constitution supersedes ad-hoc practices for this project
+          +. All changes — code reviews,                                 
+      177 +plans, and specs — MUST verify compliance with the principles 
+          +above, and the two                                            
+      178 +NON-NEGOTIABLE principles (II: Test-First for Deterministic Lo
+          +gic, IV: Bounded                                              
+      179 +Interventions, Backtest-Gated) MUST NOT be waived.            
+      180  
+       49 -**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICAT
+          -ION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]             
+       50 -<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Ame
+          -nded: 2025-07-16 -->                                          
+      181 +**Amendments**: proposed via a documented change to this file,
+          + including rationale and,                                     
+      182 +where behavior changes, a migration note. Amendments take effe
+          +ct once merged.                                               
+      183 +                                                              
+      184 +**Versioning policy** (semantic):                             
+      185 +                                                              
+      186 +- MAJOR — backward-incompatible removal or redefinition of a p
+          +rinciple or governance rule.                                  
+      187 +- MINOR — a new principle/section or materially expanded guida
+          +nce.                                                          
+      188 +- PATCH — clarifications, wording, or non-semantic refinements
+          +.                                                             
+      189 +                                                              
+      190 +**Compliance review**: every plan's "Constitution Check" and e
+          +very review MUST confirm the                                  
+      191 +per-change gates above. Complexity or deviation MUST be justif
+          +ied in writing against these                                  
+      192 +principles; unjustified violations block merge.               
+      193 +                                                              
+      194 +**Version**: 1.0.0 | **Ratified**: 2026-06-12 | **Last Amended
+          +**: 2026-06-12                                                
+
+⏺ Now SPEC.md — the single home for project substance (no principles, no owner
+  names).
+
+⏺ Write(SPEC.md)  ⎿  Wrote 108 lines to SPEC.md
+       2 # SPEC: Agent-in-the-Loop Forecasting
+       3 > This is the single source of truth for *what* we are building 
+       4 > For the rules that govern *how* we build, see `.specify/memory
+         /constitution.md`.
+         und: `docs/`.day operation of the repo, see `CLAUDE.md`. Backgro
+       6 
+       8 ## 1. Problem & Research Question
+       9 Automatic forecasting models fail silently on drift, changepoint
+      10 changes; expert analysts catch these but do not scale. This proj
+         ect modernizes Prophet's
+     … +147 lines (ctrl+o to expand)
+
+⏺ Now the thin CLAUDE.md — orientation, operations, and pointers only. No
+  principles, no project substance, no owner names.
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 43 lines
+       1 +# Agent-in-the-Loop Forecasting                                
+       2 +                                                               
+       3 +An LLM agent acting as a *bounded junior forecasting analyst*: 
+         +it diagnoses time-series                                       
+       4 +failure modes (drift, changepoints, outliers) with tools, propo
+         +ses bounded interventions,                                     
+       5 +validates them via backtesting, and writes an explanation repor
+         +t. It does NOT forecast.                                       
+       6 +                                                               
+       7 +## Read these first                                            
+       8 +- **What we're building & why** → `SPEC.md`                    
+       9 +- **Rules you must follow (principles, quality gates, non-negot
+         +iables)** →                                                    
+      10 +  `.specify/memory/constitution.md`                            
+      11 +- **Background** → `docs/` (proposal + high-level plan)        
+      12 +                                                               
+      13 +## Repository map (pointers — see SPEC.md for the architecture)
+      14 +- `src/ailf/core/` — SHARED, stable, review-gated: models, back
+         +test, metrics, agent                                           
+      15 +  (ReAct loop + tool registry), eval (+ LLM judge), reporting, 
+         +prompts.                                                       
+      16 +- `src/ailf/pipelines/<usecase>/` — THIN, team-owned: dataset g
+         +eneration, the diagnostic                                      
+      17 +  tool, versioned prompts, and `pipeline.py` wiring the tool in
+         +to the core loop.                                              
+      18 +- `pocs/<usecase>/` — throwaway fail-fast exploration; exempt f
+         +rom the quality gates.                                         
+      19 +  Prove a use-case here before promoting code into a pipeline. 
+      20 +- `tests/core/` and `tests/pipelines/<usecase>/` — tools are te
+         +sted against synthetic data                                    
+      21 +  with KNOWN injected ground truth.                            
+      22 +- `specs/` — spec-kit feature dirs (`NNN-<name>/{spec,plan,task
+         +s}.md`).                                                       
+      23 +- `sessions/<person>/` — export your Claude sessions here (prov
+         +enance + grading).                                             
+      24 +- `data/`, `reports/` — bulk artifacts are gitignored; commit o
+         +nly tiny samples.                                              
+      25 +                                                               
+      26 +## Environment & commands (uv, single workspace)               
+      27 +- `uv sync` — create/update the shared venv from `uv.lock`.    
+      28 +- `uv run pytest` — all tests · `uv run pytest tests/pipelines/
+         +drift` — one pipeline.                                         
+      29 +- `uv add <pkg>` — add a dependency (commit the updated `uv.loc
+         +k`).                                                           
+      30 +- `uv run python -m ailf.pipelines.<usecase>.pipeline` — run a 
+         +pipeline end-to-end.                                           
+      31 +- Copy `.env.example` → `.env` (gitignored). Never commit secre
+         +ts.                                                            
+      32 +                                                               
+      33 +## Workflow (spec-kit, one feature branch per task)            
+      34 +1. `/speckit.specify` a feature → creates `specs/NNN-<name>/` +
+         + branch `NNN-<name>`.                                          
+      35 +2. `/speckit.plan`, then `/speckit.tasks`, then implement on th
+         +at branch.                                                     
+      36 +3. Keep changes inside your pipeline's directories to avoid cro
+         +ss-team conflicts.                                             
+      37 +4. PR into `main`. Touching `core/`? Flag it for review and kee
+         +p core tests green.                                            
+      38 +                                                               
+      39 +## Conventions                                                 
+      40 +- Diagnostic tools: pure, typed functions with a clear contract
+         +; tests written first.                                         
+      41 +- Prompts: `prompts/<name>_vN.md`; never edit a released versio
+         +n — add a new one.                                             
+      42 +- Seed all synthetic data generation for reproducibility.      
+      43 +                                                               
+      44  <!-- SPECKIT START -->
+      45  For additional context about technologies to be used, project s
+          tructure,
+      46  shell commands, and other important information, read the curre
+          nt plan
+  ⎿  Found 28 new diagnostic issues in 1 file (ctrl+o to expand)
+
+⏺ All three documents are written. The cSpell warnings are just the
+  spell-checker flagging domain jargon (changepoint, backtesting, ARIMA, RMSE,
+  etc.) — harmless, not real issues. I'll leave them unless you want me to add a
+   project dictionary later.
+
+  Summary of what changed
+
+  .specify/memory/constitution.md — merged the two drafts. Kept the stronger
+  draft's 6 principles, its structure (Sync Impact Report, per-principle
+  rationales, semantic versioning), and its key insight (TDD for deterministic
+  logic, golden-set eval for the non-deterministic agent). Changes:
+  - Principle I softened to "Importable Core (Serializable Boundary)" — keeps
+  the clean boundary, drops the mandate to build CLI/API/chat front-ends (which
+  the proposal calls optional).
+  - Added Principle VII — Shared Core, Independent Pipelines — the
+  directory-isolation rule your 7-person / 3-team setup needs.
+  - Folded into workflow/governance (not as heavyweight principles): the POC
+  quality-gate exemption, explicit prompt versioning, and session transparency.
+
+  SPEC.md (new) — the single home for project substance: research question,
+  5-layer architecture, use-case tracks (no owner names), capability roadmap,
+  MVP loop, intervention menu, metrics/evals, datasets, milestones (dates TBD),
+  out-of-scope.
+
+  CLAUDE.md — slimmed to orientation + operations + pointers only. No restated
+  principles (→ links to constitution), no restated architecture (→ links to
+  SPEC.md). Keeps the repo map as pointers, the actual uv commands, the spec-kit
+   workflow, and conventions. The spec-kit block is preserved.
+
+  On your Q1, concretely
+
+  The de-dup rule now in effect: SPEC.md = what/why · constitution = 
+  rules/principles · CLAUDE.md = how-to-operate + links. Each fact lives in one
+  place. The only intentional "overlap" is tech stack — stated as a binding rule
+   in the constitution vs. literal commands in CLAUDE.md (rule vs. recipe).
+
+  Owner names are gone from all three. If you later want review-routing without
+  prose, a CODEOWNERS file maps pipeline dirs → reviewers and is
+  machine-enforced.
+
+  Want me to scaffold the directory tree (core/, pipelines/, pocs/, sessions/,
+  tests/) plus pyproject.toml, .gitignore, and .env.example next? That's the
+  remaining piece before your team can start pulling.
+
+✻ Crunched for 3m 47s
+
+❯ Yes, go ahead                                                                 
+  ⎿  Found 20 new diagnostic issues in 1 file (ctrl+o to expand)
+
+⏺ Scaffolding the full tree now: package dirs with __init__.py, pipeline module
+  stubs, POC/session/test/data/report folders, plus pyproject.toml, .gitignore,
+  .env.example, and a cspell.json to quiet the domain-jargon warnings.
+
+⏺ Bash(cd "/Users/hbalakr2/Library/Mobile
+      Documents/com~apple~CloudDocs/IISc/Deep
+      Learning/CourseProject/agent-in-the-loop-forecasting" && \
+      mkdir -p \…)
+  ⎿  tree created
+     pocs/anomaly/.gitkeep
+     pocs/changepoint/.gitkeep
+     … +22 lines (ctrl+o to expand)
+
+⏺ Now the per-pipeline module stubs (datasets.py, tools.py, pipeline.py) and
+  core stub files. Let me create them for each pipeline.
+
+⏺ Write(src/ailf/pipelines/drift/datasets.py)
+  ⎿  Wrote 6 lines to src/ailf/pipelines/drift/datasets.py
+      1 """Drift dataset generation.
+      2 
+      3 Seeded, knob-driven synthetic series with known drift, plus loade
+        rs for standard
+      4 drift datasets. Build generic Darts plumbing in `ailf.core.datase
+        ts`; keep only
+      5 drift-specific generation here.
+      6 """
+
+⏺ Write(src/ailf/pipelines/drift/tools.py)
+  ⎿  Wrote 5 lines to src/ailf/pipelines/drift/tools.py
+      1 """Drift-detection diagnostic tool.
+      2 
+      3 A pure, typed function the agent can call. Test-first against syn
+        thetic series with
+      4 KNOWN injected drift (precision / recall / FPR) before integratin
+        g with the agent.
+      5 """
+
+⏺ Write(src/ailf/pipelines/drift/pipeline.py)
+  ⎿  Wrote 13 lines to src/ailf/pipelines/drift/pipeline.py
+      2 """Drift pipeline entry point.
+      3 Wires the drift diagnostic tool and prompts into the shared core 
+        agent + backtest +
+      4 eval loop. Run with: `uv run python -m ailf.pipelines.drift.pipel
+        ine`.
+      6 """
+      7 
+      8 def main() -> None:
+      9     raise NotImplementedError("Drift pipeline not yet implemented
+        .")
+     … +5 lines (ctrl+o to expand)
+
+⏺ Write(src/ailf/pipelines/changepoint/datasets.py)
+  ⎿  Wrote 6 lines to src/ailf/pipelines/changepoint/datasets.py
+      1 """Changepoint dataset generation.
+      2 
+      3 Seeded, knob-driven synthetic series with known changepoints, plu
+        s loaders for
+      4 standard datasets. Build generic Darts plumbing in `ailf.core.dat
+        asets`; keep only
+      5 changepoint-specific generation here.
+      6 """
+
+⏺ Write(src/ailf/pipelines/changepoint/tools.py)
+  ⎿  Wrote 5 lines to src/ailf/pipelines/changepoint/tools.py
+      1 """Changepoint-detection diagnostic tool.
+      2 
+      3 A pure, typed function the agent can call. Test-first against syn
+        thetic series with
+      4 KNOWN injected changepoints (precision / recall / FPR) before int
+        egrating with the agent.
+      5 """
+
+⏺ Write(src/ailf/pipelines/changepoint/pipeline.py)
+  ⎿  Wrote 13 lines to src/ailf/pipelines/changepoint/pipeline.py
+      2 """Changepoint pipeline entry point.
+      3 Wires the changepoint diagnostic tool and prompts into the shared
+         core agent +
+      4 backtest + eval loop. Run with: `uv run python -m ailf.pipelines.
+        changepoint.pipeline`.
+      6 """
+      7 
+      8 def main() -> None:
+      9     raise NotImplementedError("Changepoint pipeline not yet imple
+        mented.")
+     … +6 lines (ctrl+o to expand)
+
+⏺ Write(src/ailf/pipelines/anomaly/datasets.py)
+  ⎿  Wrote 6 lines to src/ailf/pipelines/anomaly/datasets.py
+      1 """Anomaly (outlier) dataset generation.
+      2 
+      3 Seeded, knob-driven synthetic series with known outliers, plus lo
+        aders for standard
+      4 datasets. Build generic Darts plumbing in `ailf.core.datasets`; k
+        eep only
+      5 outlier-specific generation here.
+      6 """
+
+⏺ Write(src/ailf/pipelines/anomaly/tools.py)
+  ⎿  Wrote 6 lines to src/ailf/pipelines/anomaly/tools.py
+      1 """Outlier-flagging diagnostic tool.
+      2 
+      3 A pure, typed function the agent can call. Must distinguish isola
+        ted outliers from
+      4 structural changes. Test-first against synthetic series with KNOW
+        N injected outliers
+      5 (precision / recall / FPR) before integrating with the agent.
+      6 """
+
+⏺ Write(src/ailf/pipelines/anomaly/pipeline.py)
+  ⎿  Wrote 13 lines to src/ailf/pipelines/anomaly/pipeline.py
+      2 """Anomaly pipeline entry point.
+      3 Wires the outlier diagnostic tool and prompts into the shared cor
+        e agent + backtest +
+      4 eval loop. Run with: `uv run python -m ailf.pipelines.anomaly.pip
+        eline`.
+      6 """
+      7 
+      8 def main() -> None:
+      9     raise NotImplementedError("Anomaly pipeline not yet implement
+        ed.")
+     … +6 lines (ctrl+o to expand)
+
+⏺ Now the core stub modules with their public-API intent, then the config files.
+
+⏺ Write(src/ailf/core/datasets/__init__.py)
+  ⎿  Error writing file
+
+⏺ The __init__.py files already exist (empty from touch). Let me read them
+  before writing docstrings.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ These are empty. I'll add docstrings to the core subpackage __init__.py files
+  via Edit isn't ideal for empty files; let me just Write them now that they've
+  been read.
+⏺ Write(src/ailf/core/datasets/__init__.py)
+  ⎿  Wrote 6 lines to src/ailf/core/datasets/__init__.py
+      1 """Shared dataset utilities.
+      2 
+      3 Generic Darts-based time-series generation (seeded, knob-driven) 
+        and standard-dataset
+      4 loaders reused by every pipeline. Use-case-specific generation li
+        ves in each
+      5 `ailf.pipelines.<usecase>.datasets`.
+      6 """
+
+⏺ Let me add docstrings to the remaining core subpackages. Reading them first
+  (in parallel), then writing.
+
+  Read 7 files (ctrl+o to expand)
+
+⏺ Write(src/ailf/core/models/__init__.py)
+  ⎿  Wrote 5 lines to src/ailf/core/models/__init__.py
+      1 """Forecasting models behind a uniform interface.
+      2 
+      3 Seasonal Naive, Prophet, AutoARIMA / ETS (Chronos / TimesFM optio
+        nal) exposed so they
+      4 are interchangeable. Models forecast; the agent never does.
+      5 """
+
+⏺ Write(src/ailf/core/backtest/__init__.py)
+  ⎿  Wrote 5 lines to src/ailf/core/backtest/__init__.py
+      1 """Rolling-origin backtest harness — the intervention guardrail.
+      2 
+      3 No proposed intervention is accepted unless a backtest shows it d
+        oes not worsen the
+      4 selected primary metric (constitution Principle IV).
+      5 """
+
+⏺ Write(src/ailf/core/metrics/__init__.py)
+  ⎿  Wrote 4 lines to src/ailf/core/metrics/__init__.py
+      1 """Forecast metrics: MAE, RMSE, MASE, WAPE, sMAPE, and prediction
+        -interval coverage.
+      2 
+      3 Deterministic logic — built test-first (constitution Principle II
+        ).
+      4 """
+
+⏺ Write(src/ailf/core/agent/__init__.py)
+  ⎿  Wrote 7 lines to src/ailf/core/agent/__init__.py
+      1 """The bounded LLM analyst agent.
+      2 
+      3 ReAct loop, tool registry, base Tool interface, and the thin prov
+        ider wrapper (the only
+      4 place that talks to the LLM SDK). The agent reads diagnostics, ca
+        lls tools, and proposes
+      5 interventions from a fixed bounded menu — it never forecasts and 
+        never silently mutates
+      6 the pipeline.
+      7 """
+
+⏺ Write(src/ailf/core/eval/__init__.py)
+  ⎿  Wrote 6 lines to src/ailf/core/eval/__init__.py
+      1 """Evaluation harness and LLM judge.
+      2 
+      3 Runs the versioned golden eval set and the agent-level evals (dia
+        gnostic correctness,
+      4 tool-use, intervention quality, backtest discipline, constraint a
+        dherence, stability).
+      5 LLM-judge prompts are versioned (constitution Principle III).
+      6 """
+
+⏺ Write(src/ailf/core/reporting/__init__.py)
+  ⎿  Wrote 6 lines to src/ailf/core/reporting/__init__.py
+      1 """Explanation-report generation.
+      2 
+      3 Emits the human-readable report: dataset summary, horizon, baseli
+        ne comparison, detected
+      4 issues, accepted interventions with before/after metric deltas, f
+        inal recommendation, and
+      5 stated limitations (constitution Principle VI).
+      6 """
+
+⏺ Write(src/ailf/core/prompts/__init__.py)
+  ⎿  Wrote 5 lines to src/ailf/core/prompts/__init__.py
+      1 """Shared, versioned prompts (agent system prompts, LLM-judge pro
+        mpts).
+      2 
+      3 Store as `<name>_vN.md`. Never edit a released version in place —
+         add a new one and
+      4 reference it by version in code and reports (constitution: prompt
+         versioning).
+      5 """
+
+⏺ Now the config files: pyproject.toml, .gitignore, .env.example, cspell.json,
+  README updates for key dirs, and a sample ADR.
+
+⏺ Write(pyproject.toml)
+  ⎿  Wrote 37 lines to pyproject.toml
+       2 name = "ailf"
+       3 version = "0.1.0"
+       4 description = "Agent-in-the-Loop Forecasting: a bounded LLM agen
+         t that diagnoses time-series failure modes, proposes interventio
+         ns, and validates them via backtesting."
+       6 requires-python = ">=3.11"
+       7 dependencies = [
+       8     "darts",
+       9     "prophet",
+      10     "langgraph",
+     … +29 lines (ctrl+o to expand)
+
+⏺ Write(.gitignore)
+  ⎿  Wrote 32 lines to .gitignore
+       1 # Python
+       2 __pycache__/
+       3 *.py[cod]
+       4 *.egg-info/
+       5 .eggs/
+       6 build/
+       7 dist/
+       8 
+       9 # Environments
+      10 .venv/
+     … +24 lines (ctrl+o to expand)
+
+⏺ Write(.env.example)
+  ⎿  Wrote 9 lines to .env.example
+      1 # Copy to .env (gitignored) and fill in. Never commit real secret
+        s.
+      2 
+      3 # Anthropic Claude — primary LLM for the analyst agent
+      4 ANTHROPIC_API_KEY=
+      5 
+      6 # LangSmith tracing (optional)
+      7 LANGSMITH_API_KEY=
+      8 LANGSMITH_TRACING=false
+      9 LANGSMITH_PROJECT=agent-in-the-loop-forecasting
+
+⏺ Write(cspell.json)
+  ⎿  Wrote 46 lines to cspell.json
+       1 {
+       2   "version": "0.2",
+       3   "language": "en",
+       4   "words": [
+       5     "ailf",
+       6     "backtest",
+       7     "backtests",
+       8     "backtesting",
+       9     "changepoint",
+      10     "changepoints",
+     … +36 lines (ctrl+o to expand)
+
+⏺ Now short README files for the directories that benefit from in-place
+  guidance: pocs/, sessions/, and a sample ADR documenting the structure
+  decision.
+
+⏺ Write(pocs/README.md)
+  ⎿  Wrote 12 lines to pocs/README.md
+      2 # POCs
+      3 Throwaway, fail-fast exploration — one folder per use-case. This 
+        area is **exempt from
+         can move fast and provees** (constitution: POC exemption) so you
+      5 (or disprove) that an issue reproduces and is detectable.
+      6 
+        f`, but POC code is notcripts are fine here. They may `import ail
+      8 held to the core standards until it is **promoted** into `src/ail
+        f/pipelines/<usecase>/`
+      9 or `src/ailf/core/`, at which point the full gates apply.
+     … +8 lines (ctrl+o to expand)
+
+⏺ Write(sessions/README.md)
+  ⎿  Wrote 13 lines to sessions/README.md
+       2 # Claude session exports
+       3 Each contributor exports their Claude Code sessions here, in a p
+         ersonal folder, for
+       4 provenance and grading (constitution: session transparency).
+       5 
+       7 sessions/
+       8   <your-name>/
+       9     <date>-<short-topic>.md   # or whatever export format you us
+         e
+      10 ```
+     … +5 lines (ctrl+o to expand)
+
+⏺ Write(docs/decisions/0001-repo-structure.md)
+  ⎿  Wrote 29 lines to docs/decisions/0001-repo-structure.md
+       2 # 0001 — Shared core + independent pipelines
+       3 **Status:** accepted · **Date:** 2026-06-12
+       4 
+       6 ## Context
+       7 Seven contributors across three sub-teams (drift, changepoint, a
+         nomaly) must work in
+          as one coherent system.onflicts, while the repository must read
+       9 The three use-cases share a large substrate: forecasting models,
+          backtesting, metrics, the
+      10 ReAct agent loop, eval harness, and LLM judge.
+     … +29 lines (ctrl+o to expand)
+
+⏺ Let me update the README.md to be a proper entry point, then verify the
+  package imports cleanly.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Write(README.md)
+  ⎿  Added 39 lines, removed 1 line
+       1 -##Agent-in-the-loop-forecasting                                
+       1 +# Agent-in-the-Loop Forecasting                                
+       2 +                                                               
+       3 +A bounded LLM agent that acts as a *junior forecasting analyst*
+         +: it diagnoses time-series                                     
+       4 +failure modes (drift, changepoints, outliers) using tools, prop
+         +oses interventions from a                                      
+       5 +fixed menu, validates them through backtesting, and writes an e
+         +xplanation report. The                                         
+       6 +agent does not forecast — models forecast, tools diagnose, the 
+         +agent reasons and validates.                                   
+       7 +                                                               
+       8 +## Start here                                                  
+       9 +                                                               
+      10 +- **What we're building & why** → [`SPEC.md`](SPEC.md)         
+      11 +- **Rules & principles (how we build)** → [`.specify/memory/con
+         +stitution.md`](.specify/memory/constitution.md)                
+      12 +- **Working in the repo day-to-day** → [`CLAUDE.md`](CLAUDE.md)
+      13 +- **Background** → [`docs/`](docs/) (proposal + high-level plan
+         +), decisions in [`docs/decisions/`](docs/decisions/)           
+      14 +                                                               
+      15 +## Layout                                                      
+      16 +                                                               
+      17 +```                                                            
+      18 +src/ailf/core/         shared, stable spine (models, backtest, 
+         +metrics, agent, eval, reporting, prompts)                      
+      19 +src/ailf/pipelines/    one thin pipeline per use-case (drift, c
+         +hangepoint, anomaly)                                           
+      20 +pocs/                  throwaway fail-fast exploration (exempt 
+         +from quality gates)                                            
+      21 +tests/                 core + per-pipeline tests               
+      22 +specs/                 spec-kit feature dirs (NNN-<name>/)     
+      23 +sessions/              exported Claude sessions, per person    
+      24 +docs/                  proposal, plan, decisions               
+      25 +```                                                            
+      26 +                                                               
+      27 +## Quickstart                                                  
+      28 +                                                               
+      29 +```bash                                                        
+      30 +uv sync                 # set up the shared environment from uv
+         +.lock                                                          
+      31 +cp .env.example .env    # add your ANTHROPIC_API_KEY           
+      32 +uv run pytest           # run the test suite                   
+      33 +```                                                            
+      34 +                                                               
+      35 +## Contributing                                                
+      36 +                                                               
+      37 +Spec-driven, one feature branch per task: `/speckit.specify` → 
+         +`/speckit.plan` →                                              
+      38 +`/speckit.tasks` → implement → PR into `main`. Keep your change
+         +s inside your pipeline's                                       
+      39 +directories; changes to `src/ailf/core/` get an extra review. S
+         +ee `CLAUDE.md` for details.                                    
+
+⏺ Now let me verify the package structure imports cleanly and the tree looks
+  right.
+⏺ Bash(cd "/Users/hbalakr2/Library/Mobile
+      Documents/com~apple~CloudDocs/IISc/Deep
+      Learning/CourseProject/agent-in-the-loop-forecasting" && \
+      echo "=== import check (no…)
+  ⎿  === import check (no deps needed for stubs) ===
+     all packages import OK
+     … +77 lines (ctrl+o to expand)
+
+⏺ All 14 packages import cleanly. The __pycache__ dirs are from that check and
+  are gitignored. The scaffold is complete and verified.
+
+  Done — foundation is in place
+
+  Documents (de-duplicated, no owner names):
+  - .specify/memory/constitution.md — merged, 7 principles, v1.0.0
+  - SPEC.md — single source for project substance
+  - CLAUDE.md — thin: orientation + commands + pointers (spec-kit block
+  preserved)
+  - README.md — entry point with quickstart
+  - docs/decisions/0001-repo-structure.md — ADR for the structure choice
+
+  Repo skeleton (verified importable):
+  -
+  src/ailf/core/{datasets,models,backtest,metrics,agent,prompts,eval,reporting}/
+   — shared spine, each with a docstring stating its intent + the constitution
+  principle it serves
+  - src/ailf/pipelines/{drift,changepoint,anomaly}/ — each with datasets.py,
+  tools.py, pipeline.py stubs + a versioned prompts/ folder
+  - pocs/{drift,changepoint,anomaly}/ + pocs/README.md (quality-gate exemption
+  explained)
+  - tests/core/ + tests/pipelines/<usecase>/
+  - sessions/ + sessions/README.md (per-person convention)
+  - data/{synthetic,standard}/, reports/ (gitignored bulk, samples allowed)
+
+  Config:
+  - pyproject.toml — uv/hatchling, src/ layout, deps (darts, prophet, langgraph,
+   anthropic…), pytest configured for src + tests
+  - .gitignore — ignores .venv/.env/caches/bulk data, keeps uv.lock
+  - .env.example — ANTHROPIC_API_KEY, LangSmith
+  - cspell.json — silences the domain-jargon warnings
+
+  Two things to flag
+
+  1. uv.lock doesn't exist yet — I didn't run uv sync/uv lock since that
+  resolves and downloads real packages (Prophet/Darts are heavy) and touches
+  your environment. Want me to generate the lockfile now, or leave that for you
+  to run with uv sync?
+  2. Nothing is committed. This is all working-tree changes. Since the plan
+  calls this the "First PR," I can stage and commit when you're ready — just say
+   the word (and confirm whether you want a feature branch per spec-kit, or this
+   foundation directly on main).
+
+✻ Baked for 6m 15s
+
+❯ 1. Yes, run it. 2. Go ahead and commit it with a meaningful commit message    
+  and raise a PR (you might have to checkout a new branch first) with an        
+  approprate description (you should have access to the github cli - if not let 
+   me know what needs to be done, I have the GitHub developer API key)          
+  ⎿  Found 3 new diagnostic issues in 1 file (ctrl+o to expand)
+
+⏺ Running uv sync to generate the lockfile, and checking the git/gh setup in
+  parallel.
+
+⏺ Bash(cd "/Users/hbalakr2/Library/Mobile
+      Documents/com~apple~CloudDocs/IISc/Deep
+      Learning/CourseProject/agent-in-the-loop-forecasting" && uv sync 2>&1 |
+      tail -40)
+  ⎿  Running in the background (↓ to manage)
+
+⏺ Bash(echo "=== uv ===" && which uv && uv --version; echo "=== gh ===" && which
+       gh && gh --version 2>&1 | head -2 && echo "=== gh auth ===" && gh auth
+      status 2>&1 | h…)
+  ⎿  === uv ===
+     /Users/hbalakr2/.pyenv/shims/uv
+     uv 0.7.21 (77c771c7f 2025-07-14)
+     … +18 lines (ctrl+o to expand)
+
+⏺ gh is authenticated with repo scope and the remote is set. While uv sync runs
+  in the background, let me check the current git status and what's on the
+  remote.
+
+⏺ Bash(cd "/Users/hbalakr2/Library/Mobile
+      Documents/com~apple~CloudDocs/IISc/Deep
+      Learning/CourseProject/agent-in-the-loop-forecasting" && echo "=== status
+      ===" && git…)
+  ⎿  === status ===
+     On branch main
+     Your branch is up to date with 'origin/main'.
+     … +33 lines (ctrl+o to expand)
+
+⏺ Background command "cd "/Users/hbalakr2/Library/Mobile Documents/com~apple~CloudDocs/IISc/Deep Learning/CourseProject/agent-in-the-loop-forecasting" &amp;&amp; uv sync 2&gt;&amp;1 | tail -40" completed (exit code 0)
+
+⏺ uv sync finished (exit 0) and uv.lock is present. Note .claude/ and .specify/
+  are untracked — they're spec-kit tooling that should be committed too. Let me
+  check the uv output and whether .claude/settings has anything sensitive.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Bash(cd "/Users/hbalakr2/Library/Mobile
+      Documents/com~apple~CloudDocs/IISc/Deep
+      Learning/CourseProject/agent-in-the-loop-forecasting" && echo "=== .claude
+       contents =…)
+  ⎿  === .claude contents ===
+     .claude/settings.local.json
+     === any settings.local or secrets? ===
+     … +3 lines (ctrl+o to expand)
+
+⏺ uv sync resolved the full tree (darts, prophet, langgraph, anthropic, etc.) —
+  lockfile is good. Let me inspect .claude/settings.local.json since .local.json
+   files are typically per-developer and shouldn't be committed.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ settings.local.json is per-developer permission state — that should be
+  gitignored, not committed. The .specify/ tooling and .claude/skills/ are
+  shared spec-kit setup and should go in. Let me update .gitignore to exclude
+  the local settings (and quiet those three cspell words), then commit.
+
+⏺ Update(.gitignore)
+  ⎿  Added 3 lines
+      10  .venv/
+      11  .env
+      12  
+      13 +# Per-developer Claude Code settings (shared config lives in .c
+         +laude/, skills, etc.)                                          
+      14 +.claude/settings.local.json                                    
+      15 +                                                               
+      16  # uv
+      17  # (uv.lock IS committed — do not ignore it)
+      18  
+
+⏺ Update(cspell.json)
+  ⎿  Added 4 lines, removed 1 line
+      34      "MAPE",
+      35      "negotiables",
+      36      "Letham",
+      37 -    "Prophet"                                                  
+      37 +    "Prophet",                                                 
+      38 +    "pycache",                                                 
+      39 +    "mypy",                                                    
+      40 +    "ipynb"                                                    
+      41    ],
+      42    "ignorePaths": [
+      43      ".venv/**",
+
+⏺ Now create the feature branch, stage everything, and commit. I'll add files
+  explicitly by path to avoid pulling in anything unintended.
+
+⏺ Bash(cd "/Users/hbalakr2/Library/Mobile
+      Documents/com~apple~CloudDocs/IISc/Deep
+      Learning/CourseProject/agent-in-the-loop-forecasting" && git checkout -b
+      001-project-…)
+  ⎿  Switched to a new branch '001-project-foundation'
+     === on branch ===
+     001-project-foundation
+
+⏺ Bash(cd "/Users/hbalakr2/Library/Mobile
+      Documents/com~apple~CloudDocs/IISc/Deep
+      Learning/CourseProject/agent-in-the-loop-forecasting" && \
+      git add README.md CLAUDE.m…)
+  ⎿  === staged (excluding settings.local) ===
+     A  .claude/skills/speckit-agent-context-update/SKILL.md
+     A  .claude/skills/speckit-analyze/SKILL.md
+     … +82 lines (ctrl+o to expand)
+
+⏺ The PDFs in docs/ are referenced throughout (SPEC, CLAUDE, README) as
+  background — they should be committed too. Let me add them, then commit.
+
+⏺ Bash(cd "/Users/hbalakr2/Library/Mobile
+      Documents/com~apple~CloudDocs/IISc/Deep
+      Learning/CourseProject/agent-in-the-loop-forecasting" && git add
+      "docs/Confluence-hig…)
+  ⎿  added PDFs
+     total files staged: 80
+
+⏺ Bash(cd "/Users/hbalakr2/Library/Mobile
+      Documents/com~apple~CloudDocs/IISc/Deep
+      Learning/CourseProject/agent-in-the-loop-forecasting" && git commit -m
+      "$(cat <<'EOF'…)
+  ⎿  [001-project-foundation 02f923f] Scaffold project foundation: structur
+     e, governance docs, and tooling
+      81 files changed, 7819 insertions(+), 1 deletion(-)
+     … +81 lines (ctrl+o to expand)
+⏺ Committed. Now push the branch and open the PR.
+
+⏺ Bash(cd "/Users/hbalakr2/Library/Mobile
+      Documents/com~apple~CloudDocs/IISc/Deep
+      Learning/CourseProject/agent-in-the-loop-forecasting" && git push -u
+      origin 001-proje…)
+  ⎿  remote:
+     remote: Create a pull request for '001-project-foundation' on GitHub b
+     y visiting:
+     … +7 lines (ctrl+o to expand)
+
+⏺ Bash(cd "/Users/hbalakr2/Library/Mobile
+      Documents/com~apple~CloudDocs/IISc/Deep
+      Learning/CourseProject/agent-in-the-loop-forecasting" && gh pr create
+      --base main --h…)
+  ⎿  https://github.com/harishbalakrishnan3/agent-in-the-loop-forecasting/p
+     ull/1
+
+⏺ Done. Everything is committed, pushed, and the PR is open.
+
+  PR #1 — 
+  https://github.com/harishbalakrishnan3/agent-in-the-loop-forecasting/pull/1
+
+  What happened:
+  1. uv sync → resolved and locked the full dependency tree (darts, prophet,
+  langgraph, anthropic, statsmodels, pyod, etc.); uv.lock is committed (2381
+  lines).
+  2. Branch 001-project-foundation (matches your spec-kit NNN-<name>
+  convention).
+  3. Commit 02f923f — 81 files, the full foundation.
+  4. PR opened against main with a description mapping the work back to your
+  three requirements.
+
+  One safety call I made: I excluded .claude/settings.local.json from the commit
+   and added it to .gitignore. That file is per-developer permission state (it
+  just records which Bash commands you've allow-listed this session) — it
+  shouldn't be shared. The rest of .claude/ (the spec-kit skills) and all of
+  .specify/ are committed, since those are shared tooling your teammates need.
+
+  A couple of notes for you:
+  - I committed the two PDFs in docs/ since SPEC/CLAUDE/README reference them as
+   background. If your team would rather keep binaries out of git, say so and
+  I'll drop them + add a pointer instead.
+  - The repo has two other remote branches (ksowmya, meenachidambaram) —
+  teammates already pushing. Worth a heads-up to them that main is about to get
+  this structure so they can rebase their work onto it.
+  - Milestone dates (M0–M5) in SPEC.md are left as TBD for the team to fill in.
+
+  Want me to set anything else up — e.g. a CODEOWNERS file for automatic
+  review-routing per pipeline, or a CI workflow that runs uv run pytest on PRs?
+
+✻ Cooked for 2m 54s
