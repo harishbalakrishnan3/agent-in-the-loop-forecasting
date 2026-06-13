@@ -50,14 +50,22 @@ def plot_drift_overlay(case: Case, *, window: int | None = None) -> go.Figure:
                              line={"color": "#ff7f0e", "width": 2}))
 
     if case.labeled and case.labels:
+        # Group flavors by onset so a shared onset gets one marker (no overlapping text).
+        flavors_by_onset: dict[int, list[str]] = {}
         for label in case.labels:
             onset_idx = label.get("onset_index")
             if onset_idx is None or onset_idx >= len(times):
                 continue
+            flavors_by_onset.setdefault(onset_idx, []).append(label.get("flavor", ""))
+        # Stagger annotation height across distinct onsets so nearby markers don't collide.
+        for rank, onset_idx in enumerate(sorted(flavors_by_onset)):
+            flavors = ", ".join(f for f in flavors_by_onset[onset_idx] if f)
             fig.add_vline(
                 x=times[onset_idx].timestamp() * 1000,  # plotly datetime axis uses epoch ms
                 line={"color": "red", "width": 2, "dash": "dash"},
-                annotation_text=f"onset: {label.get('flavor', '')}",
+                annotation_text=f"onset: {flavors}",
+                annotation_position="top right",
+                annotation_yshift=-18 * rank,
             )
 
     fig.update_layout(
