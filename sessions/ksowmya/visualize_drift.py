@@ -75,7 +75,7 @@ fig.suptitle(
 )
 plt.tight_layout()
 
-out = pathlib.Path("../../drift_overview.png")
+out = pathlib.Path("drift_overview.png")
 fig.savefig(out, dpi=120, bbox_inches="tight")
 print(f"Saved → {out.resolve()}")
 plt.show()
