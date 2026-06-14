@@ -1,0 +1,28 @@
+{
+  "scenario_id": "level_shift_loses_seasonality",
+  "horizon": 120,
+  "methods": {
+    "full_history_prophet": {
+      "mae": 5.9914,
+      "rmse": 10.232,
+      "wape": 3.6601,
+      "smape": 3.6292
+    },
+    "naive_workflow": {
+      "mae": 5.9914,
+      "rmse": 10.232,
+      "wape": 3.6601,
+      "smape": 3.6292,
+      "selected_window": "window_start=0"
+    },
+    "agent": {
+      "mae": 7.762,
+      "rmse": 12.7521,
+      "wape": 4.7418,
+      "smape": 4.6573,
+      "tool": "full_history_ramp_regressor",
+      "final_case": "accepted_beat_naive"
+    }
+  },
+  "winner": "full_history_prophet"
+}

@@ -32,4 +32,8 @@ reports/*
 !**/.gitkeep
 !**/*sample*
 
+# Changepoint POC run artifacts (bulk; never committed)
+pocs/changepoint/runs/
+pocs/**/_debug/
+
 # Notebooks scratch output (POCs may keep notebooks; clear heavy outputs)
