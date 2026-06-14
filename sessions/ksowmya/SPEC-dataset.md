@@ -29,6 +29,9 @@ class DriftGenerator:
 3. requirements.txt should have all the dependencies and versions pinned.
 4. Add a README.md with instructions to run the project and details about the architecture and design decisions. Add a section about how to use the API endpoint to change the trend of the time series data during runtime.
 5. Add tests for the time series generator and the API endpoint using pytest.
+6. The DriftGenerator should be able to generate combination of two or more drifts in different types of series like sine, linear, binary, etc.
+7. Drift is injected by modifying a shared component (trend + seasonal + noise), so multiple drifts can be stacked on the same series.
+8. Use darts to implement the generators and ensure that the output is compatible with Prophet (i.e., a DataFrame with `ds` and `y` columns, plus optional covariates). The metadata dict should include the type of drift(s) injected, their parameters, and the exact timestamps of injection for evaluation purposes.
 
 ## Documentation
 Create a mermaid diagram in sessions/ksowmya/architecture-phase1.md to visualize the architecture of the system and the flow of data. The diagram should include the time series generator, the API endpoint, and how they interact with each other. Use appropriate shapes and labels to make the diagram clear and easy to understand.

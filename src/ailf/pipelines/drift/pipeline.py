@@ -56,7 +56,7 @@ _state = _AppState()
 # Pydantic models
 # ---------------------------------------------------------------------------
 
-TrendLiteral = Literal["flat", "linear", "exponential"]
+TrendLiteral = Literal["flat", "linear", "exponential", "sine", "binary"]
 
 
 class TrendUpdate(BaseModel):
@@ -106,6 +106,36 @@ class GenerateRequest(BaseModel):
     coef_before: float | None = None
     coef_after: float | None = None
     # shared overrides
+    noise_std: float | None = None
+    start_date: str | None = None
+    freq: str | None = None
+
+
+class DriftSpec(BaseModel):
+    """A single drift component spec for combined_drift."""
+
+    type: str
+    drift_point: int | None = None
+    magnitude: float | None = None
+    drift_start: int | None = None
+    drift_end: int | None = None
+    slope: float | None = None
+    season_length: int | None = None
+    amplitude_before: float | None = None
+    amplitude_after: float | None = None
+    change_point: int | None = None
+    period: int | None = None
+    duration: int | None = None
+    n_covariates: int | None = None
+    covariate_magnitude: float | None = None
+    coef_before: float | None = None
+    coef_after: float | None = None
+
+
+class CombinedGenerateRequest(BaseModel):
+    drift_specs: list[DriftSpec]
+    seed: int = 42
+    n_points: int | None = None
     noise_std: float | None = None
     start_date: str | None = None
     freq: str | None = None
@@ -243,6 +273,42 @@ def generate_drift(drift_type: str, body: GenerateRequest) -> GenerateResponse:
             ),
         )
 
+    df["ds"] = df["ds"].dt.strftime("%Y-%m-%d")
+    return GenerateResponse(data=df.to_dict(orient="records"), meta=meta)
+
+
+@app.post(
+    "/drift/generate/combined",
+    response_model=GenerateResponse,
+    summary="Generate a dataset with combined (stacked) drift types",
+    tags=["generate"],
+)
+def generate_combined(body: CombinedGenerateRequest) -> GenerateResponse:
+    """Stack multiple drift types on a single shared base series.
+
+    Send a list of ``drift_specs`` where each entry has a ``type`` field plus
+    any per-drift overrides.  All drift effects accumulate on the same series
+    (spec item 7).
+
+    Example body::
+
+        {
+          "drift_specs": [
+            {"type": "sudden", "drift_point": 100, "magnitude": 8.0},
+            {"type": "gradual", "drift_start": 200, "drift_end": 300, "magnitude": 5.0}
+          ],
+          "seed": 42
+        }
+    """
+    gen = _state.generator
+    specs = [s.model_dump(exclude_none=True) for s in body.drift_specs]
+    kw: dict[str, Any] = {"seed": body.seed}
+    if body.n_points   is not None: kw["n_points"]   = body.n_points
+    if body.noise_std  is not None: kw["noise_std"]  = body.noise_std
+    if body.start_date is not None: kw["start_date"] = body.start_date
+    if body.freq       is not None: kw["freq"]       = body.freq
+
+    df, meta = gen.combined_drift(drift_specs=specs, **kw)
     df["ds"] = df["ds"].dt.strftime("%Y-%m-%d")
     return GenerateResponse(data=df.to_dict(orient="records"), meta=meta)
 
