@@ -1,0 +1,49 @@
+# Drift Pipeline Configuration
+# The `trend` parameter is exposed via the API and can be changed at runtime.
+
+drift:
+  # Trend type for the base time series.
+  # Valid values: "flat" | "linear" | "exponential"
+  trend: linear
+
+  # Default generation parameters (all overridable per-request via the API)
+  n_points: 365          # number of time steps to generate
+  seed: 42               # global reproducibility seed
+  noise_std: 1.0         # Gaussian noise standard deviation
+  start_date: "2023-01-01"
+  freq: "D"              # pandas-compatible frequency string
+
+  # Per drift-type defaults
+  sudden:
+    drift_point: 182     # index at which the sudden shift occurs
+    magnitude: 10.0      # size of the mean shift
+
+  gradual:
+    drift_start: 100
+    drift_end: 265
+    magnitude: 8.0
+
+  incremental:
+    drift_start: 100
+    slope: 0.05          # added slope per step after drift_start
+
+  seasonal:
+    season_length: 7     # weekly seasonality
+    amplitude_before: 3.0
+    amplitude_after: 8.0
+    change_point: 182
+
+  recurring:
+    period: 90           # every 90 steps a drift window opens
+    duration: 20         # window stays open for 20 steps
+    magnitude: 6.0
+
+  covariate:
+    n_covariates: 1
+    drift_point: 182     # covariate distribution shifts here
+    covariate_magnitude: 5.0
+
+  concept:
+    change_point: 182    # relationship between X and y reverses here
+    coef_before: 1.5
+    coef_after: -1.5

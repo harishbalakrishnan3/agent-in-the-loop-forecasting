@@ -81,28 +81,3 @@ vs. baselines, constraint adherence, explanation quality, and stability across r
 **Baselines to beat:** Prophet-default (no diagnostic loop), Seasonal Naive, a rule-based
 diagnostic loop (no LLM), and an LLM-only diagnosis (no tools — to show why tool grounding
 and backtesting matter).
-
-## 8. Datasets
-
-- **Custom-generated** (Darts): seeded generators with knobs for start time, drift /
-  changepoint parameters, outlier counts, etc. Used for evals because ground truth is known.
-- **Standard datasets**: real series exhibiting drift, changepoints, and outliers.
-- **Problem reproduction**: run Prophet / ARIMA / Seasonal Naive on each dataset and confirm
-  the issue actually appears; filter out datasets where it does not before building the
-  train/test split.
-
-## 9. Milestones (fail-fast — dates TBD)
-
-| ID | Milestone                                                              | Date |
-|----|------------------------------------------------------------------------|------|
-| M0 | Foundation: structure, SPEC, CLAUDE.md, constitution                   | TBD  |
-| M1 | POCs: each track proves its issue reproduces and is detectable         | TBD  |
-| M2 | Datasets + problem reproduction (filtered train/test set)              | TBD  |
-| M3 | Diagnostic tools + unit tests; agent integration (MVP loop)            | TBD  |
-| M4 | Agent evals + LLM judge; explanation-report generation                 | TBD  |
-| M5 | (optional) extended baselines / UI / chat interface                    | TBD  |
-
-## 10. Out of scope (unless time permits)
-
-Direct numerical forecasting by the LLM; production deployment; chat / web UI; foundation-
-model baselines (Chronos / TimesFM). These are explicitly extended-version items.
