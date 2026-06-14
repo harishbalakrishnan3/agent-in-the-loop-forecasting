@@ -1,0 +1,26 @@
+# Code owners for review routing. Later matches win, so module-level rules
+# below override the global owner. See:
+# https://docs.github.com/articles/about-code-owners
+
+# Global owner (team lead) — owns everything by default.
+*                               @harishbalakrishnan3
+
+# Shared core — collectively owned, review-gated (constitution Principle VII).
+/src/ailf/core/                 @harishbalakrishnan3
+/tests/core/                    @harishbalakrishnan3
+
+# Drift pipeline — Sowmya, Harish
+/src/ailf/pipelines/drift/      @sowmya291098 @harishbalakrishnan3
+/tests/pipelines/drift/         @sowmya291098 @harishbalakrishnan3
+/pocs/drift/                    @sowmya291098 @harishbalakrishnan3
+
+# Changepoint pipeline — Goutham, Meena, Dinesh
+# TODO: add Dinesh's handle once he accepts the repo invite.
+/src/ailf/pipelines/changepoint/  @gouthamp-iisc @meenaxchidam
+/tests/pipelines/changepoint/     @gouthamp-iisc @meenaxchidam
+/pocs/changepoint/                @gouthamp-iisc @meenaxchidam
+
+# Anomaly pipeline — Nadhiya, Amudhaval
+/src/ailf/pipelines/anomaly/    @nadhiyar-byte @amuthaval-wq
+/tests/pipelines/anomaly/       @nadhiyar-byte @amuthaval-wq
+/pocs/anomaly/                  @nadhiyar-byte @amuthaval-wq

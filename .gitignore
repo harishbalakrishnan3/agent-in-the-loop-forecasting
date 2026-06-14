@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Environments
+.venv/
+.env
+
+# Per-developer Claude Code settings (shared config lives in .claude/, skills, etc.)
+.claude/settings.local.json
+
+# uv
+# (uv.lock IS committed — do not ignore it)
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+
+# Bulk data & generated artifacts — commit only tiny samples explicitly
+data/synthetic/*
+data/standard/*
+reports/*
+!**/.gitkeep
+!**/*sample*
+
+# Notebooks scratch output (POCs may keep notebooks; clear heavy outputs)
