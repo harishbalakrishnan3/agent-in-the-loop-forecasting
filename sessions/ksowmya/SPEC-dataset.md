@@ -37,17 +37,19 @@ class DriftGenerator:
 8. Use darts to implement the generators and ensure that the output is compatible with Prophet (i.e., a DataFrame with `ds` and `y` columns, plus optional covariates). The metadata dict should include the type of drift(s) injected, their parameters, and the exact timestamps of injection for evaluation purposes.
 9. Use the combined drift generators to generate below a sinusoidal time series of 5 years with atleast 10 sudden drifts each year in both positive and negative directions pertaining to one - two day holidays; recurrent drifts during every quarter end; seasonal drifts increase during the year end and summer and drops (negative severely) during winter in alternate years. Make it with less frequency or less noise so it is easy to differentiate changepoints with naked eye.
    i. First graph should be in negative trend for the second year third quarter.
-    ii. Second graph which goes up every year last quarter and goes down in the first quarter of next year before gradually rising again.
-   iii. Third graph should be negative trend and upwards only during the second quarter of every year.
+    ii. Second graph which goes up 
+         -  last 5 days of last quarter in first year, last 10 days of last quarter in second year, last 15 days of last quarter in third year, last 20 days of last quarter in fourth year and last 25 days of last quarter in fifth year.
+      - goes down in the first quarter of next year every year before gradually rising again.
+      iii. Third graph should be negative trend and upwards only during the second quarter of every year.
 10. New graph which is a sine wave which has seasonal drift in ampltide only during the third year second and third quarter out of 5 years and recurring drifts during quarter end for a period of 10 days every year.
 11. Update the config.yaml to generate different variety of drift trends and capture atleast 3 mutually exclusive. Task: Generate 3 new graphs with different configs. Goal: Choose the configs such that it is difficult-to-predict drift trends by any naive/prophet model. Capture the config.yaml params in their graphs.
 12. New sinusoidal graph which has covariate drift during the seasonal drift with high amplitude during second year second, third  quarter and covariate shift backs to old in the end of third year, seasonal drifts every december of 5 years and recurrent amplitude drifts every month end for 5 days. Sudden covariate drifts once in first, third year, twice in second, fourth year and fifth year has three sudden drifts.
-13. Save the generated graphs in csv to experiment in UI with prophet model. The csv should be split till fourth year before feeding to prophet and prophet's predicted output should be compared with the actual graph in the UI interactively. 
+13. Save the generated graphs in csv to experiment in UI with prophet model. The csv should be split till fourth year before feeding to prophet and prophet's predicted output should be compared with the actual graph in the UI interactively. Both the http://127.0.0.1:8000/forecast/ui and streamlist UI should also have output display to show what the qwen agent is thinking while detecting the changepoints and drifts before invoking the prophet with input.
 14. Save the predicted output vs actual for all the generated graphs from 9 to 12 in prophet/ dir.
 
 ## Forecasting
 1. Write a tool to use Qwen-3.5 with reasoning (which is already installed with ollama) to find the changepoints from the generated graphs and save them in json or csv format. To visualize the changepoints found by Qwen, mark them and visualize in graphs under qwen folder.
-2. Use prophet model to forecast fifth year with the first four year's data from the generated graphs from above and compare with the actual graph of fifth year.
+2. Use prophet model to forecast fifth year with the first four year's data from the generated csvs from above and compare with the actual data of fifth year and display on UI.
 
 ## Documentation
 Create a mermaid diagram in sessions/ksowmya/architecture-phase1.md to visualize the architecture of the system and the flow of data. The diagram should include the time series generator, the API endpoint, and how they interact with each other. Use appropriate shapes and labels to make the diagram clear and easy to understand.

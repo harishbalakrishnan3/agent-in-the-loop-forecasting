@@ -144,18 +144,30 @@ def build_all_series() -> dict[str, pd.DataFrame]:
     df["y"] = y
     series["sec9_i_neg_yr2q3"] = df
 
-    # ── §9-ii  Q4 up / Q1 down / gradual rise Q2-Q3 ─────────────────────
+    # ── §9-ii  Escalating Q4-end up / Q1 down / gradual rise Q2-Q3 ─────────
+    # SPEC §9-ii: last 5 days Q4 yr1, 10 days yr2, 15 yr3, 20 yr4, 25 yr5;
+    # goes down in Q1 of next year, gradually rises Q2-Q3.
     q4q1: list[dict] = []
     for yr_off in range(N_YEARS):
         year = start_ts.year + yr_off
-        q4 = (pd.Timestamp(f"{year}-10-01") - start_ts).days
-        q1 = (pd.Timestamp(f"{year}-01-01") - start_ts).days
+        # Q4 end burst: last (5 + yr_off*5) days of December
+        q4_burst_days = 5 + yr_off * 5
+        q4_end = (pd.Timestamp(f"{year}-12-31") - start_ts).days
+        q4_burst_start = q4_end - q4_burst_days + 1
+        if 0 <= q4_burst_start < N_POINTS:
+            q4q1.append({
+                "type": "sudden",
+                "drift_point": max(q4_burst_start, 0),
+                "magnitude": 15.0,
+            })
+        # Q1 down: Jan 1 of next year
+        next_year = year + 1
+        q1_next = (pd.Timestamp(f"{next_year}-01-01") - start_ts).days
+        if 0 <= q1_next < N_POINTS:
+            q4q1.append({"type": "sudden", "drift_point": q1_next, "magnitude": -12.0})
+        # Q2-Q3 gradual rise
         q2 = (pd.Timestamp(f"{year}-04-01") - start_ts).days
         q3e = (pd.Timestamp(f"{year}-09-30") - start_ts).days
-        if 0 <= q4 < N_POINTS:
-            q4q1.append({"type": "sudden", "drift_point": q4, "magnitude": 15.0})
-        if 0 <= q1 < N_POINTS:
-            q4q1.append({"type": "sudden", "drift_point": q1, "magnitude": -12.0})
         if 0 <= q2 < N_POINTS:
             q4q1.append({"type": "gradual", "drift_start": q2,
                           "drift_end": min(q3e, N_POINTS), "magnitude": 8.0})

@@ -319,10 +319,11 @@ def generate_combined(body: CombinedGenerateRequest) -> GenerateResponse:
 
 
 # ---------------------------------------------------------------------------
-# Forecast routes — SPEC item 2i / 2ii / 2iii
+# Forecast routes — SPEC item 2i / 2ii / 2iii / 13
 # ---------------------------------------------------------------------------
 
 # HTML for the interactive forecast UI (no CDN — Plotly.js inlined via plotly)
+# SPEC §13: show Qwen agent reasoning before invoking Prophet.
 _UI_HTML = """\
 <!DOCTYPE html>
 <html lang="en">
@@ -330,21 +331,46 @@ _UI_HTML = """\
   <meta charset="UTF-8">
   <title>Drift Forecast UI</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+    body { font-family: Arial, sans-serif; max-width: 1040px; margin: 2rem auto; padding: 0 1rem; }
     h1 { color: #1a3a5c; }
+    h2 { color: #2a5a9c; font-size: 1rem; margin-top: 1.5rem; }
     label { font-weight: bold; display: block; margin-top: 1rem; }
     input, select { width: 100%; padding: .4rem; margin-top: .25rem; box-sizing: border-box; }
     button { margin-top: 1.2rem; padding: .6rem 2rem; background: #1a3a5c; color: #fff;
               border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; }
     button:hover { background: #2a5a9c; }
     #status { margin-top: 1rem; color: #c00; font-size: .9rem; }
+
+    /* Reasoning panel */
+    #reasoning-section { display: none; margin-top: 1.5rem; }
+    #reasoning-badge {
+      display: inline-block; padding: .2rem .6rem; border-radius: 3px;
+      font-size: .75rem; font-weight: bold; margin-left: .5rem; vertical-align: middle;
+    }
+    .badge-qwen   { background: #d4edda; color: #155724; }
+    .badge-cusum  { background: #fff3cd; color: #856404; }
+    #reasoning-box {
+      background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;
+      padding: 1rem; font-size: .82rem; line-height: 1.6; white-space: pre-wrap;
+      max-height: 320px; overflow-y: auto; font-family: monospace;
+    }
+    .cp-list { margin-top: .5rem; }
+    .cp-item {
+      display: flex; gap: .5rem; align-items: baseline;
+      padding: .2rem 0; border-bottom: 1px solid #e9ecef; font-size: .8rem;
+    }
+    .cp-type { font-weight: bold; min-width: 80px; }
+    .cp-dir  { min-width: 60px; color: #6c757d; }
+    .cp-conf { min-width: 50px; }
+    .cp-reason { color: #495057; }
+
     #chart { margin-top: 1.5rem; }
   </style>
 </head>
 <body>
   <h1>📈 Prophet Forecast Explorer</h1>
-  <p>Upload a CSV with <code>ds</code> (date) and <code>y</code> (value) columns to fit a
-     Prophet model and explore the forecast interactively.</p>
+  <p>Upload a CSV with <code>ds</code> (date) and <code>y</code> (value) columns. The agent
+     detects changepoints &amp; drifts first, then fits Prophet on the training data.</p>
 
   <form id="fcastForm">
     <label for="csvFile">CSV file (ds, y columns required):</label>
@@ -360,10 +386,21 @@ _UI_HTML = """\
       <option value="MS">Monthly start (MS)</option>
     </select>
 
-    <button type="submit">Run Forecast</button>
+    <button type="submit">🔍 Detect &amp; Forecast</button>
   </form>
 
   <div id="status"></div>
+
+  <!-- Qwen / agent reasoning panel -->
+  <section id="reasoning-section">
+    <h2>
+      🤖 Agent Analysis
+      <span id="reasoning-badge" class="reasoning-badge"></span>
+    </h2>
+    <div id="reasoning-box"></div>
+    <div class="cp-list" id="cp-list"></div>
+  </section>
+
   <div id="chart"></div>
 
   <script src="/forecast/plotly.js"></script>
@@ -371,11 +408,17 @@ _UI_HTML = """\
     const form   = document.getElementById('fcastForm');
     const status = document.getElementById('status');
     const chart  = document.getElementById('chart');
+    const reasoningSection = document.getElementById('reasoning-section');
+    const reasoningBox     = document.getElementById('reasoning-box');
+    const reasoningBadge   = document.getElementById('reasoning-badge');
+    const cpList           = document.getElementById('cp-list');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      status.textContent = '⏳ Running Prophet forecast…';
+      status.textContent = '⏳ Step 1/2 — Agent detecting changepoints…';
       chart.innerHTML = '';
+      reasoningSection.style.display = 'none';
+      cpList.innerHTML = '';
 
       const file    = document.getElementById('csvFile').files[0];
       const horizon = document.getElementById('horizon').value;
@@ -389,7 +432,7 @@ _UI_HTML = """\
       fd.append('freq', freq);
 
       try {
-        const resp = await fetch('/forecast/upload', { method: 'POST', body: fd });
+        const resp = await fetch('/forecast/analyze', { method: 'POST', body: fd });
         if (!resp.ok) {
           const err = await resp.json();
           status.textContent = '❌ ' + (err.detail || JSON.stringify(err));
@@ -397,11 +440,49 @@ _UI_HTML = """\
         }
         const data = await resp.json();
         status.textContent = '';
+
+        // Show reasoning panel
+        showReasoning(data);
+
+        // Render forecast chart
         renderChart(data);
+
       } catch (err) {
         status.textContent = '❌ Network error: ' + err.message;
       }
     });
+
+    function showReasoning(d) {
+      const source = d.detection_source || 'cusum';
+      const isQwen = source === 'qwen';
+
+      reasoningBadge.textContent = isQwen ? '✓ Qwen (' + (d.detection_model || '') + ')' : '⚠ CUSUM fallback';
+      reasoningBadge.className   = 'reasoning-badge ' + (isQwen ? 'badge-qwen' : 'badge-cusum');
+
+      reasoningBox.textContent = d.reasoning || '(no reasoning returned)';
+
+      // Changepoints table
+      const cps = d.changepoints || [];
+      if (cps.length) {
+        cpList.innerHTML = '<strong>Detected changepoints (' + cps.length + '):</strong>';
+        cps.forEach(cp => {
+          const row = document.createElement('div');
+          row.className = 'cp-item';
+          const conf = cp.confidence != null ? (cp.confidence * 100).toFixed(0) + '%' : '—';
+          row.innerHTML =
+            '<span class="cp-type">' + (cp.type || '?') + '</span>' +
+            '<span class="cp-dir">' + (cp.direction || '?') + '</span>' +
+            '<span>' + (cp.timestamp || 'idx ' + cp.index) + '</span>' +
+            '<span class="cp-conf">' + conf + '</span>' +
+            '<span class="cp-reason">' + (cp.reason || '') + '</span>';
+          cpList.appendChild(row);
+        });
+      } else {
+        cpList.innerHTML = '<em>No changepoints detected.</em>';
+      }
+
+      reasoningSection.style.display = 'block';
+    }
 
     function renderChart(d) {
       const hist = {
@@ -437,12 +518,24 @@ _UI_HTML = """\
         line: { color: '#e05c00', width: 2, dash: 'dash' },
       };
 
+      // Mark changepoints as vertical lines
+      const shapes = (d.changepoints || []).map(cp => ({
+        type: 'line',
+        x0: cp.timestamp || '', x1: cp.timestamp || '',
+        yref: 'paper', y0: 0, y1: 1,
+        line: { color: 'rgba(220,53,69,0.45)', width: 1.5, dash: 'dot' },
+      }));
+
       const layout = {
-        title: 'Historical vs. Forecast  —  horizon: ' + d.prediction_length + ' days',
+        title: 'Historical vs. Forecast  —  horizon: ' + d.prediction_length + ' days'
+               + (d.changepoints && d.changepoints.length
+                  ? '  |  ' + d.changepoints.length + ' changepoints (dotted red)'
+                  : ''),
         xaxis: { title: 'Date', rangeslider: { visible: true } },
         yaxis: { title: 'y' },
         legend: { orientation: 'h', y: -0.2 },
         hovermode: 'x unified',
+        shapes: shapes,
       };
 
       Plotly.newPlot('chart', [hist, ci_upper, ci_lower, fcast], layout,
@@ -595,6 +688,131 @@ async def forecast_upload(
         "freq": freq,
         "n_historical": len(df),
         "n_forecast": len(fut_part),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Shared CSV + Prophet helper (used by both upload and analyze endpoints)
+# ---------------------------------------------------------------------------
+
+async def _parse_csv_upload(file: UploadFile) -> pd.DataFrame:
+    """Read and validate an uploaded CSV; returns a clean DataFrame (ds, y, ...)."""
+    raw = await file.read()
+    try:
+        df = pd.read_csv(io.BytesIO(raw))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Cannot parse CSV: {exc}") from exc
+
+    missing = {"ds", "y"} - set(df.columns)
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail=f"CSV missing required columns: {sorted(missing)}. Got: {list(df.columns)}",
+        )
+    try:
+        df["ds"] = pd.to_datetime(df["ds"])
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Cannot parse 'ds' as dates: {exc}") from exc
+    try:
+        df["y"] = pd.to_numeric(df["y"], errors="raise")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Cannot parse 'y' as numeric: {exc}") from exc
+
+    df = df.sort_values("ds").reset_index(drop=True)
+    if len(df) < 2:
+        raise HTTPException(status_code=422, detail="CSV must contain at least 2 rows.")
+    return df
+
+
+def _run_prophet(df: pd.DataFrame, prediction_length: int, freq: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Fit Prophet on df; return (fut_part, df) where fut_part is the forecast horizon rows."""
+    from prophet import Prophet  # lazy import
+
+    prophet_model = Prophet(
+        daily_seasonality=False,
+        weekly_seasonality=True,
+        yearly_seasonality=True,
+    )
+    regressor_cols = [c for c in df.columns if c not in ("ds", "y")]
+    for col in regressor_cols:
+        prophet_model.add_regressor(col)
+
+    prophet_model.fit(df[["ds", "y"] + regressor_cols])
+    future = prophet_model.make_future_dataframe(periods=prediction_length, freq=freq)
+    for col in regressor_cols:
+        future[col] = df[col].iloc[-1]
+
+    forecast = prophet_model.predict(future)
+    cutoff = df["ds"].max()
+    fut_part = forecast[forecast["ds"] > cutoff][["ds", "yhat", "yhat_lower", "yhat_upper"]]
+    return fut_part, df
+
+
+# ---------------------------------------------------------------------------
+# Forecast/analyze — SPEC §13: Qwen reasoning panel before Prophet
+# ---------------------------------------------------------------------------
+
+@app.post(
+    "/forecast/analyze",
+    summary="Detect changepoints with Qwen/CUSUM, then fit Prophet",
+    tags=["forecast"],
+)
+async def forecast_analyze(
+    file: UploadFile = File(..., description="CSV file with `ds` and `y` columns"),
+    prediction_length: int = Form(default=90, ge=1, le=3650, description="Forecast horizon in days"),
+    freq: str = Form(default="D", description="Pandas frequency string: D, W, MS, …"),
+) -> dict[str, Any]:
+    """Run the full agent pipeline: detect changepoints first, then forecast.
+
+    **Step 1** — Qwen (via Ollama) analyses the uploaded series and returns its
+    reasoning narrative and detected changepoints. Falls back to CUSUM if Ollama
+    is unavailable.
+
+    **Step 2** — Prophet is fitted and the forecast is returned together with
+    the agent's findings so the UI can display both side-by-side.
+
+    **Response** extends ``/forecast/upload`` with:
+    - ``reasoning``         — Qwen/CUSUM narrative text
+    - ``changepoints``      — list of detected changepoint dicts
+    - ``detection_source``  — "qwen" | "cusum"
+    - ``detection_model``   — model name used
+    """
+    from ailf.pipelines.drift.qwen_detect import detect as qwen_detect
+
+    # Parse CSV
+    df = await _parse_csv_upload(file)
+
+    # Step 1: Agent changepoint detection
+    detection = qwen_detect(df)
+
+    # Step 2: Prophet forecast
+    try:
+        fut_part, df = _run_prophet(df, prediction_length, freq)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Prophet error: {exc}") from exc
+
+    def _to_str_list(series: pd.Series) -> list[str]:
+        return series.dt.strftime("%Y-%m-%d").tolist()
+
+    return {
+        "historical": {
+            "ds": _to_str_list(df["ds"]),
+            "y":  df["y"].tolist(),
+        },
+        "forecast": {
+            "ds":         _to_str_list(fut_part["ds"]),
+            "yhat":       fut_part["yhat"].round(4).tolist(),
+            "yhat_lower": fut_part["yhat_lower"].round(4).tolist(),
+            "yhat_upper": fut_part["yhat_upper"].round(4).tolist(),
+        },
+        "prediction_length": prediction_length,
+        "freq": freq,
+        "n_historical": len(df),
+        "n_forecast": len(fut_part),
+        "reasoning":        detection.reasoning,
+        "changepoints":     detection.changepoints,
+        "detection_source": detection.source,
+        "detection_model":  detection.model,
     }
 
 
