@@ -1,23 +1,28 @@
 """Drift pipeline entry point.
 
 Wires the DriftGenerator into a FastAPI application that exposes a Swagger UI
-for runtime control of synthetic drift dataset generation.
+for runtime control of synthetic drift dataset generation, plus a Prophet
+forecast endpoint and an interactive Plotly-powered UI.
 
 Run with:
     uv run python -m ailf.pipelines.drift.pipeline
 or:
     PYTHONPATH=src uvicorn ailf.pipelines.drift.pipeline:app --reload --port 8000
 
-Swagger UI: http://127.0.0.1:8000/docs
+Swagger UI:       http://127.0.0.1:8000/docs
+Forecast UI:      http://127.0.0.1:8000/forecast/ui
 """
 
 from __future__ import annotations
 
+import io
 import pathlib
 from typing import Any, Literal
 
+import pandas as pd
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, field_validator
 
 from ailf.pipelines.drift.datasets import DriftGenerator, _VALID_TRENDS
@@ -311,6 +316,286 @@ def generate_combined(body: CombinedGenerateRequest) -> GenerateResponse:
     df, meta = gen.combined_drift(drift_specs=specs, **kw)
     df["ds"] = df["ds"].dt.strftime("%Y-%m-%d")
     return GenerateResponse(data=df.to_dict(orient="records"), meta=meta)
+
+
+# ---------------------------------------------------------------------------
+# Forecast routes — SPEC item 2i / 2ii / 2iii
+# ---------------------------------------------------------------------------
+
+# HTML for the interactive forecast UI (no CDN — Plotly.js inlined via plotly)
+_UI_HTML = """\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Drift Forecast UI</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { color: #1a3a5c; }
+    label { font-weight: bold; display: block; margin-top: 1rem; }
+    input, select { width: 100%; padding: .4rem; margin-top: .25rem; box-sizing: border-box; }
+    button { margin-top: 1.2rem; padding: .6rem 2rem; background: #1a3a5c; color: #fff;
+              border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; }
+    button:hover { background: #2a5a9c; }
+    #status { margin-top: 1rem; color: #c00; font-size: .9rem; }
+    #chart { margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+  <h1>📈 Prophet Forecast Explorer</h1>
+  <p>Upload a CSV with <code>ds</code> (date) and <code>y</code> (value) columns to fit a
+     Prophet model and explore the forecast interactively.</p>
+
+  <form id="fcastForm">
+    <label for="csvFile">CSV file (ds, y columns required):</label>
+    <input type="file" id="csvFile" accept=".csv" required>
+
+    <label for="horizon">Prediction length (days):</label>
+    <input type="number" id="horizon" value="90" min="1" max="3650">
+
+    <label for="freqSel">Frequency:</label>
+    <select id="freqSel">
+      <option value="D" selected>Daily (D)</option>
+      <option value="W">Weekly (W)</option>
+      <option value="MS">Monthly start (MS)</option>
+    </select>
+
+    <button type="submit">Run Forecast</button>
+  </form>
+
+  <div id="status"></div>
+  <div id="chart"></div>
+
+  <script src="/forecast/plotly.js"></script>
+  <script>
+    const form   = document.getElementById('fcastForm');
+    const status = document.getElementById('status');
+    const chart  = document.getElementById('chart');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      status.textContent = '⏳ Running Prophet forecast…';
+      chart.innerHTML = '';
+
+      const file    = document.getElementById('csvFile').files[0];
+      const horizon = document.getElementById('horizon').value;
+      const freq    = document.getElementById('freqSel').value;
+
+      if (!file) { status.textContent = 'Please select a CSV file.'; return; }
+
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('prediction_length', horizon);
+      fd.append('freq', freq);
+
+      try {
+        const resp = await fetch('/forecast/upload', { method: 'POST', body: fd });
+        if (!resp.ok) {
+          const err = await resp.json();
+          status.textContent = '❌ ' + (err.detail || JSON.stringify(err));
+          return;
+        }
+        const data = await resp.json();
+        status.textContent = '';
+        renderChart(data);
+      } catch (err) {
+        status.textContent = '❌ Network error: ' + err.message;
+      }
+    });
+
+    function renderChart(d) {
+      const hist = {
+        x: d.historical.ds,
+        y: d.historical.y,
+        mode: 'lines',
+        name: 'Historical (actual)',
+        line: { color: '#1a3a5c', width: 2, dash: 'solid' },
+      };
+
+      const ci_upper = {
+        x: d.forecast.ds,
+        y: d.forecast.yhat_upper,
+        mode: 'lines',
+        name: 'Upper bound',
+        line: { width: 0, color: 'rgba(70,130,180,0)' },
+        showlegend: false,
+      };
+      const ci_lower = {
+        x: d.forecast.ds,
+        y: d.forecast.yhat_lower,
+        fill: 'tonexty',
+        fillcolor: 'rgba(70,130,180,0.15)',
+        mode: 'lines',
+        name: '95% CI',
+        line: { width: 0 },
+      };
+      const fcast = {
+        x: d.forecast.ds,
+        y: d.forecast.yhat,
+        mode: 'lines',
+        name: 'Forecast (Prophet)',
+        line: { color: '#e05c00', width: 2, dash: 'dash' },
+      };
+
+      const layout = {
+        title: 'Historical vs. Forecast  —  horizon: ' + d.prediction_length + ' days',
+        xaxis: { title: 'Date', rangeslider: { visible: true } },
+        yaxis: { title: 'y' },
+        legend: { orientation: 'h', y: -0.2 },
+        hovermode: 'x unified',
+      };
+
+      Plotly.newPlot('chart', [hist, ci_upper, ci_lower, fcast], layout,
+                     {responsive: true});
+    }
+  </script>
+</body>
+</html>
+"""
+
+
+@app.get(
+    "/forecast/ui",
+    response_class=HTMLResponse,
+    summary="Interactive Prophet forecast UI",
+    tags=["forecast"],
+    include_in_schema=False,
+)
+def forecast_ui() -> HTMLResponse:
+    """Serve the interactive Plotly-powered forecast explorer.
+
+    Upload a CSV with ``ds`` and ``y`` columns, choose a prediction horizon,
+    and visualise historical data (solid) vs. Prophet forecast (dashed) with
+    95% confidence intervals (shaded).
+    """
+    return HTMLResponse(content=_UI_HTML)
+
+
+@app.get(
+    "/forecast/plotly.js",
+    include_in_schema=False,
+    response_class=HTMLResponse,
+)
+def serve_plotly_js() -> HTMLResponse:
+    """Serve the bundled Plotly.js from the installed plotly package (no CDN)."""
+    import plotly
+    js_path = pathlib.Path(plotly.__file__).parent / "package_data" / "plotly.min.js"
+    if not js_path.exists():
+        # Fallback: minified bundle name varies by version
+        candidates = list(pathlib.Path(plotly.__file__).parent.rglob("plotly*.min.js"))
+        if not candidates:
+            raise HTTPException(status_code=500, detail="plotly.min.js not found in package")
+        js_path = candidates[0]
+    from fastapi.responses import FileResponse
+    return FileResponse(str(js_path), media_type="application/javascript")
+
+
+@app.post(
+    "/forecast/upload",
+    summary="Upload CSV, fit Prophet, return forecast JSON",
+    tags=["forecast"],
+)
+async def forecast_upload(
+    file: UploadFile = File(..., description="CSV file with `ds` (date) and `y` (numeric) columns"),
+    prediction_length: int = Form(default=90, ge=1, le=3650, description="Forecast horizon in days"),
+    freq: str = Form(default="D", description="Pandas frequency string: D, W, MS, …"),
+) -> dict[str, Any]:
+    """Fit a Prophet model on the uploaded time series and return forecast data.
+
+    **Request** (multipart/form-data):
+    - ``file`` — CSV with at minimum ``ds`` and ``y`` columns
+    - ``prediction_length`` — number of periods to forecast (default 90)
+    - ``freq`` — frequency string passed to ``make_future_dataframe`` (default ``D``)
+
+    **Response**:
+    ```json
+    {
+      "historical": {"ds": [...], "y": [...]},
+      "forecast":   {"ds": [...], "yhat": [...], "yhat_lower": [...], "yhat_upper": [...]},
+      "prediction_length": 90
+    }
+    ```
+
+    Historical data is returned as-is (solid line in UI).
+    Forecast data covers the future horizon (dashed line + CI shading in UI).
+    """
+    # -- Parse CSV -----------------------------------------------------------
+    raw = await file.read()
+    try:
+        df = pd.read_csv(io.BytesIO(raw))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Cannot parse CSV: {exc}") from exc
+
+    missing = {"ds", "y"} - set(df.columns)
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail=f"CSV missing required columns: {sorted(missing)}. Got: {list(df.columns)}",
+        )
+
+    try:
+        df["ds"] = pd.to_datetime(df["ds"])
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Cannot parse 'ds' as dates: {exc}") from exc
+
+    try:
+        df["y"] = pd.to_numeric(df["y"], errors="raise")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Cannot parse 'y' as numeric: {exc}") from exc
+
+    df = df.sort_values("ds").reset_index(drop=True)
+
+    if len(df) < 2:
+        raise HTTPException(status_code=422, detail="CSV must contain at least 2 rows.")
+
+    # -- Fit Prophet ---------------------------------------------------------
+    try:
+        from prophet import Prophet  # lazy import — keeps startup fast
+
+        model = Prophet(
+            daily_seasonality=False,
+            weekly_seasonality=True,
+            yearly_seasonality=True,
+        )
+        # Add any extra regressors present in the CSV
+        regressor_cols = [c for c in df.columns if c not in ("ds", "y")]
+        for col in regressor_cols:
+            model.add_regressor(col)
+
+        model.fit(df[["ds", "y"] + regressor_cols])
+        future = model.make_future_dataframe(periods=prediction_length, freq=freq)
+        for col in regressor_cols:
+            # Carry last-known regressor value forward into the future
+            future[col] = df[col].iloc[-1]
+        forecast = model.predict(future)
+
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Prophet error: {exc}") from exc
+
+    # -- Split historical vs. future ----------------------------------------
+    cutoff = df["ds"].max()
+    hist_part = forecast[forecast["ds"] <= cutoff][["ds", "yhat", "yhat_lower", "yhat_upper"]]
+    fut_part  = forecast[forecast["ds"] >  cutoff][["ds", "yhat", "yhat_lower", "yhat_upper"]]
+
+    def _to_str_list(series: pd.Series) -> list[str]:
+        return series.dt.strftime("%Y-%m-%d").tolist()
+
+    return {
+        "historical": {
+            "ds": _to_str_list(df["ds"]),
+            "y":  df["y"].tolist(),
+        },
+        "forecast": {
+            "ds":         _to_str_list(fut_part["ds"]),
+            "yhat":       fut_part["yhat"].round(4).tolist(),
+            "yhat_lower": fut_part["yhat_lower"].round(4).tolist(),
+            "yhat_upper": fut_part["yhat_upper"].round(4).tolist(),
+        },
+        "prediction_length": prediction_length,
+        "freq": freq,
+        "n_historical": len(df),
+        "n_forecast": len(fut_part),
+    }
 
 
 # ---------------------------------------------------------------------------

@@ -3,7 +3,7 @@
 
 drift:
   # Trend type for the base time series.
-  # Valid values: "flat" | "linear" | "exponential"
+  # Valid values: "flat" | "linear" | "exponential" | "sine" | "binary"
   trend: linear
 
   # Default generation parameters (all overridable per-request via the API)
@@ -47,3 +47,64 @@ drift:
     change_point: 182    # relationship between X and y reverses here
     coef_before: 1.5
     coef_after: -1.5
+
+# ---------------------------------------------------------------------------
+# SPEC §11 — Three mutually exclusive, hard-to-predict drift configurations
+# Goal: maximise prediction difficulty for naive/Prophet models by choosing
+#       trend + drift type combinations that violate Prophet's assumptions.
+# ---------------------------------------------------------------------------
+
+# Config A: exponential trend + concept drift
+# Why hard: exponential growth violates Prophet's piecewise-linear assumption;
+#           concept drift reverses the covariate relationship mid-series so the
+#           learned coefficients are wrong for the entire second half.
+hard_config_a:
+  trend: exponential
+  n_points: 1825          # 5 years daily
+  seed: 101
+  noise_std: 0.8
+  start_date: "2020-01-01"
+  freq: "D"
+  concept:
+    change_point: 547     # year-2 (mid-series)
+    coef_before: 2.0      # strong positive covariate effect
+    coef_after: -2.5      # reverses to strong negative
+
+# Config B: binary trend + covariate drift
+# Why hard: binary (square-wave) trend has abrupt non-smooth jumps Prophet
+#           cannot model; covariate distribution shift at day 365 makes the
+#           exogenous regressors unreliable from year 2 onward.
+hard_config_b:
+  trend: binary
+  n_points: 1825
+  seed: 202
+  noise_std: 0.6
+  start_date: "2020-01-01"
+  freq: "D"
+  covariate:
+    n_covariates: 2
+    drift_point: 365      # year-2 onset
+    covariate_magnitude: 8.0   # large distribution shift
+
+# Config C: flat trend + simultaneous sudden+gradual+recurring drifts
+# Why hard: no usable trend signal; three layered drift mechanisms operate at
+#           different timescales so no single drift pattern repeats cleanly.
+#           Prophet will overfit to one regime and fail in the others.
+hard_config_c:
+  trend: flat
+  n_points: 1825
+  seed: 303
+  noise_std: 0.5
+  start_date: "2020-01-01"
+  freq: "D"
+  sudden:
+    drift_point: 300
+    magnitude: 18.0
+  gradual:
+    drift_start: 600
+    drift_end: 900
+    magnitude: 12.0
+  recurring:
+    period: 73            # ~5 times per year, irregular vs quarterly
+    duration: 14
+    magnitude: 8.0
