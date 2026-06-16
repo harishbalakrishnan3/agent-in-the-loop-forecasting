@@ -1,40 +1,65 @@
-# POC Spec: Level Shift Detection in Changepoint Pipeline
+# POC Spec: Level Shift Diagnostic Pipeline
 
 **Owner:** Meena  
 **Location:** `pocs/changepoint/level_shift/`  
-**Status:** Draft  
 **Created:** 2026-06-15
 
 ---
 
 ## Goal
 
-Prove that a PELT-based level shift detector can reliably identify abrupt mean changes
-in synthetic time-series data, and that the detection is accurate enough to serve as
-input to the agent-in-the-loop forecasting system.
+Build an end-to-end level shift diagnostic pipeline that:
+1. Detects abrupt mean changes in time-series data
+2. Applies intelligent interventions to Prophet based on detection results
+3. Proves that informed interventions improve forecast accuracy (lower MAE) compared to naive Prophet defaults
+4. Demonstrates agent value on complex scenarios where a fixed rule fails but reasoning wins
 
 ---
 
-## Scope (POC Only)
+## End-to-End Flow
 
-- Synthetic dataset generation (Darts) with configurable level shifts
-- Level shift detection tool (ruptures, PELT with L2 cost)
-- Unit tests proving detection against planted ground truth
-- Interactive visualization (Plotly) for inspection and debugging
-
-**Out of scope for this POC:**
-- Agent integration
-- Forecasting / fixing / backtesting
-- Slope change or variance change detection
-- Production code promotion (stays in `pocs/`)
+```
+Input: Time series with poor Prophet forecast
+                │
+                ▼
+┌──────────────────────────────────────────────┐
+│  1. DETECTION (detect_level_shift)           │
+│     Algorithm: PELT + L2 cost (ruptures)     │
+│     Output: changepoint locations + mags     │
+└──────────────────────────────────────────────┘
+                │
+                ▼
+┌──────────────────────────────────────────────┐
+│  2. INTERVENTION (select_strategy)           │
+│     Picks strategy based on detection output │
+│     Configures Prophet accordingly           │
+└──────────────────────────────────────────────┘
+                │
+                ▼
+┌──────────────────────────────────────────────┐
+│  3. BACKTEST                                 │
+│     Naive Prophet (no intervention) → MAE α  │
+│     Prophet + intervention → MAE β           │
+│     Improvement = ((α-β)/α) × 100           │
+└──────────────────────────────────────────────┘
+                │
+                ▼
+┌──────────────────────────────────────────────┐
+│  4. AGENT INTEGRATION (later)                │
+│     LLM replaces deterministic strategy      │
+│     picker with reasoning                    │
+└──────────────────────────────────────────────┘
+```
 
 ---
 
 ## Components
 
+---
+
 ### 1. Dataset Generator (`datasets.py`)
 
-Generate synthetic time series with known level shifts using Darts.
+Generate synthetic time series with known level shifts using Darts. All generation is seeded for reproducibility.
 
 **Interface:**
 
@@ -52,6 +77,11 @@ def generate_level_shift_series(
     magnitudes: list[float] | None = None,
     seasonality_period: int | None = None,
     seasonality_amplitude: float = 0.0,
+    seasonality_end_index: int | None = None,
+    spike_indices: list[int] | None = None,
+    spike_magnitudes: list[float] | None = None,
+    spike_duration: int = 20,
+    noise_std_after: float | None = None,
     seed: int = 42,
 ) -> tuple[TimeSeries, dict]:
     """
@@ -61,48 +91,70 @@ def generate_level_shift_series(
     """
 ```
 
-**Datasets to generate:**
-
-| ID | Name | Description | Difficulty |
-|----|------|-------------|-----------|
-| D1 | `single_large` | 1 changepoint, magnitude=40, noise=5 | Easy |
-| D2 | `single_subtle` | 1 changepoint, magnitude=10, noise=8 | Hard |
-| D3 | `multiple` | 3 changepoints at different positions | Medium |
-| D4 | `noisy` | 1 changepoint, magnitude=30, noise=15 | Hard |
-| D5 | `with_trend` | 1 changepoint + underlying linear trend | Medium |
-| D6 | `with_seasonality` | 1 changepoint + weekly seasonal pattern | Medium |
-| D7 | `close_together` | 2 changepoints only 50 points apart | Hard |
-| D8 | `no_changepoint` | Clean series, no shifts (negative control) | Control |
-| D9 | `large_series` | 1 changepoint in a 2000-point series | Medium |
-| D10 | `small_magnitude_large_series` | Subtle shift in long series | Hard |
-
 **Knobs/Parameters:**
 
 | Parameter | Purpose | Range |
 |-----------|---------|-------|
 | `length` | Series length | 100 – 5000 |
-| `base_level` | Starting mean | Any float |
-| `base_slope` | Underlying trend | -1.0 to 1.0 |
-| `noise_std` | Background noise | 0.1 – 50.0 |
-| `changepoint_indices` | Where shifts occur | List of ints within [0, length) |
-| `magnitudes` | Size of each shift | List of floats (positive or negative) |
+| `base_level` | Starting mean value | Any float |
+| `base_slope` | Underlying linear trend per step | -1.0 to 1.0 |
+| `noise_std` | Gaussian noise standard deviation | 0.1 – 50.0 |
+| `changepoint_indices` | Where level shifts occur | List of ints within [0, length) |
+| `magnitudes` | Size of each shift (+/-) | List of floats |
 | `seasonality_period` | Periodic pattern length | None, 7, 30, 365 |
 | `seasonality_amplitude` | Seasonal strength | 0.0 – 50.0 |
+| `seasonality_end_index` | Index after which seasonality stops | None or int |
+| `spike_indices` | Temporary events that revert | List of ints |
+| `spike_magnitudes` | Size of each spike | List of floats |
+| `spike_duration` | How many points spike lasts before reverting | int |
+| `noise_std_after` | Noise level after changepoint (variance regime) | None or float |
 | `seed` | Reproducibility | Any int |
+
+**Dataset Catalog:**
+
+| ID | Name | Description | Difficulty | Complexity |
+|----|------|-------------|-----------|------------|
+| D1 | `single_large` | 1 shift, +40, low noise | Easy | Low |
+| D2 | `single_subtle` | 1 shift, +10, high noise (SNR ≈ 1.25) | Hard | Low |
+| D3 | `multiple` | 3 shifts at [150, 350, 500] | Medium | Low |
+| D4 | `noisy` | 1 shift, +30, very high noise (σ=15) | Hard | Low |
+| D5 | `with_trend` | 1 shift + underlying linear slope | Medium | Low |
+| D6 | `with_seasonality` | 1 shift + weekly seasonal pattern | Medium | Low |
+| D7 | `close_together` | 2 shifts only 50 points apart | Hard | Low |
+| D8 | `no_changepoint` | Clean series (negative control) | Control | Low |
+| D9 | `large_series` | 1 shift in 2000-point series | Medium | Low |
+| D10 | `small_magnitude_large_series` | Subtle shift (+8) in long series | Hard | Low |
+| D11 | `shift_loses_seasonality` | Shift + seasonality disappears after | Hard | **High** |
+| D12 | `temporary_spike` | Large spike that reverts (not a permanent shift) | Hard | **High** |
+| D13 | `shift_with_trend` | Level shift buried in existing upward trend | Hard | **High** |
+| D14 | `mixed_magnitudes` | Multiple shifts — some subtle, some large | Hard | **High** |
+| D15 | `shift_plus_noise_regime` | Mean AND variance change simultaneously | Hard | **High** |
+
+**Why D11–D15 matter (complexity justification):**
+
+| Dataset | Why naive approach fails | What smart reasoning does differently |
+|---------|--------------------------|---------------------------------------|
+| D11 | Injects changepoint but Prophet still expects seasonality → wrong | Also disables seasonality after shift |
+| D12 | PELT sees 2 shifts, naive treats as permanent → wrong | Recognizes canceling magnitudes → cleans spike instead |
+| D13 | Hard to separate "trend acceleration" from "level jump" | Uses magnitude + context to decide |
+| D14 | Same strategy for all shifts; subtle ones need different handling | Applies different strategies per shift |
+| D15 | Simple changepoint injection doesn't fix the variance issue | Adjusts uncertainty interval width |
 
 **Ground truth metadata format:**
 
 ```json
 {
-  "dataset_id": "single_large",
+  "dataset_id": "D11_shift_loses_seasonality",
   "length": 500,
   "changepoint_indices": [250],
   "changepoint_dates": ["2023-09-08"],
-  "magnitudes": [40.0],
-  "type": "level_shift",
-  "noise_std": 5.0,
+  "magnitudes": [30.0],
+  "type": "level_shift_with_seasonality_loss",
+  "noise_std": 3.0,
   "base_level": 100.0,
-  "seed": 42
+  "seasonality_end_index": 250,
+  "complexity": "high",
+  "seed": 60
 }
 ```
 
@@ -152,22 +204,336 @@ def detect_level_shift(
 
 ---
 
-### 3. Tests (`test_level_shift.py`)
+### 3. Intervention Module (`interventions.py`)
 
-**Test-first approach.** Write these before implementing.
+Strategy functions that take detection output and configure Prophet.
 
-| Test ID | Test | Assertion |
-|---------|------|-----------|
-| T1 | `test_finds_single_large_shift` | Detected index within ±5 of ground truth |
-| T2 | `test_finds_multiple_shifts` | Finds all 3 changepoints (within ±5 tolerance) |
-| T3 | `test_no_false_positives` | Returns 0 changepoints on clean data (D8) |
-| T4 | `test_detects_subtle_shift` | Finds changepoint in D2 (may allow wider tolerance ±10) |
-| T5 | `test_handles_noisy_data` | Finds changepoint in D4 (noisy) |
-| T6 | `test_works_with_trend` | Finds level shift even with underlying slope (D5) |
-| T7 | `test_works_with_seasonality` | Finds level shift even with seasonal pattern (D6) |
-| T8 | `test_correct_magnitude` | Reported magnitude within ±20% of true magnitude |
-| T9 | `test_output_schema` | Result has all required fields in LevelShiftResult |
-| T10 | `test_reproducibility` | Same input → same output (deterministic) |
+**Interface:**
+
+```python
+from dataclasses import dataclass
+from prophet import Prophet
+import pandas as pd
+
+from pocs.changepoint.level_shift.detector import LevelShiftResult
+
+
+@dataclass
+class InterventionResult:
+    strategy_name: str              # which strategy was applied
+    model: Prophet                  # configured Prophet instance
+    training_data: pd.DataFrame     # possibly modified training data
+    description: str                # human-readable explanation of what was done
+
+
+def inject_changepoints(
+    result: LevelShiftResult,
+    df: pd.DataFrame,
+) -> InterventionResult:
+    """Inject detected changepoints explicitly into Prophet.
+    
+    Use when: few large, unambiguous shifts.
+    """
+
+
+def trim_to_post_shift(
+    result: LevelShiftResult,
+    df: pd.DataFrame,
+    buffer_days: int = 7,
+) -> InterventionResult:
+    """Train only on data after the most recent shift.
+    
+    Use when: recent regime change, old data is irrelevant.
+    """
+
+
+def add_step_regressor(
+    result: LevelShiftResult,
+    df: pd.DataFrame,
+) -> InterventionResult:
+    """Add a binary regressor column (0 before shift, 1 after).
+    
+    Use when: permanent level change that should be modeled explicitly.
+    """
+
+
+def increase_sensitivity(
+    result: LevelShiftResult,
+    df: pd.DataFrame,
+    prior_scale: float = 0.5,
+) -> InterventionResult:
+    """Increase Prophet's changepoint_prior_scale.
+    
+    Use when: subtle shift that Prophet's defaults miss.
+    """
+
+
+def clean_temporary_event(
+    result: LevelShiftResult,
+    df: pd.DataFrame,
+    threshold_ratio: float = 0.8,
+) -> InterventionResult:
+    """Remove temporary spikes from training data.
+    
+    Use when: two detected shifts of opposite sign (cancel out) → transient event.
+    Identifies spike by: shift[i] and shift[i+1] magnitudes nearly cancel.
+    """
+```
+
+**Strategy selection logic (deterministic for POC, LLM replaces this later):**
+
+```python
+def select_strategy(result: LevelShiftResult, df: pd.DataFrame) -> str:
+    """Deterministic strategy picker for backtesting.
+    
+    In production, the LLM agent replaces this with reasoning.
+    """
+    if result.n_changepoints == 0:
+        return "no_intervention"
+    
+    # Check for temporary spike (two shifts that cancel)
+    if result.n_changepoints == 2:
+        m1, m2 = result.magnitudes
+        if abs(m1 + m2) / max(abs(m1), abs(m2)) < 0.3:
+            return "clean_temporary_event"
+    
+    # Few large shifts → inject
+    if result.n_changepoints <= 2 and all(abs(m) > 20 for m in result.magnitudes):
+        return "inject_changepoints"
+    
+    # Many shifts → trim to most recent
+    if result.n_changepoints >= 3:
+        return "trim_to_post_shift"
+    
+    # Subtle shift → increase sensitivity
+    if all(abs(m) < 15 for m in result.magnitudes):
+        return "increase_sensitivity"
+    
+    # Default
+    return "add_step_regressor"
+```
+
+---
+
+### 4. Backtest Module (`backtest.py`)
+
+**Interface:**
+
+```python
+from dataclasses import dataclass
+
+
+@dataclass
+class BacktestResult:
+    dataset_id: str
+    naive_mae: float                # Prophet with defaults, no intervention
+    intervention_mae: float         # Prophet with best intervention applied
+    strategy_used: str              # which intervention was applied
+    forecast_horizon: int           # how many days ahead were forecasted
+    train_size: int                 # number of training points
+    improvement_pct: float          # (naive - intervention) / naive * 100
+
+
+def run_backtest(
+    dataset_name: str,
+    config: dict,
+    forecast_horizon: int = 30,
+    train_ratio: float = 0.8,
+) -> BacktestResult:
+    """Run naive vs intervention comparison on one dataset.
+    
+    Steps:
+        1. Generate dataset from config
+        2. Split into train/test (by train_ratio)
+        3. Fit Prophet with defaults on train → forecast test → Naive MAE
+        4. Run detect_level_shift on train data
+        5. Apply select_strategy → configure Prophet with intervention
+        6. Fit Prophet with intervention on train → forecast test → Intervention MAE
+        7. Return comparison
+    """
+
+
+def run_all_backtests(
+    forecast_horizon: int = 30,
+) -> pd.DataFrame:
+    """Run backtest on all datasets (D1–D15).
+    
+    Returns DataFrame with columns:
+        dataset_id | naive_mae | intervention_mae | strategy_used | improvement_pct
+    """
+```
+
+**Train/test split:**
+
+```
+|←——————— train (80%) ———————→|←— test (20%) —→|
+                                |← forecast_horizon →|
+
+Prophet fits on train, predicts test period.
+MAE computed on test period only.
+```
+
+**Evaluation metrics:**
+
+| Metric | Definition | Target |
+|--------|------------|--------|
+| MAE | Mean Absolute Error of forecast | Lower is better |
+| Improvement % | (naive_mae - intervention_mae) / naive_mae × 100 | > 0% means intervention helped |
+| Strategy accuracy | Did the picker choose the best strategy? | Compare all strategies per dataset |
+
+**Output format (`results.csv`):**
+
+```
+dataset_id,naive_mae,intervention_mae,strategy_used,improvement_pct
+<dataset>,α,β,<strategy>,((α-β)/α)×100
+...
+```
+
+---
+
+### 5. Agent Integration (promotion to pipeline)
+
+Register `detect_level_shift` as a callable tool in the core ReAct loop.
+
+**Tool registration contract (from `src/ailf/core/`):**
+
+```python
+from ailf.core.agent import ToolSpec
+
+level_shift_tool = ToolSpec(
+    name="detect_level_shift",
+    description=(
+        "Detect abrupt mean changes (level shifts) in a time series using PELT "
+        "with L2 cost. Returns changepoint locations, dates, magnitudes, and count."
+    ),
+    function=detect_level_shift,
+    parameters={
+        "series": "TimeSeries — the input time series to analyze",
+        "penalty": "str|float — 'bic', 'aic', or numeric penalty (default: 'bic')",
+        "min_segment_length": "int — minimum points between changepoints (default: 10)",
+    },
+    returns="LevelShiftResult with changepoint_indices, dates, magnitudes, n_changepoints",
+)
+```
+
+**Agent prompt (what the LLM sees):**
+
+```markdown
+You are a forecasting analyst. A Prophet model is producing poor forecasts.
+You have access to diagnostic tools. Use them to identify what's wrong,
+then propose an intervention.
+
+Available tools:
+- detect_level_shift(series, penalty, min_segment_length) → LevelShiftResult
+
+Based on the tool output, choose one of these interventions:
+- inject_changepoints: tell Prophet where shifts are
+- trim_to_post_shift: train only on recent data
+- add_step_regressor: add binary feature for the shift
+- increase_sensitivity: raise changepoint_prior_scale
+- clean_temporary_event: remove transient spikes from training data
+
+Explain your reasoning, then apply the intervention.
+```
+
+**Agent flow:**
+
+```
+Input: time series with poor Prophet forecast
+  ↓
+Agent calls: detect_level_shift(series)
+  ↓
+Agent receives: LevelShiftResult
+  ↓
+Agent reasons: "I see 2 shifts of +50 and -48, close together.
+               They nearly cancel — this is a temporary event, not a regime change.
+               I'll clean it from training data."
+  ↓
+Agent calls: clean_temporary_event(result, df)
+  ↓
+Prophet re-forecasts → improved MAE
+```
+
+**File locations after promotion:**
+
+```
+src/ailf/pipelines/changepoint/
+├── __init__.py
+├── tool.py              ← detect_level_shift registered as agent tool
+├── interventions.py     ← strategy functions (promoted from POC)
+├── pipeline.py          ← wires tool + agent + backtest together
+└── prompts/
+    └── level_shift_v1.md  ← agent prompt
+```
+
+---
+
+### 6. Agent Evaluation
+
+**Evaluation setup:**
+
+```python
+@dataclass
+class AgentEvalResult:
+    dataset_id: str
+    naive_mae: float                # Prophet defaults
+    agent_mae: float                # after agent's chosen intervention
+    agent_strategy: str             # which strategy the LLM picked
+    optimal_strategy: str           # best strategy (from brute-force backtest)
+    strategy_match: bool            # did agent pick the optimal one?
+    reasoning_quality: float        # LLM judge score (1-5)
+    explanation: str                # agent's reasoning text
+```
+
+**Comparison table (target output):**
+
+```
+dataset_id  | naive_mae | agent_mae | improvement      | strategy_match | reasoning_score
+<dataset>   |     α     |     β     | ((α-β)/α)×100 % | ✅/❌          | 1-5
+...
+```
+
+**LLM judge criteria (from `src/ailf/core/eval`):**
+
+| Score | Meaning |
+|-------|---------|
+| 5 | Correct diagnosis, correct intervention, clear explanation |
+| 4 | Correct diagnosis, reasonable intervention, adequate explanation |
+| 3 | Partially correct diagnosis, intervention helps but not optimal |
+| 2 | Incorrect diagnosis but intervention doesn't make things worse |
+| 1 | Wrong diagnosis, intervention hurts forecast |
+
+---
+
+## Tests (`test_level_shift.py`)
+
+**Test-first approach.** Tests written before implementation.
+
+**Detection tests (D1–D10):**
+
+| Test | Assertion |
+|------|-----------|
+| `test_finds_single_large_shift` | Detected index within ±5 of ground truth |
+| `test_finds_multiple_shifts` | Finds all 3 changepoints (within ±5 tolerance) |
+| `test_no_false_positives` | Returns 0 changepoints on clean data (D8) |
+| `test_detects_subtle_shift` | Finds changepoint in D2 (wider tolerance ±10) |
+| `test_handles_noisy_data` | Finds changepoint in D4 (noisy) |
+| `test_works_with_trend` | Finds shift despite underlying slope (D5) |
+| `test_works_with_seasonality` | Finds shift despite seasonal pattern (D6) |
+| `test_correct_magnitude` | Magnitude within ±20% of truth |
+| `test_output_schema` | LevelShiftResult has all required fields |
+| `test_reproducibility` | Same input → same output |
+
+**Intervention tests (D11–D15):**
+
+| Test | Assertion |
+|------|-----------|
+| `test_d11_intervention_disables_seasonality` | Prophet configured without seasonality post-shift |
+| `test_d12_spike_cleaned_not_treated_as_shift` | Temporary spike removed from training data |
+| `test_d13_shift_detected_despite_trend` | Level jump identified separately from trend |
+| `test_d14_different_strategies_per_magnitude` | Subtle shifts get different treatment than large |
+| `test_d15_variance_change_handled` | Uncertainty intervals adjust after regime change |
+| `test_backtest_improvement_positive` | Intervention MAE < Naive MAE on D11–D15 |
 
 **Evaluation metrics (computed across all datasets):**
 
@@ -175,31 +541,11 @@ def detect_level_shift(
 |--------|------------|
 | Precision | correct detections / all detections |
 | Recall | correct detections / all true changepoints |
-| Detection delay | |detected_index - true_index| |
+| Detection delay | \|detected_index - true_index\| |
 | False positive rate | false alarms on clean data |
-| Magnitude accuracy | |detected_magnitude - true_magnitude| / true_magnitude |
+| Magnitude accuracy | \|detected_magnitude - true_magnitude\| / true_magnitude |
 
 Tolerance window: a detection is "correct" if within **±5 indices** of a ground truth changepoint.
-
----
-
-### 4. Visualization (`visualize.py`)
-
-Interactive Plotly dashboard for inspecting datasets and detection results.
-
-**Features:**
-- Plot raw time series with ground truth changepoints marked (vertical lines)
-- Overlay detected changepoints (different color)
-- Show segment means (horizontal lines per segment)
-- Dropdown to switch between datasets (D1–D10)
-- Hover info showing values, dates, magnitude
-- Before/after mean annotations at each changepoint
-
-**Usage:**
-```bash
-uv run python pocs/changepoint/level_shift/visualize.py
-# Opens interactive Plotly figure in browser
-```
 
 ---
 
@@ -208,11 +554,17 @@ uv run python pocs/changepoint/level_shift/visualize.py
 ```
 pocs/changepoint/level_shift/
 ├── spec.md              ← this file
+├── pr1_summary.md       ← PR 1 deliverables summary
 ├── __init__.py
-├── datasets.py          ← Darts-based synthetic data generator
+├── datasets.py          ← D1–D15 synthetic data generator
 ├── detector.py          ← PELT L2 level shift detection
-├── test_level_shift.py  ← unit tests (run with pytest)
-└── visualize.py         ← Plotly interactive visualization
+├── interventions.py     ← strategy functions
+├── backtest.py          ← naive vs intervention comparison
+├── results.csv          ← generated comparison table
+├── test_level_shift.py  ← unit tests
+├── visualize.py         ← Plotly interactive visualization
+├── export_plots.py      ← static PNG exporter
+└── plots/               ← exported PNGs
 ```
 
 ---
@@ -222,10 +574,13 @@ pocs/changepoint/level_shift/
 ```
 darts          # synthetic time series generation
 ruptures       # PELT changepoint detection
+prophet        # forecasting model (the model being diagnosed/fixed)
 pandas         # data handling
 numpy          # numerical operations
 plotly         # interactive visualization
+scikit-learn   # metrics (mean_absolute_error)
 pytest         # testing
+kaleido        # static PNG export
 ```
 
 ---
@@ -233,31 +588,60 @@ pytest         # testing
 ## Implementation Order
 
 ```
-1. Write test_level_shift.py        → tests fail (no code yet)
-2. Implement datasets.py            → generator works, dataset tests pass
-3. Implement detector.py            → detection tests pass
-4. Implement visualize.py           → visual inspection of results
-5. Run full eval metrics            → precision, recall, delay across all datasets
+1. Write tests                        → detection tests pass, intervention tests fail
+2. Implement datasets.py (D1–D10)     → generator works, dataset tests pass
+3. Implement detector.py              → detection tests pass
+4. Implement visualize.py             → visual inspection
+5. Extend datasets.py (D11–D15)       → complex scenarios generate correctly
+6. Implement interventions.py         → strategy functions work in isolation
+7. Implement backtest.py              → end-to-end naive vs intervention comparison
+8. Generate results.csv               → table proving intervention improves MAE
+9. Register tool in src/ailf/core/    → agent can call detect_level_shift
+10. Write agent prompt                → LLM uses tool + picks strategy
+11. Run agent on D1–D15              → collect agent MAE + reasoning
+12. Score with LLM judge             → reasoning quality evaluation
 ```
 
 ---
 
 ## Success Criteria
 
-- [ ] All 10 datasets generated with correct ground truth metadata
-- [ ] Detection tool finds level shifts in D1, D3, D5, D6, D9 with precision ≥ 0.9
-- [ ] Zero false positives on D8 (control)
-- [ ] Detection delay ≤ 5 indices on easy datasets (D1, D3, D9)
-- [ ] Magnitude accuracy within ±20% on easy datasets
-- [ ] All unit tests passing
-- [ ] Plotly visualization shows ground truth vs detected changepoints clearly
-- [ ] All code seeded and reproducible
+**Detection (steps 1–4):** ✅ Complete
+- ✅ All 10 datasets generated with correct ground truth metadata
+- ✅ Detection precision ≥ 0.9 on D1, D3, D5, D6, D9
+- ✅ Zero false positives on D8 (control)
+- ✅ Detection delay ≤ 5 indices on easy datasets
+- ✅ Magnitude accuracy within ±20%
+- ✅ All 20 unit tests passing
+- ✅ Visualization + static PNG exports working
+- ✅ All code seeded and reproducible
+
+**Intervention & Backtest (steps 5–8):**
+- [ ] D11–D15 datasets implemented with ground truth
+- [ ] Intervention strategies reduce MAE vs naive on D11–D15
+- [ ] Improvement > 30% on at least 3 of D11–D15
+- [ ] All tests passing (existing + new)
+
+**Agent Integration (steps 9–12):**
+- [ ] Detection tool registered in core agent tool registry
+- [ ] Agent calls tool and applies intervention end-to-end
+- [ ] Agent MAE < Naive MAE on D11–D15 via LLM reasoning
+- [ ] Agent picks optimal strategy on ≥ 80% of datasets
+- [ ] Reasoning quality score ≥ 4/5 average (LLM judge)
 
 ---
 
 ## Open Questions
 
-- [ ] What penalty value works best across datasets? (Start with BIC, tune if needed)
-- [ ] Should `min_segment_length` be configurable or fixed?
-- [ ] How to handle detection near series boundaries (first/last 10 points)?
-- [ ] Does PELT L2 struggle when trend + level shift coexist? (D5 will reveal this)
+**Resolved:**
+- ✅ What penalty works best? → BIC across all D1–D10
+- ✅ `min_segment_length` configurable or fixed? → Configurable (default=10)
+- ✅ Detection near boundaries? → PELT handles naturally
+- ✅ PELT L2 with trend + shift? → Works with moderate trend (D5)
+
+**Open:**
+- [ ] Does Prophet need `cmdstanpy` or can we use the default backend?
+- [ ] Should D11's seasonality disappear abruptly or fade over N points?
+- [ ] For D12 (temporary spike), what spike duration is realistic? (5? 20? 50 points?)
+- [ ] How to handle cases where multiple strategies improve MAE similarly?
+- [ ] What forecast horizon is fair for backtesting? (7 days? 30 days?)
