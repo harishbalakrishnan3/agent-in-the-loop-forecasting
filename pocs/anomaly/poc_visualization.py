@@ -19,8 +19,13 @@ from ailf.pipelines.anomaly.datasets import generate_nab_like_synthetic, split_d
 from ailf.pipelines.anomaly.tools import detect_level_shift, detect_outliers
 from ailf.pipelines.anomaly.pipeline import AnomalyDetectionPipeline
 
+# Resolve artifact paths relative to this file so the script works from any cwd.
+ARTIFACT_DIR = Path(__file__).resolve().parent
+RESULTS_FILE = ARTIFACT_DIR / "pipeline_results.json"
+VISUALIZATION_FILE = ARTIFACT_DIR / "agent_visualization.html"
 
-def create_agent_visualization(results_file: str = "pocs/anomaly/pipeline_results.json") -> None:
+
+def create_agent_visualization(results_file: Path = RESULTS_FILE) -> None:
     """Create interactive visualization of agent reasoning.
 
     Args:
@@ -209,16 +214,13 @@ def create_agent_visualization(results_file: str = "pocs/anomaly/pipeline_result
     )
 
     # Save
-    output_file = "pocs/anomaly/agent_visualization.html"
-    fig.write_html(output_file)
-    print(f"✅ Visualization saved to {output_file}")
+    fig.write_html(VISUALIZATION_FILE)
+    print(f"✅ Visualization saved to {VISUALIZATION_FILE}")
 
 
 def create_metrics_summary() -> None:
     """Print metrics summary from pipeline results."""
-    results_file = "pocs/anomaly/pipeline_results.json"
-    
-    with open(results_file, "r") as f:
+    with open(RESULTS_FILE, "r") as f:
         results = json.load(f)
 
     print("\n" + "=" * 80)

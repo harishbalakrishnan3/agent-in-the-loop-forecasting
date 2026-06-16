@@ -101,7 +101,10 @@ def generate_nab_like_synthetic(
     Args:
         n_points: Number of points to generate.
         seed: Random seed for reproducibility.
-        anomaly_ratio: Fraction of points that are anomalies (0.0-1.0).
+        anomaly_ratio: Approximate fraction of points labeled as anomalies
+            (0.0-1.0). `level_shift` and `trend` anomalies span a contiguous
+            block of points, so the number of injected events is scaled by the
+            block size to keep the realized labeled fraction near this ratio.
         anomaly_type: "point" (impulse), "level_shift", or "trend".
 
     Returns:
@@ -124,11 +127,12 @@ def generate_nab_like_synthetic(
     # Convert to numpy (shape is (n, 1, 1), flatten to 1D)
     values = ts.all_values().flatten()
 
-    # Create anomaly labels
-    n_anomalies = max(1, int(n_points * anomaly_ratio))
-    anomaly_indices = np.random.choice(
-        n_points, size=n_anomalies, replace=False
-    )
+    # Each anomaly event labels a block of this many points. Scale the number of
+    # events by the block size so the realized labeled fraction tracks
+    # anomaly_ratio regardless of anomaly_type.
+    block_size = {"point": 1, "level_shift": 5, "trend": 10}.get(anomaly_type, 1)
+    n_events = max(1, int(n_points * anomaly_ratio / block_size))
+    anomaly_indices = np.random.choice(n_points, size=n_events, replace=False)
     anomaly_labels = np.zeros(n_points, dtype=int)
 
     if anomaly_type == "point":

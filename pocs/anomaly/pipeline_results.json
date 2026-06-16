@@ -2,100 +2,100 @@
   "success": true,
   "logs": [
     {
-      "timestamp": "2026-06-16T21:27:45.959796",
+      "timestamp": "2026-06-16T22:18:43.756845",
       "level": "info",
       "message": "Starting anomaly detection pipeline"
     },
     {
-      "timestamp": "2026-06-16T21:27:45.959895",
+      "timestamp": "2026-06-16T22:18:43.756919",
       "level": "info",
       "message": "Loading NAB-like (level_shift) dataset for validation..."
     },
     {
-      "timestamp": "2026-06-16T21:27:45.971676",
+      "timestamp": "2026-06-16T22:18:43.758862",
       "level": "info",
-      "message": "Loaded dataset: 500 points, 214 anomalies (42.8%)"
+      "message": "Loaded dataset: 500 points, 50 anomalies (10.0%)"
     },
     {
-      "timestamp": "2026-06-16T21:27:45.971746",
+      "timestamp": "2026-06-16T22:18:43.758890",
       "level": "info",
       "message": "Running baseline Prophet forecast (default params)..."
     },
     {
-      "timestamp": "2026-06-16T21:27:46.222985",
+      "timestamp": "2026-06-16T22:18:43.920268",
       "level": "info",
-      "message": "Baseline Prophet MAE: 67.20"
+      "message": "Baseline Prophet MAE: 11.97"
     },
     {
-      "timestamp": "2026-06-16T21:27:46.223075",
+      "timestamp": "2026-06-16T22:18:43.920329",
       "level": "info",
       "message": "Performing diagnosis: detecting anomalies..."
     },
     {
-      "timestamp": "2026-06-16T21:27:46.232427",
+      "timestamp": "2026-06-16T22:18:43.925848",
       "level": "info",
-      "message": "Detected 81 outliers (ground truth: 214)"
+      "message": "Detected 40 outliers (ground truth: 50)"
     },
     {
-      "timestamp": "2026-06-16T21:27:46.238555",
+      "timestamp": "2026-06-16T22:18:43.929393",
       "level": "info",
-      "message": "Detected 39 level shift points. Indices (first 5): [7, 20, 31, 37, 50]"
+      "message": "Detected 18 level shift points. Indices (first 5): [14, 20, 48, 54, 161]"
     },
     {
-      "timestamp": "2026-06-16T21:27:46.243399",
+      "timestamp": "2026-06-16T22:18:43.932085",
       "level": "info",
-      "message": "Anomaly detection metrics: Precision=0.84, Recall=0.32, F1=0.46"
+      "message": "Anomaly detection metrics (outliers + level shifts): Precision=0.32, Recall=0.76, F1=0.45"
     },
     {
-      "timestamp": "2026-06-16T21:27:46.243474",
+      "timestamp": "2026-06-16T22:18:43.932103",
       "level": "info",
       "message": "Proposing intervention: detrending + removing detected anomalies..."
     },
     {
-      "timestamp": "2026-06-16T21:27:46.244492",
+      "timestamp": "2026-06-16T22:18:43.932777",
       "level": "info",
-      "message": "Removed 45 anomalies from training data"
+      "message": "Removed 31 anomalies from training data"
     },
     {
-      "timestamp": "2026-06-16T21:27:46.244528",
+      "timestamp": "2026-06-16T22:18:43.932805",
       "level": "info",
       "message": "Backtesting intervention..."
     },
     {
-      "timestamp": "2026-06-16T21:27:46.332521",
+      "timestamp": "2026-06-16T22:18:43.986921",
       "level": "info",
-      "message": "Intervention Prophet MAE: 61.32"
+      "message": "Intervention Prophet MAE: 10.50"
     },
     {
-      "timestamp": "2026-06-16T21:27:46.332614",
+      "timestamp": "2026-06-16T22:18:43.986984",
       "level": "info",
-      "message": "Improvement: 5.89 MAE (8.8% reduction)"
+      "message": "Improvement: 1.47 MAE (12.2% reduction)"
     },
     {
-      "timestamp": "2026-06-16T21:27:46.332638",
+      "timestamp": "2026-06-16T22:18:43.987005",
       "level": "info",
-      "message": "\u2705 ACCEPT intervention: MAE improved from 67.20 to 61.32"
+      "message": "\u2705 ACCEPT intervention: MAE improved from 11.97 to 10.50"
     }
   ],
   "backtest_results": {
-    "baseline_mae": 67.2028426821745,
-    "intervention_mae": 61.31594820337307
+    "baseline_mae": 11.968631176796082,
+    "intervention_mae": 10.502551201861285
   },
   "anomaly_detection_metrics": {
-    "precision": 0.8395061728395061,
-    "recall": 0.3177570093457944,
-    "f1": 0.4610169491525424,
+    "precision": 0.31666666666666665,
+    "recall": 0.76,
+    "f1": 0.4470588235294118,
     "confusion_matrix": [
       [
-        273,
-        13
+        368,
+        82
       ],
       [
-        146,
-        68
+        12,
+        38
       ]
     ]
   },
   "recommendation": "\u2705 ACCEPT intervention",
-  "timestamp": "2026-06-16T21:27:46.332656"
+  "timestamp": "2026-06-16T22:18:43.987017"
 }
