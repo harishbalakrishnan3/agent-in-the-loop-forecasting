@@ -37,3 +37,7 @@ uv run pytest           # run the test suite
 Spec-driven, one feature branch per task: `/speckit.specify` → `/speckit.plan` →
 `/speckit.tasks` → implement → PR into `main`. Keep your changes inside your pipeline's
 directories; changes to `src/ailf/core/` get an extra review. See `CLAUDE.md` for details.
+
+
+## Visualizing using streamlit
+streamlit run src/ailf/pipelines/drift/streamlit_app.py --server.headless true

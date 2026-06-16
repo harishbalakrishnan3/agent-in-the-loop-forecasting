@@ -22,7 +22,7 @@ import pandas as pd
 import pytest
 
 # Import will fail until DriftGenerator is implemented (expected red → green TDD cycle).
-from ailf.pipelines.drift.datasets import DriftGenerator
+from ailf.pipelines.drift.dataset_generator import DriftGenerator
 
 CONFIG_PATH = pathlib.Path(__file__).parents[3] / "src" / "config" / "config.yml"
 

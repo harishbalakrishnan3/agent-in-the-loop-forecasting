@@ -25,7 +25,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, field_validator
 
-from ailf.pipelines.drift.datasets import DriftGenerator, _VALID_TRENDS
+from ailf.pipelines.drift.dataset_generator import DriftGenerator, _VALID_TRENDS
 
 # ---------------------------------------------------------------------------
 # Bootstrap

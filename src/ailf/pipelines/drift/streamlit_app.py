@@ -48,7 +48,7 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("📈 Drift Forecast Explorer")
+st.title("📈 Forecast Explorer")
 st.caption(
     "Agent-in-the-Loop Forecasting · "
     "[FastAPI UI](http://127.0.0.1:8000/forecast/ui) · "
