@@ -8,16 +8,20 @@ surfaced explicitly — never a silent fallback to another model (FR-024, SC-010
 from __future__ import annotations
 
 import base64
+import time
 from pathlib import Path
 from typing import TypeVar
 
 from langchain_aws import ChatBedrockConverse
 from langchain_core.messages import HumanMessage
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from pocs.changepoint.config import PocConfig
 
 T = TypeVar("T", bound=BaseModel)
+
+_MAX_PARSE_RETRIES = 3
+_RETRY_DELAY_S = 2.0
 
 
 class ModelUnavailableError(RuntimeError):
@@ -45,15 +49,27 @@ def _wrap_bedrock_error(model_id: str, exc: Exception) -> ModelUnavailableError:
     )
 
 
+def _invoke_with_retry(structured, messages, model_id: str):
+    """Invoke a structured-output chain, retrying on parse failures (ValidationError)."""
+    last_exc: Exception | None = None
+    for attempt in range(_MAX_PARSE_RETRIES):
+        try:
+            return structured.invoke(messages)
+        except ValidationError as exc:
+            last_exc = exc
+            if attempt < _MAX_PARSE_RETRIES - 1:
+                time.sleep(_RETRY_DELAY_S)
+        except Exception as exc:  # noqa: BLE001
+            raise _wrap_bedrock_error(model_id, exc) from exc
+    raise _wrap_bedrock_error(model_id, last_exc) from last_exc
+
+
 def invoke_structured_text(
     model: ChatBedrockConverse, *, model_id: str, prompt: str, schema: type[T]
 ) -> T:
     """Invoke a text-only prompt and parse the reply into ``schema`` (structured output)."""
-    try:
-        structured = model.with_structured_output(schema)
-        return structured.invoke([HumanMessage(content=prompt)])
-    except Exception as exc:  # noqa: BLE001 — re-raised explicitly, never swallowed
-        raise _wrap_bedrock_error(model_id, exc) from exc
+    structured = model.with_structured_output(schema)
+    return _invoke_with_retry(structured, [HumanMessage(content=prompt)], model_id)
 
 
 def invoke_structured_with_image(
@@ -65,8 +81,5 @@ def invoke_structured_with_image(
         {"type": "text", "text": prompt},
         {"type": "image", "source_type": "base64", "mime_type": "image/png", "data": image_b64},
     ]
-    try:
-        structured = model.with_structured_output(schema)
-        return structured.invoke([HumanMessage(content=content)])
-    except Exception as exc:  # noqa: BLE001 — re-raised explicitly, never swallowed
-        raise _wrap_bedrock_error(model_id, exc) from exc
+    structured = model.with_structured_output(schema)
+    return _invoke_with_retry(structured, [HumanMessage(content=content)], model_id)
