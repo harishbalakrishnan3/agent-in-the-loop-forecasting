@@ -1,0 +1,225 @@
+{
+  "scenario_id": "level_shift_loses_seasonality",
+  "seed": 1729,
+  "model_ids": {
+    "visual": "us.anthropic.claude-opus-4-8",
+    "react": "us.anthropic.claude-sonnet-4-6"
+  },
+  "visual": {
+    "observations": [
+      "2019 through mid-2020 shows a smooth annual cycle: rise to ~130 in spring 2019, dip to ~80 by autumn 2019, rise again to ~130 by early 2020, then decline toward ~85 by late summer 2020.",
+      "A sharp discontinuous jump occurs around 2020-09, where the level steps up from ~85 to ~120 abruptly and does not revert.",
+      "After the jump the series rises further via a second step/ramp around 2020-12 (to ~140) and continues climbing to ~190-200 by early 2021.",
+      "High-frequency oscillation (short-period wiggle) is present throughout, consistent with a regular short cycle riding on the slower movement.",
+      "The smooth large-amplitude annual swing that dominated 2019 appears much less pronounced after the upward shift; late history is mostly elevated level with small ripples.",
+      "Near the forecast origin (mid-2021) the level is high (~185-200) and shows a slight downward bend from its peak."
+    ],
+    "pattern_summary": "A previously seasonal series undergoes a permanent upward level shift (with a follow-on ramp) after which the strong annual cycle is no longer evident.",
+    "hypotheses": [
+      "A forecast trained only on the elevated recent window may carry forward the high level but miss any remaining cyclical behavior or mean-revert incorrectly.",
+      "If the recent climb is read as a persistent trend, the forecast could extrapolate upward past the apparent late-history plateau/turn.",
+      "The pre-shift annual seasonality may no longer apply, so reintroducing the old cycle shape could mismatch the new regime.",
+      "The slight downturn right before the origin could be over- or under-weighted, biasing the near-term path."
+    ],
+    "uncertainties": [
+      "Whether the late-2020 jump is a permanent regime change or a long-lived but temporary elevation.",
+      "Whether the recent upward movement is a continuing trend or has already peaked and is reverting.",
+      "The exact dates and magnitudes of the shift and subsequent ramp.",
+      "Whether a short cycle still exists after the shift or its amplitude has genuinely collapsed.",
+      "External causes of the discontinuity and whether they persist beyond the forecast origin."
+    ]
+  },
+  "diagnostics": {
+    "detected_changepoints": [
+      {
+        "index": 197,
+        "ds": "2019-07-17",
+        "trend_delta": -0.78573842
+      },
+      {
+        "index": 366,
+        "ds": "2020-01-02",
+        "trend_delta": 1.1254784
+      }
+    ],
+    "latest_changepoint": {
+      "index": 366,
+      "ds": "2020-01-02",
+      "trend_delta": 1.1254784
+    },
+    "primary_changepoint": {
+      "index": 366,
+      "ds": "2020-01-02",
+      "trend_delta": 1.1254784
+    },
+    "post_changepoint_history_len": 514,
+    "post_changepoint_shorter_than_season": false,
+    "seasonal_period": 365,
+    "segment_stats": [
+      {
+        "start": 0,
+        "end": 197,
+        "mean": 113.83145168747932,
+        "std": 9.70806208333338
+      },
+      {
+        "start": 197,
+        "end": 366,
+        "mean": 90.68878554340913,
+        "std": 9.800746699007464
+      },
+      {
+        "start": 366,
+        "end": 880,
+        "mean": 142.6552541881814,
+        "std": 35.86629604781907
+      }
+    ],
+    "candidate_event_blocks": [],
+    "recurring_event_summary": {
+      "is_calendar_recurring": false,
+      "period_days": null,
+      "windows": [],
+      "dominant_month": null,
+      "confidence": 0.0
+    },
+    "local_boundary_jumps": [
+      {
+        "index": 197,
+        "jump": -4.533202766085239
+      },
+      {
+        "index": 366,
+        "jump": 4.821012090455881
+      }
+    ],
+    "candidate_drift_intervals": [
+      {
+        "start": 197,
+        "end": 366,
+        "start_ds": "2019-07-17",
+        "end_ds": "2020-01-02",
+        "slope_per_step": 0.1318888776177645,
+        "total_delta": 22.289220317402197
+      }
+    ],
+    "transient_event_score": 0.8029012183075597,
+    "permanent_shift_magnitude": 28.823802500702087
+  },
+  "naive_summary": {
+    "candidates": [
+      {
+        "label": "full_history",
+        "val_metrics": {
+          "mae": 23.493587095543194,
+          "rmse": 25.655491175689484,
+          "wape": 12.169885007489132,
+          "smape": 11.413796645254239
+        },
+        "test_metrics": null,
+        "extra": {
+          "window_start": 0
+        }
+      },
+      {
+        "label": "naive_window@197",
+        "val_metrics": {
+          "mae": 41.77295851433885,
+          "rmse": 49.04697096699248,
+          "wape": 21.63876037638193,
+          "smape": 19.012079622966244
+        },
+        "test_metrics": null,
+        "extra": {
+          "window_start": 197
+        }
+      },
+      {
+        "label": "naive_window@366",
+        "val_metrics": {
+          "mae": 52.21615244902666,
+          "rmse": 59.926437244308076,
+          "wape": 27.048426800636417,
+          "smape": 23.171539692229317
+        },
+        "test_metrics": null,
+        "extra": {
+          "window_start": 366
+        }
+      }
+    ],
+    "selected": {
+      "label": "full_history",
+      "val_metrics": {
+        "mae": 23.493587095543194,
+        "rmse": 25.655491175689484,
+        "wape": 12.169885007489132,
+        "smape": 11.413796645254239
+      },
+      "test_metrics": null,
+      "extra": {
+        "window_start": 0
+      }
+    },
+    "selected_window_start": 0
+  },
+  "iterations": [
+    {
+      "i": 1,
+      "proposal": {
+        "tool": "full_history_ramp_regressor",
+        "params": {
+          "intervals": "primary"
+        },
+        "action_signature": "full_history_ramp_regressor|{\"intervals\": \"primary\"}",
+        "visual_first_rationale": "Visually, the chart shows two distinct phases of upward movement after mid-2019: first a gradual descent from ~130 to ~85 between mid-2019 and late-2019, then a steady climb from ~85 through ~120, ~140, and up to ~190-200 by early 2021. Critically, this post-trough ascent is not a clean vertical step \u2014 it is a progressive, multi-stage ramp spanning roughly 2019-07 through 2020-01 (and beyond), where the level rises incrementally rather than jumping instantaneously. The visual description explicitly notes \"a second step/ramp around 2020-12\" and a \"continuing climb,\" reinforcing the gradual-drift interpretation rather than a single discrete jump. Reconciling with numerics: the `candidate_drift_intervals` diagnostic confirms exactly this \u2014 a drift interval from 2019-07-17 to 2020-01-02 with slope_per_step=0.132 and total_delta=22.3, representing a meaningful gradual transition between two levels. The `permanent_shift_magnitude` of 28.8 is large, but the visual and the drift interval together indicate this magnitude was accumulated via a ramp, not an instantaneous step. The `transient_event_score` of 0.80 is elevated but `candidate_event_blocks` is empty, so there are no discrete temporary events to clean. The primary changepoint at 2020-01-02 marks the end of the ramp, making `primary` the correct interval target. A ramp regressor added over this interval will allow the model to absorb the gradual level transition without misattributing it to trend extrapolation or seasonal misfit.",
+        "expected_effect": "Adding a clipped ramp regressor over the primary candidate drift interval (2019-07-17 to 2020-01-02) will explicitly model the gradual level ascent, preventing the baseline Prophet trend from over-fitting the slope as a continuing upward trend. This should reduce forecast bias and lower MAE/RMSE below the naive full_history baseline (MAE ~23.5, WAPE ~12.2%) by correctly anchoring the post-ramp level without extrapolating the climb further into the forecast horizon."
+      },
+      "val_result": {
+        "val_metrics": {
+          "mae": 1.3490502307914365,
+          "rmse": 1.714424885839365,
+          "wape": 0.6988198997152273,
+          "smape": 0.6995700502889579
+        },
+        "naive_val_mae": 23.493587095543194
+      },
+      "beat_naive": true
+    }
+  ],
+  "rejected_signatures": [],
+  "accepted": {
+    "proposal": {
+      "tool": "full_history_ramp_regressor",
+      "params": {
+        "intervals": "primary"
+      },
+      "action_signature": "full_history_ramp_regressor|{\"intervals\": \"primary\"}",
+      "visual_first_rationale": "Visually, the chart shows two distinct phases of upward movement after mid-2019: first a gradual descent from ~130 to ~85 between mid-2019 and late-2019, then a steady climb from ~85 through ~120, ~140, and up to ~190-200 by early 2021. Critically, this post-trough ascent is not a clean vertical step \u2014 it is a progressive, multi-stage ramp spanning roughly 2019-07 through 2020-01 (and beyond), where the level rises incrementally rather than jumping instantaneously. The visual description explicitly notes \"a second step/ramp around 2020-12\" and a \"continuing climb,\" reinforcing the gradual-drift interpretation rather than a single discrete jump. Reconciling with numerics: the `candidate_drift_intervals` diagnostic confirms exactly this \u2014 a drift interval from 2019-07-17 to 2020-01-02 with slope_per_step=0.132 and total_delta=22.3, representing a meaningful gradual transition between two levels. The `permanent_shift_magnitude` of 28.8 is large, but the visual and the drift interval together indicate this magnitude was accumulated via a ramp, not an instantaneous step. The `transient_event_score` of 0.80 is elevated but `candidate_event_blocks` is empty, so there are no discrete temporary events to clean. The primary changepoint at 2020-01-02 marks the end of the ramp, making `primary` the correct interval target. A ramp regressor added over this interval will allow the model to absorb the gradual level transition without misattributing it to trend extrapolation or seasonal misfit.",
+      "expected_effect": "Adding a clipped ramp regressor over the primary candidate drift interval (2019-07-17 to 2020-01-02) will explicitly model the gradual level ascent, preventing the baseline Prophet trend from over-fitting the slope as a continuing upward trend. This should reduce forecast bias and lower MAE/RMSE below the naive full_history baseline (MAE ~23.5, WAPE ~12.2%) by correctly anchoring the post-ramp level without extrapolating the climb further into the forecast horizon."
+    },
+    "val_result": {
+      "val_metrics": {
+        "mae": 1.3490502307914365,
+        "rmse": 1.714424885839365,
+        "wape": 0.6988198997152273,
+        "smape": 0.6995700502889579
+      },
+      "naive_val_mae": 23.493587095543194
+    }
+  },
+  "final_candidate": {
+    "label": "agent:full_history_ramp_regressor|{\"intervals\": \"primary\"}",
+    "tool": "full_history_ramp_regressor",
+    "params": {
+      "intervals": "primary"
+    },
+    "test_metrics": {
+      "mae": 7.762047421737838,
+      "rmse": 12.752077688841958,
+      "wape": 4.741769413426029,
+      "smape": 4.657253005659193
+    }
+  },
+  "final_case": "accepted_beat_naive"
+}

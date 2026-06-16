@@ -1,0 +1,28 @@
+{
+  "scenario_id": "gradual_drift_loses_seasonality",
+  "horizon": 120,
+  "methods": {
+    "full_history_prophet": {
+      "mae": 7.3204,
+      "rmse": 9.3923,
+      "wape": 4.5287,
+      "smape": 4.5371
+    },
+    "naive_workflow": {
+      "mae": 7.3204,
+      "rmse": 9.3923,
+      "wape": 4.5287,
+      "smape": 4.5371,
+      "selected_window": "window_start=0"
+    },
+    "agent": {
+      "mae": 4.5604,
+      "rmse": 5.8256,
+      "wape": 2.8212,
+      "smape": 2.8585,
+      "tool": "full_history_ramp_regressor",
+      "final_case": "accepted_beat_naive"
+    }
+  },
+  "winner": "agent"
+}
