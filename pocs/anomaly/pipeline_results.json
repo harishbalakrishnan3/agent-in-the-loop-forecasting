@@ -1,0 +1,101 @@
+{
+  "success": true,
+  "logs": [
+    {
+      "timestamp": "2026-06-16T21:27:45.959796",
+      "level": "info",
+      "message": "Starting anomaly detection pipeline"
+    },
+    {
+      "timestamp": "2026-06-16T21:27:45.959895",
+      "level": "info",
+      "message": "Loading NAB-like (level_shift) dataset for validation..."
+    },
+    {
+      "timestamp": "2026-06-16T21:27:45.971676",
+      "level": "info",
+      "message": "Loaded dataset: 500 points, 214 anomalies (42.8%)"
+    },
+    {
+      "timestamp": "2026-06-16T21:27:45.971746",
+      "level": "info",
+      "message": "Running baseline Prophet forecast (default params)..."
+    },
+    {
+      "timestamp": "2026-06-16T21:27:46.222985",
+      "level": "info",
+      "message": "Baseline Prophet MAE: 67.20"
+    },
+    {
+      "timestamp": "2026-06-16T21:27:46.223075",
+      "level": "info",
+      "message": "Performing diagnosis: detecting anomalies..."
+    },
+    {
+      "timestamp": "2026-06-16T21:27:46.232427",
+      "level": "info",
+      "message": "Detected 81 outliers (ground truth: 214)"
+    },
+    {
+      "timestamp": "2026-06-16T21:27:46.238555",
+      "level": "info",
+      "message": "Detected 39 level shift points. Indices (first 5): [7, 20, 31, 37, 50]"
+    },
+    {
+      "timestamp": "2026-06-16T21:27:46.243399",
+      "level": "info",
+      "message": "Anomaly detection metrics: Precision=0.84, Recall=0.32, F1=0.46"
+    },
+    {
+      "timestamp": "2026-06-16T21:27:46.243474",
+      "level": "info",
+      "message": "Proposing intervention: detrending + removing detected anomalies..."
+    },
+    {
+      "timestamp": "2026-06-16T21:27:46.244492",
+      "level": "info",
+      "message": "Removed 45 anomalies from training data"
+    },
+    {
+      "timestamp": "2026-06-16T21:27:46.244528",
+      "level": "info",
+      "message": "Backtesting intervention..."
+    },
+    {
+      "timestamp": "2026-06-16T21:27:46.332521",
+      "level": "info",
+      "message": "Intervention Prophet MAE: 61.32"
+    },
+    {
+      "timestamp": "2026-06-16T21:27:46.332614",
+      "level": "info",
+      "message": "Improvement: 5.89 MAE (8.8% reduction)"
+    },
+    {
+      "timestamp": "2026-06-16T21:27:46.332638",
+      "level": "info",
+      "message": "\u2705 ACCEPT intervention: MAE improved from 67.20 to 61.32"
+    }
+  ],
+  "backtest_results": {
+    "baseline_mae": 67.2028426821745,
+    "intervention_mae": 61.31594820337307
+  },
+  "anomaly_detection_metrics": {
+    "precision": 0.8395061728395061,
+    "recall": 0.3177570093457944,
+    "f1": 0.4610169491525424,
+    "confusion_matrix": [
+      [
+        273,
+        13
+      ],
+      [
+        146,
+        68
+      ]
+    ]
+  },
+  "recommendation": "\u2705 ACCEPT intervention",
+  "timestamp": "2026-06-16T21:27:46.332656"
+}
