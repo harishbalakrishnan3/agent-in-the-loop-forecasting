@@ -43,6 +43,9 @@ packages = ["src/ailf"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+# Avoid module-name collisions between same-named test files across pipelines
+# (e.g. tests/pipelines/{anomaly,drift}/test_datasets.py).
+addopts = ["--import-mode=importlib"]
 
 [tool.ruff]
 src = ["src", "tests"]
