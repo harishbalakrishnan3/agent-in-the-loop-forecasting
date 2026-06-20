@@ -55,3 +55,8 @@ markers = [
 [tool.ruff]
 src = ["src", "tests"]
 line-length = 100
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
