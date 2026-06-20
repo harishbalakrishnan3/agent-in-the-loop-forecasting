@@ -1,0 +1,55 @@
+# Changepoint pipeline configuration DEFAULTS (FR-007, contracts/config_schema.md).
+#
+# This file is the single defaults source for a changepoint run. A per-run override of the same
+# shape is merged onto these (resolve.py): scalars replace; diagnostics/agent_tools merge key-wise;
+# the split block replaces as a unit. The fully-resolved EffectiveConfig is recorded to
+# reports/changepoint/<run_id>/effective_config.json.
+#
+# Secrets (ANTHROPIC_API_KEY, AWS credentials) stay in .env and NEVER appear here. Model IDs are
+# identifiers (not secrets) and live here so the UI can read/override them (FR-008).
+
+models:
+  visual_model_id: "us.anthropic.claude-opus-4-8"     # stronger vision model for the visual node
+  decision_model_id: "us.anthropic.claude-sonnet-4-6"  # faster reasoning model for the decision node
+
+aws_region: "us-west-2"
+
+# Master switch for the visual-inspection stage (FR-015). When false: the visual node is omitted
+# entirely, no agent-context image is produced/sent, and the decision runs on the diagnostics-only
+# prompt.
+visual_analysis_enabled: true
+
+# Per-diagnostic visibility toggles — EXACTLY the 13 DiagnosticsBundle fields (lockstep, FR-011).
+# A disabled diagnostic is still COMPUTED but hidden from the agent's decision input (FR-013).
+diagnostics:
+  detected_changepoints: true
+  latest_changepoint: true
+  primary_changepoint: true
+  post_changepoint_history_len: true
+  post_changepoint_shorter_than_season: true
+  seasonal_period: true
+  segment_stats: true
+  candidate_event_blocks: true
+  recurring_event_summary: true
+  local_boundary_jumps: true
+  candidate_drift_intervals: true
+  transient_event_score: true
+  permanent_shift_magnitude: true
+
+# Per-tool enable/disable — the 5 structural intervention tools plus the always-on fallback
+# (lockstep scopes to the structural names, FR-012). A disabled tool is removed from the menu AND
+# the gate's allowed set (FR-014). full_history_default MAY NOT be disabled (FR-016).
+agent_tools:
+  recent_window: true
+  full_history_step_regressor: true
+  full_history_ramp_regressor: true
+  full_history_clean_event: true
+  full_history_prophet_tuned_holidays: true
+  full_history_default: true
+
+# Train/validation/test split (FR-017..021). "golden" uses each scenario's committed metadata split
+# verbatim. Override with EITHER ratios OR absolute rows (never both) — see contracts/split_resolver.md.
+split:
+  source: golden
+
+seed: 1729
