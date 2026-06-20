@@ -39,13 +39,13 @@ increments that build on US1. Dependencies reflect that reality.
 
 **Purpose**: Scaffolding, dependency pin, fixtures, and the parity oracle — captured before any code moves.
 
-- [ ] T001 Create core package tree with `__init__.py` files: `src/ailf/core/{config,agent,backtest,metrics,models,events,prompts,reporting}/` (reuse existing `agent/models/backtest/metrics/reporting/prompts` stubs; add `config/` and `events/`)
-- [ ] T002 Create changepoint pipeline package files (empty/typed stubs to be filled): `src/ailf/pipelines/changepoint/{scenarios,datasets,detector,diagnostics,interventions,baselines,schemas,viz,pipeline}.py` and `prompts/`, `data/` dirs
-- [ ] T003 Pin `prophet==1.1.6` in `pyproject.toml`, run `uv sync`, and commit the updated `uv.lock` (parity stability — research Decision 17)
-- [ ] T004 [P] Copy committed fixtures into the pipeline: `pocs/changepoint/data/csv/*.csv` and `scenario_metadata.json` → `src/ailf/pipelines/changepoint/data/{csv/,scenario_metadata.json}`
-- [ ] T005 [P] Create test tree dirs + `conftest.py`: `tests/core/{config,agent,backtest,metrics,events,parity}/`, `tests/pipelines/changepoint/fixtures/`
-- [ ] T006 Verify `reports/changepoint/<run_id>/` artifact dirs are gitignored (already covered by the existing `reports/*` rule in `.gitignore`; add an explicit entry only if that rule changes)
-- [ ] T007 Capture the POC parity oracle from the **un-promoted POC**: write `tests/pipelines/changepoint/capture_poc_parity.py` that runs each of the 5 scenarios through `pocs/changepoint` (seed 1729) and records detected changepoints (index+trend_delta), full-history-Prophet val metrics, every naive candidate val metrics + `selected_window_start`, and the two baselines' test metrics → committed `tests/pipelines/changepoint/fixtures/poc_parity_reference.json` (research Decision 18)
+- [X] T001 Create core package tree with `__init__.py` files: `src/ailf/core/{config,agent,backtest,metrics,models,events,prompts,reporting}/` (reuse existing `agent/models/backtest/metrics/reporting/prompts` stubs; add `config/` and `events/`)
+- [X] T002 Create changepoint pipeline package files (empty/typed stubs to be filled): `src/ailf/pipelines/changepoint/{scenarios,datasets,detector,diagnostics,interventions,baselines,schemas,viz,pipeline}.py` and `prompts/`, `data/` dirs
+- [X] T003 Pin `prophet==1.3.0` (the installed/working version) in `pyproject.toml`, run `uv sync`, and commit the updated `uv.lock` (parity stability — research Decision 17; the exact pin must match the version the oracle + promoted code both run on)
+- [X] T004 [P] Copy committed fixtures into the pipeline: `pocs/changepoint/data/csv/*.csv` and `scenario_metadata.json` → `src/ailf/pipelines/changepoint/data/{csv/,scenario_metadata.json}`
+- [X] T005 [P] Create test tree dirs + `conftest.py`: `tests/core/{config,agent,backtest,metrics,events,parity}/`, `tests/pipelines/changepoint/fixtures/`
+- [X] T006 Verify `reports/changepoint/<run_id>/` artifact dirs are gitignored (already covered by the existing `reports/*` rule in `.gitignore`; add an explicit entry only if that rule changes)
+- [X] T007 Capture the POC parity oracle from the **un-promoted POC**: write `tests/pipelines/changepoint/capture_poc_parity.py` that runs each of the 5 scenarios through `pocs/changepoint` (seed 1729) and records detected changepoints (index+trend_delta), full-history-Prophet val metrics, every naive candidate val metrics + `selected_window_start`, and the two baselines' test metrics → committed `tests/pipelines/changepoint/fixtures/poc_parity_reference.json` (research Decision 18)
 
 **Checkpoint**: packages scaffolded, prophet pinned, fixtures in place, parity oracle committed.
 
@@ -57,15 +57,15 @@ increments that build on US1. Dependencies reflect that reality.
 
 **⚠️ CRITICAL**: Blocks all user stories.
 
-- [ ] T008 [P] Define core exceptions: `ConfigError`/`SplitError` in their owning modules and `StageError` in `src/ailf/core/agent/runtime.py` (or a shared `core/agent/errors.py`); `ToolBoundsError` in `src/ailf/core/agent/registry.py`; `ModelUnavailableError` in `src/ailf/core/models/llm.py` (data-model.md → Exceptions)
-- [ ] T009 [P] Write failing test for the strict JSON serializer in `tests/core/events/test_leakage.py`: `to_json(obj)` raises `TypeError` on numpy arrays, `pd.Timestamp`, and arbitrary handles (no `default=str` coercion)
-- [ ] T010 Implement `to_json` strict serializer + `assert_no_leakage(payload)` in `src/ailf/core/events/leakage.py` (import-clean; no emitter deps) — make T009 pass (research Decision 16)
-- [ ] T011 [P] Write failing closed-form tests for forecast metrics in `tests/core/metrics/test_metrics.py` (MAE/RMSE/WAPE/sMAPE on hand-computed vectors)
-- [ ] T012 Implement `metrics()` (MAE/RMSE/WAPE/sMAPE) in `src/ailf/core/metrics/metrics.py`, shaped as an extension point for MASE/PI-coverage (deferred — plan Deviation 1) — make T011 pass
-- [ ] T013 [P] Promote the LLM provider wrapper to `src/ailf/core/models/llm.py`: `ModelWrapper` with `invoke_structured_text`/`invoke_structured_with_image` (generic pydantic TypeVar), `build_visual_model`, `build_decision_model` (renamed from `build_react_model`), `ModelUnavailableError` + no-silent-fallback wrapping; **only** module importing `langchain_aws` (research Decision 13, FR-036)
-- [ ] T014 [P] Add `FakeModelWrapper` test double in `tests/core/conftest.py`: returns canned pydantic objects, records `(prompt, image_path)` seen (for leakage asserts), can raise `ModelUnavailableError`
-- [ ] T015 [P] Write failing test for the generic prompt loader in `tests/core/prompts/test_loader.py` (loads `<name>_vN.md`, fills `{{placeholder}}`)
-- [ ] T016 Implement `load_prompt(dir, name, version)` + placeholder fill in `src/ailf/core/prompts/loader.py` — make T015 pass
+- [X] T008 [P] Define core exceptions: `ConfigError`/`SplitError` in their owning modules and `StageError` in `src/ailf/core/agent/runtime.py` (or a shared `core/agent/errors.py`); `ToolBoundsError` in `src/ailf/core/agent/registry.py`; `ModelUnavailableError` in `src/ailf/core/models/llm.py` (data-model.md → Exceptions)
+- [X] T009 [P] Write failing test for the strict JSON serializer in `tests/core/events/test_leakage.py`: `to_json(obj)` raises `TypeError` on numpy arrays, `pd.Timestamp`, and arbitrary handles (no `default=str` coercion)
+- [X] T010 Implement `to_json` strict serializer + `assert_no_leakage(payload)` in `src/ailf/core/events/leakage.py` (import-clean; no emitter deps) — make T009 pass (research Decision 16)
+- [X] T011 [P] Write failing closed-form tests for forecast metrics in `tests/core/metrics/test_metrics.py` (MAE/RMSE/WAPE/sMAPE on hand-computed vectors)
+- [X] T012 Implement `metrics()` (MAE/RMSE/WAPE/sMAPE) in `src/ailf/core/metrics/metrics.py`, shaped as an extension point for MASE/PI-coverage (deferred — plan Deviation 1) — make T011 pass
+- [X] T013 [P] Promote the LLM provider wrapper to `src/ailf/core/models/llm.py`: `ModelWrapper` with `invoke_structured_text`/`invoke_structured_with_image` (generic pydantic TypeVar), `build_visual_model`, `build_decision_model` (renamed from `build_react_model`), `ModelUnavailableError` + no-silent-fallback wrapping; **only** module importing `langchain_aws` (research Decision 13, FR-036)
+- [X] T014 [P] Add `FakeModelWrapper` test double in `tests/core/conftest.py`: returns canned pydantic objects, records `(prompt, image_path)` seen (for leakage asserts), can raise `ModelUnavailableError`
+- [X] T015 [P] Write failing test for the generic prompt loader in `tests/core/prompts/test_loader.py` (loads `<name>_vN.md`, fills `{{placeholder}}`)
+- [X] T016 Implement `load_prompt(dir, name, version)` + placeholder fill in `src/ailf/core/prompts/loader.py` — make T015 pass
 
 **Checkpoint**: serializer, metrics, LLM wrapper + fake, prompt loader, exceptions ready.
 
@@ -83,18 +83,18 @@ match the oracle (floats `1e-6`, structural fields exact). Core contains zero ch
 
 ### Config (load golden defaults only — override machinery is US2)
 
-- [ ] T017 [P] [US1] Write failing tests for config schema round-trip in `tests/core/config/test_schema.py` (`EffectiveConfig`/`ModelConfig`/`SplitSpec`/`ConfigOverride` `to_dict`/`from_dict` lossless)
-- [ ] T018 [US1] Implement frozen config dataclasses in `src/ailf/core/config/schema.py` (data-model.md → Configuration domain) — make T017 pass
+- [X] T017 [P] [US1] Write failing tests for config schema round-trip in `tests/core/config/test_schema.py` (`EffectiveConfig`/`ModelConfig`/`SplitSpec`/`ConfigOverride` `to_dict`/`from_dict` lossless)
+- [X] T018 [US1] Implement frozen config dataclasses in `src/ailf/core/config/schema.py` (data-model.md → Configuration domain) — make T017 pass
 - [ ] T019 [US1] Author the pipeline defaults file `src/ailf/pipelines/changepoint/config.yaml` (models, `aws_region`, `visual_analysis_enabled: true`, 13 diagnostics, 5 tools + `full_history_default`, `split: {source: golden}`, `seed: 1729`) per contracts/config_schema.md
 - [ ] T020 [US1] Implement `src/ailf/core/config/loader.py`: read `config.yaml` → `EffectiveConfig` (golden split, derive `enabled_diagnostics`/`enabled_tools`); test in `tests/core/config/test_loader.py`
 
 ### Split resolver (golden path) + scenario loading
 
-- [ ] T021 [P] [US1] Write failing tests for the split golden path in `tests/core/backtest/test_split.py`: `ResolvedSplit` invariants + nested-view derivation (`fit_end`, `train_end`, test range); `resolve_split(None, n, golden)` returns golden verbatim
-- [ ] T022 [US1] Implement `src/ailf/core/backtest/split.py` golden path: `ResolvedSplit`, `SplitProvenance`, `resolve_split` (None→golden), `SplitError` (contracts/split_resolver.md) — make T021 pass
-- [ ] T023 [US1] Implement `src/ailf/pipelines/changepoint/datasets.py`: `golden_split_from_metadata(meta)→ResolvedSplit` (rejects non-positive train_rows) + committed-CSV fixture loading
-- [ ] T024 [US1] Write the **golden-reproduction test** `tests/pipelines/changepoint/test_split_golden.py`: derived `train_end`/`fit_end`/test indices equal the POC `SeriesSplit` for all 5 scenarios (gates SC-001 before further split work)
-- [ ] T025 [US1] Implement `src/ailf/pipelines/changepoint/scenarios.py`: `Scenario` + pandas `SeriesSplit` adapter built from `ResolvedSplit`; `load_scenario`; `audit_only` kept strictly off the agent path; test in `tests/pipelines/changepoint/test_scenarios.py` (incl. audit-not-exposed assertion)
+- [X] T021 [P] [US1] Write failing tests for the split golden path in `tests/core/backtest/test_split.py`: `ResolvedSplit` invariants + nested-view derivation (`fit_end`, `train_end`, test range); `resolve_split(None, n, golden)` returns golden verbatim
+- [X] T022 [US1] Implement `src/ailf/core/backtest/split.py` golden path: `ResolvedSplit`, `SplitProvenance`, `resolve_split` (None→golden), `SplitError` (contracts/split_resolver.md) — make T021 pass
+- [X] T023 [US1] Implement `src/ailf/pipelines/changepoint/datasets.py`: `golden_split_from_metadata(meta)→ResolvedSplit` (rejects non-positive train_rows) + committed-CSV fixture loading
+- [X] T024 [US1] Write the **golden-reproduction test** `tests/pipelines/changepoint/test_split_golden.py`: derived `train_end`/`fit_end`/test indices equal the POC `SeriesSplit` for all 5 scenarios (gates SC-001 before further split work)
+- [X] T025 [US1] Implement `src/ailf/pipelines/changepoint/scenarios.py`: `Scenario` + pandas `SeriesSplit` adapter built from `ResolvedSplit`; `load_scenario`; `audit_only` kept strictly off the agent path; test in `tests/pipelines/changepoint/test_scenarios.py` (incl. audit-not-exposed assertion)
 
 ### Detector + diagnostics
 
