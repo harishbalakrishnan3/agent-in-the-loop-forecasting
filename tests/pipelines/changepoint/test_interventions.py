@@ -76,6 +76,18 @@ def test_tuned_param_out_of_grid_rejected():
         reg.invoke("full_history_prophet_tuned_holidays", ctx, {"changepoint_prior_scale": 0.99})
 
 
+def test_clean_event_malformed_block_list_is_bounds_rejection_not_crash():
+    # Regression (caught by the live golden eval): the agent may pass `blocks` as a list of dicts
+    # or out-of-range ints. Both must raise ToolBoundsError (a normal rejection → re-prompt), never
+    # a TypeError/IndexError crash (which would become a stage failure).
+    reg = register_changepoint_registry()
+    ctx, _ = _context("temporary_event_not_regime_change")
+    with pytest.raises(ToolBoundsError, match="integer indices"):
+        reg.invoke("full_history_clean_event", ctx, {"blocks": [{"start": 1, "end": 2}]})
+    with pytest.raises(ToolBoundsError, match="out of range"):
+        reg.invoke("full_history_clean_event", ctx, {"blocks": [9999]})
+
+
 def test_holiday_precondition_blocks_non_recurring_scenario():
     reg = register_changepoint_registry()
     # level_shift is NOT calendar-recurring → precondition must block (FR-031)

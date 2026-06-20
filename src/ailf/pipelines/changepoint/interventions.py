@@ -144,7 +144,18 @@ def _invoke_clean_event(ctx: ToolContext, params: dict) -> ToolResult:
     if sel == "all_closed":
         chosen = [b for b in blocks if b["closed_before_origin"]]
     elif isinstance(sel, list):
-        chosen = [blocks[i] for i in sel if 0 <= i < len(blocks)]
+        # The list must contain integer indices into candidate_event_blocks. The agent may emit
+        # non-int entries (e.g. block dicts) or out-of-range ints — treat both as a NORMAL bounds
+        # rejection (the agent re-prompts), never a crash.
+        if not all(isinstance(i, int) and not isinstance(i, bool) for i in sel):
+            raise ToolBoundsError(
+                f"clean_event.blocks list must contain integer indices, got {sel!r}"
+            )
+        if any(not (0 <= i < len(blocks)) for i in sel):
+            raise ToolBoundsError(
+                f"clean_event.blocks index out of range for {len(blocks)} candidate blocks: {sel!r}"
+            )
+        chosen = [blocks[i] for i in sel]
         if any(not b["closed_before_origin"] for b in chosen):
             raise ToolBoundsError("clean_event may only clean blocks closed before the origin (FR-026a)")
     else:

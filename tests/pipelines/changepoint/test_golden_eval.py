@@ -22,10 +22,13 @@ _RECURRING_SCENARIO = "prophet_prior_tuning_recurring_event"
 
 
 def _have_bedrock() -> bool:
-    return bool(os.getenv("AWS_ACCESS_KEY_ID") and os.getenv("VISUAL_MODEL_ID") and os.getenv("REACT_MODEL_ID"))
+    # The promoted pipeline reads model IDs from config.yaml (not env), so the only env requirement
+    # is AWS credentials for Bedrock. boto3 resolves creds from the standard chain (env / profile);
+    # we gate on an explicit access key OR a configured profile so the eval skips cleanly off-cloud.
+    return bool(os.getenv("AWS_ACCESS_KEY_ID") or os.getenv("AWS_PROFILE"))
 
 
-@pytest.mark.skipif(not _have_bedrock(), reason="requires live Bedrock credentials + model ids in env")
+@pytest.mark.skipif(not _have_bedrock(), reason="requires live Bedrock credentials (AWS_ACCESS_KEY_ID / AWS_PROFILE)")
 def test_holiday_tool_selected_only_on_recurring_scenario(tmp_path):
     from ailf.pipelines.changepoint.scenarios import load_all_scenarios
     from ailf.pipelines.changepoint.pipeline import run_scenario
