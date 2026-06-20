@@ -24,6 +24,10 @@ from ailf.core.backtest.split import resolve_split
 from ailf.core.config.loader import load_config_yaml
 from ailf.core.config.resolve import resolve_config
 from ailf.core.config.schema import ConfigOverride
+from ailf.core.events import payloads as ev
+from ailf.core.events.emitter import EventEmitter, NullEmitter
+from ailf.core.events.sink import FileEventSink
+from ailf.core.events.stages import StageId, StageStatus
 from ailf.core.models.llm import ModelWrapper, build_decision_model, build_visual_model
 from ailf.core.prompts.loader import load_prompt
 from ailf.core.reporting.artifacts import write_agent_trace, write_metrics_json, write_report_md
@@ -59,6 +63,7 @@ def run_scenario(
     override: ConfigOverride | None = None,
     model_wrappers: tuple | None = None,
     reports_root: Path | None = None,
+    emit_events: bool = True,
 ) -> dict:
     """Execute one scenario end-to-end and write artifacts; returns the metrics report dict."""
     # 1. Resolve config (merge → validate → lockstep).
@@ -86,11 +91,38 @@ def run_scenario(
     run_id = f"{scenario_id}-{cfg.seed}"
     run_dir = create_run_dir(run_id, root=reports_root)
 
-    # 4. Deterministic prelude: detect → baselines → diagnostics.
-    cps = detect_changepoints(split.train_df, n_changepoints_to_detect=scenario.n_changepoints_to_detect)
-    naive = naive_workflow(split, cps)
-    _ = full_history_prophet(split)  # comparability (test computed at final stage)
-    diagnostics = compute_diagnostics(split.train_df, changepoints=cps, seasonal_period=scenario.seasonal_period)
+    hidden = sorted(set(DiagnosticsBundle.field_names()) - set(cfg.enabled_diagnostics))
+    removed = sorted(set(structural_tool_names()) - set(cfg.enabled_tools))
+
+    # Emitter: every run step emits a typed event to the file sink (FR-026..032). The deterministic
+    # prelude is emitted SEQUENTIALLY by this single-threaded driver before graph invocation; the
+    # in-graph stages are reconstructed from final_state after invoke (no seq-race — FR-028).
+    if emit_events:
+        emitter = EventEmitter(run_id, [FileEventSink(run_dir / "events.jsonl")], payload_dir=run_dir / "event_payloads")
+    else:
+        emitter = NullEmitter()
+
+    emitter.emit(
+        StageId.CONFIG_RESOLVED,
+        StageStatus.COMPLETE,
+        ev.config_resolved(cfg.to_dict(), hidden_diagnostics=hidden, removed_tools=removed, visual_enabled=cfg.visual_analysis_enabled),
+    )
+    emitter.emit(StageId.SPLIT_BUILT, StageStatus.COMPLETE, ev.split_built(resolved.provenance.to_dict()))
+
+    # 4. Deterministic prelude: detect → baselines → diagnostics (each emits).
+    with emitter.stage(StageId.CHANGEPOINT_DETECTION) as p:
+        cps = detect_changepoints(split.train_df, n_changepoints_to_detect=scenario.n_changepoints_to_detect)
+        detected = [{"index": c.index, "ds": str(c.ds.date()), "trend_delta": float(c.trend_delta)} for c in cps.changepoints]
+        p.update(ev.changepoint_detection(detected))
+    with emitter.stage(StageId.BASELINE_FULL_HISTORY_PROPHET) as p:
+        full = full_history_prophet(split)
+        p.update(ev.baseline_full_history_prophet(full.val_metrics))
+    with emitter.stage(StageId.BASELINE_NAIVE_WORKFLOW) as p:
+        naive = naive_workflow(split, cps)
+        p.update(ev.baseline_naive_workflow(naive.summary_dict()))
+    with emitter.stage(StageId.DIAGNOSTICS_COMPUTED) as p:
+        diagnostics = compute_diagnostics(split.train_df, changepoints=cps, seasonal_period=scenario.seasonal_period)
+        p.update(ev.diagnostics_computed(diagnostics.to_agent_dict(cfg.enabled_diagnostics), hidden=hidden))
 
     # 5. Registry projection + prompts shaped by config.
     registry = register_changepoint_registry().for_run(set(cfg.enabled_tools))
@@ -117,9 +149,6 @@ def run_scenario(
             build_decision_model(cfg.models.decision_model_id, cfg.models.aws_region), cfg.models.decision_model_id
         )
 
-    hidden = sorted(set(DiagnosticsBundle.field_names()) - set(cfg.enabled_diagnostics))
-    removed = sorted(set(structural_tool_names()) - set(cfg.enabled_tools))
-
     ctx = RunContext(
         run_id=run_id, scenario_id=scenario_id,
         visual_model=visual_model, decision_model=decision_model,
@@ -127,7 +156,7 @@ def run_scenario(
         split=split, full_diagnostics=diagnostics, naive=naive, tool_registry=registry,
         visual_enabled=cfg.visual_analysis_enabled,
         enabled_diagnostics=frozenset(cfg.enabled_diagnostics),
-        image_path=image_path, emitter=None,
+        image_path=image_path, emitter=emitter,
         decision_prompt=decision_prompt, visual_prompt=visual_prompt,
         visual_schema=VisualInspectionResult, decision_schema=InterventionChoice,
         prompt_ids={"decision": decision_prompt_id, "visual": "visual_inspection_v1" if visual_prompt else None},
@@ -140,6 +169,19 @@ def run_scenario(
          "seasonal_period": scenario.seasonal_period, "iterations": [], "rejected_signatures": []},
         config={"recursion_limit": 50},
     )
+
+    # 7b. Emit the in-graph stages, reconstructed from final_state (single-threaded, post-invoke).
+    menu_names = sorted(registry.allowed_names())
+    if cfg.visual_analysis_enabled and final_state.get("visual"):
+        emitter.emit(
+            StageId.VISUAL_INSPECTION,
+            StageStatus.COMPLETE,
+            ev.visual_inspection(final_state["visual"], image_ref="agent_context.png"),
+            concurrency_group="visual_diagnostics",
+        )
+    for iteration in final_state.get("iterations", []):
+        emitter.emit(StageId.DECISION_ITERATION, StageStatus.COMPLETE, ev.decision_iteration(iteration, menu=menu_names))
+        emitter.emit(StageId.VALIDATION_OUTCOME, StageStatus.COMPLETE, ev.validation_outcome(iteration))
 
     # 8. Write artifacts.
     fe = final_state["_final_eval"]
@@ -186,6 +228,28 @@ def run_scenario(
         },
         out_path=run_dir / "forecast_comparison.png",
     )
+
+    # 9. Final-evaluation + run-complete events (test metrics first appear here — FR-029).
+    emitter.emit(
+        StageId.FINAL_EVALUATION,
+        StageStatus.COMPLETE,
+        ev.final_evaluation(
+            final_state.get("final_case", ""),
+            final_state.get("final_candidate", {}),
+            {
+                "full_history_prophet": fe["full_history_prophet"]["test_metrics"],
+                "naive_workflow": fe["naive_workflow"]["test_metrics"],
+                "agent": fe["agent"]["test_metrics"],
+            },
+        ),
+    )
+    artifacts = [p.name for p in sorted(run_dir.glob("*")) if p.is_file()]
+    emitter.emit(
+        StageId.RUN_COMPLETE,
+        StageStatus.COMPLETE,
+        ev.run_complete(winner=metrics_report["winner"], artifacts=artifacts, run_dir=str(run_dir)),
+    )
+
     print(f"  {scenario_id}: winner={metrics_report['winner']} agent_tool={fe['agent']['tool']} "
           f"run_dir={run_dir}")
     return metrics_report
