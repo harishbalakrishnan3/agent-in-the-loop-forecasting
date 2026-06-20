@@ -93,11 +93,11 @@ ground-truth markers; `export_plots.py` writes one PNG per dataset.
 
 ### Implementation for User Story 3
 
-- [ ] T011 [US3] Implement `build_figure()` in `pocs/changepoint/slope_change/visualize.py` rendering, per dataset, the raw series (line) and ground-truth slope-change vertical markers, with a dropdown over S1–S10; imports only plotly + local `datasets`.
+- [X] T011 [US3] Implement `build_figure()` in `pocs/changepoint/slope_change/visualize.py` rendering, per dataset, the raw series (line) and ground-truth slope-change vertical markers, with a dropdown over S1–S10; imports only plotly + local `datasets`.
   - **Acceptance**: `build_figure()` returns a `plotly.graph_objects.Figure`; switching the dropdown shows each dataset's series + its ground-truth markers; no `level_shift`/`ailf` import.
-- [ ] T012 [US3] Add a `main()` (and `__main__` guard) to `pocs/changepoint/slope_change/visualize.py` that calls `fig.show()`.
+- [X] T012 [US3] Add a `main()` (and `__main__` guard) to `pocs/changepoint/slope_change/visualize.py` that calls `fig.show()`.
   - **Acceptance**: `uv run python -m pocs.changepoint.slope_change.visualize` opens a figure without error.
-- [ ] T013 [P] [US3] Implement `build_single_figure(name, config)` and `export_all()` in `pocs/changepoint/slope_change/export_plots.py` writing one PNG per dataset (raw series + ground-truth markers) to `plots/` via kaleido; imports only plotly + local `datasets`.
+- [X] T013 [P] [US3] Implement `build_single_figure(name, config)` and `export_all()` in `pocs/changepoint/slope_change/export_plots.py` writing one PNG per dataset (raw series + ground-truth markers) to `plots/` via kaleido; imports only plotly + local `datasets`.
   - **Acceptance**: `uv run python -m pocs.changepoint.slope_change.export_plots` writes 10 PNGs named `S1_…`–`S10_…` into `pocs/changepoint/slope_change/plots/`.
 
 **Checkpoint**: Datasets are visually inspectable interactively and as 10 exported PNGs (partial SC-006).
