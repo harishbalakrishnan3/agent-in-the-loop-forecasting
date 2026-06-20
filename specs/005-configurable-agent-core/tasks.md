@@ -116,24 +116,24 @@ match the oracle (floats `1e-6`, structural fields exact). Core contains zero ch
 
 - [X] T036 [P] [US1] Write failing tests for baselines in `tests/pipelines/changepoint/test_baselines.py` (full-history Prophet val metrics; naive-window candidate selection by val MAE)
 - [X] T037 [US1] Implement `src/ailf/pipelines/changepoint/baselines.py` (full-history + naive workflow, `CandidateResult`, `NaiveWorkflowResult`, `fit_predict_prophet` helper) — make T036 pass
-- [ ] T038 [P] [US1] Add `src/ailf/pipelines/changepoint/schemas.py`: pydantic `VisualInspectionResult` + `InterventionChoice` (LLM I/O only)
-- [ ] T039 [P] [US1] Promote `prompts/visual_inspection_v1.md` UNCHANGED; author `prompts/react_decision_v2.md` with a `{{tool_menu}}` placeholder (visual-on arm; menu generated from `for_run()` registry — research Decision 7)
+- [X] T038 [P] [US1] Add `src/ailf/pipelines/changepoint/schemas.py`: pydantic `VisualInspectionResult` + `InterventionChoice` (LLM I/O only)
+- [X] T039 [P] [US1] Promote `prompts/visual_inspection_v1.md` UNCHANGED; author `prompts/react_decision_v2.md` with a `{{tool_menu}}` placeholder (visual-on arm; menu generated from `for_run()` registry — research Decision 7)
 
 ### Agent engine + nodes + runtime + state (visual-ON graph)
 
-- [ ] T040 [P] [US1] Add `src/ailf/core/agent/state.py`: `AgentState` TypedDict (POC shape, `_take_right` reducer, langgraph-clean)
-- [ ] T041 [US1] Add `src/ailf/core/agent/runtime.py`: `RunContext` (model handles, full diagnostics bundle, naive result, image path, `for_run()` registry, `visual_enabled`, `enabled_diagnostics`, emitter, `ResolvedSplit`, prompt ids)
-- [ ] T042 [US1] Implement `src/ailf/core/agent/nodes.py`: `visual_inspection`, `diagnostics` (applies `to_agent_dict(enabled)`), `decision` (menu from registry; visual-first rationale; `StageError` invariant when visual on), `validation` (calls gate), `final_evaluation` (only place test indices read) — node bodies take `(state, RunContext)`
-- [ ] T043 [US1] Implement `src/ailf/core/agent/engine.py`: `GraphSpec` + `build_agent_graph(spec, ctx)` compiling the **visual-on** topology onto LangGraph (`visual ∥ diagnostics → decision ↔ validation → final`); **only** module importing `langgraph`
-- [ ] T044 [US1] Write graph wiring/routing test in `tests/core/agent/test_engine.py` using `FakeModelWrapper`: fan-out join, decision↔validation loop ≤5 iters, accepted/budget-exhausted routing, `final_evaluation` reads test only at the end
+- [X] T040 [P] [US1] Add `src/ailf/core/agent/state.py`: `AgentState` TypedDict (POC shape, `_take_right` reducer, langgraph-clean)
+- [X] T041 [US1] Add `src/ailf/core/agent/runtime.py`: `RunContext` (model handles, full diagnostics bundle, naive result, image path, `for_run()` registry, `visual_enabled`, `enabled_diagnostics`, emitter, `ResolvedSplit`, prompt ids)
+- [X] T042 [US1] Implement `src/ailf/core/agent/nodes.py`: `visual_inspection`, `diagnostics` (applies `to_agent_dict(enabled)`), `decision` (menu from registry; visual-first rationale; `StageError` invariant when visual on), `validation` (calls gate), `final_evaluation` (only place test indices read) — node bodies take `(state, RunContext)`
+- [X] T043 [US1] Implement `src/ailf/core/agent/engine.py`: `GraphSpec` + `build_agent_graph(spec, ctx)` compiling the **visual-on** topology onto LangGraph (`visual ∥ diagnostics → decision ↔ validation → final`); **only** module importing `langgraph`
+- [X] T044 [US1] Write graph wiring/routing test in `tests/core/agent/test_engine.py` using `FakeModelWrapper`: fan-out join, decision↔validation loop ≤5 iters, accepted/budget-exhausted routing, `final_evaluation` reads test only at the end
 
 ### Reporting + viz + entrypoint
 
-- [ ] T045 [P] [US1] Implement `src/ailf/core/reporting/run_dir.py` (create `reports/changepoint/<run_id>/`; stamp seed) and `src/ailf/core/reporting/artifacts.py` (`write_metrics_json`, `write_agent_trace` via strict `to_json`, `write_report_md` narrative with before/after deltas vs naive + agent limitations — Principle VI)
-- [ ] T046 [P] [US1] Implement `src/ailf/pipelines/changepoint/viz.py`: `render_agent_context` (training-only image) + `render_forecast_comparison` (human-only, post-final; never re-fed to an agent)
-- [ ] T047 [US1] Implement `src/ailf/pipelines/changepoint/pipeline.py` single-scenario entrypoint: seed(1729) FIRST → deterministic prelude (detector, both baselines, diagnostics) → build visual-on `GraphSpec` from golden config → `build_agent_graph` + invoke (NullEmitter for now) → write artifacts (research Decision 17)
+- [X] T045 [P] [US1] Implement `src/ailf/core/reporting/run_dir.py` (create `reports/changepoint/<run_id>/`; stamp seed) and `src/ailf/core/reporting/artifacts.py` (`write_metrics_json`, `write_agent_trace` via strict `to_json`, `write_report_md` narrative with before/after deltas vs naive + agent limitations — Principle VI)
+- [X] T046 [P] [US1] Implement `src/ailf/pipelines/changepoint/viz.py`: `render_agent_context` (training-only image) + `render_forecast_comparison` (human-only, post-final; never re-fed to an agent)
+- [X] T047 [US1] Implement `src/ailf/pipelines/changepoint/pipeline.py` single-scenario entrypoint: seed(1729) FIRST → deterministic prelude (detector, both baselines, diagnostics) → build visual-on `GraphSpec` from golden config → `build_agent_graph` + invoke (NullEmitter for now) → write artifacts (research Decision 17)
 - [X] T048 [US1] Write the **SC-001 parity test** `tests/core/parity/test_poc_parity.py`: the promoted core path matches `poc_parity_reference.json` for all 5 scenarios (floats `1e-6`; structural fields exact)
-- [ ] T049 [US1] Write end-to-end smoke test `tests/pipelines/changepoint/test_pipeline_smoke.py`: golden run with `FakeModelWrapper` produces the full artifact set (image, comparison plot, `metrics.json`, `agent_trace.json`)
+- [X] T049 [US1] Write end-to-end smoke test `tests/pipelines/changepoint/test_pipeline_smoke.py`: golden run with `FakeModelWrapper` produces the full artifact set (image, comparison plot, `metrics.json`, `agent_trace.json`)
 
 **Checkpoint**: golden-config single-scenario run reproduces POC metrics end-to-end (MVP). 🎯
 
@@ -154,7 +154,7 @@ diagnostic hidden (still computed) and the tool removed; both runs record their 
 - [X] T053 [US2] Write `tests/pipelines/changepoint/test_config_lockstep.py`: reflect `dataclasses.fields(DiagnosticsBundle)` + live registry structural names; assert committed `config.yaml` key-sets equal them exactly (SC-003)
 - [ ] T054 [P] [US2] Write failing tests for split override in `tests/core/backtest/test_split.py` (extend): ratios sum-to-1.0 rounding (`floor_test_val_train_absorbs`); absolute units; ambiguous (ratio+absolute) → `SplitError`; segment≥1 / sum≤n / test>rows guards; **ratio vs equivalent-absolute resolve identically on n=1000 and n=1730** (SC-009)
 - [ ] T055 [US2] Extend `src/ailf/core/backtest/split.py` with `SplitSpec` units (ratios/absolute) + rounding rule + ambiguity + validation — make T054 pass
-- [ ] T056 [US2] Wire toggles + override into the entrypoint: `pipeline.py` accepts `--override` (JSON), resolves config, derives `enabled_diagnostics`/`enabled_tools`, builds `for_run()` registry projection, and threads them via `RunContext`; the `diagnostics` node hides via `to_agent_dict(enabled)`, the decision menu + gate use the projected registry (FR-013/FR-014)
+- [X] T056 [US2] Wire toggles + override into the entrypoint: `pipeline.py` accepts `--override` (JSON), resolves config, derives `enabled_diagnostics`/`enabled_tools`, builds `for_run()` registry projection, and threads them via `RunContext`; the `diagnostics` node hides via `to_agent_dict(enabled)`, the decision menu + gate use the projected registry (FR-013/FR-014)
 - [ ] T057 [US2] Write integration test `tests/pipelines/changepoint/test_toggles.py` (with `FakeModelWrapper`): a disabled diagnostic is absent from the decision input but present in the full recorded bundle; a disabled tool is absent from menu + `allowed_names()` and never accepted; trace records `hidden_diagnostics`/`removed_tools`
 
 **Checkpoint**: config overrides + toggles + split knobs take effect and are recorded.
@@ -170,10 +170,10 @@ preserves the visual-first ordering guarantee.
 **Independent Test**: same scenario visual-on vs visual-off → on-trace has a visual result before the
 decision; off-trace has no visual result, uses the diagnostics-only prompt, still yields a forecast + metrics.
 
-- [ ] T058 [P] [US3] Author `prompts/react_decision_diagnostics_only_v1.md` (visual-off arm; `{{tool_menu}}` placeholder; rationale cites numeric diagnostics; no visual references)
-- [ ] T059 [US3] Extend `src/ailf/core/agent/engine.py` to build a **linear** `GraphSpec` (`START → diagnostics → decision → validation → final`) when `visual_enabled` is false — omit the `visual_inspection` node entirely
-- [ ] T060 [US3] In `pipeline.py`, when visual is off: select the diagnostics-only prompt, do **not** render or pass `agent_context.png`; record `visual_analysis_enabled=false` in the trace (FR-015)
-- [ ] T061 [US3] Confirm the visual-first ordering invariant is enforced as a `StageError` (not a bare `assert`) and **only** when visual is on (`nodes.py`)
+- [X] T058 [P] [US3] Author `prompts/react_decision_diagnostics_only_v1.md` (visual-off arm; `{{tool_menu}}` placeholder; rationale cites numeric diagnostics; no visual references)
+- [X] T059 [US3] Extend `src/ailf/core/agent/engine.py` to build a **linear** `GraphSpec` (`START → diagnostics → decision → validation → final`) when `visual_enabled` is false — omit the `visual_inspection` node entirely
+- [X] T060 [US3] In `pipeline.py`, when visual is off: select the diagnostics-only prompt, do **not** render or pass `agent_context.png`; record `visual_analysis_enabled=false` in the trace (FR-015)
+- [X] T061 [US3] Confirm the visual-first ordering invariant is enforced as a `StageError` (not a bare `assert`) and **only** when visual is on (`nodes.py`)
 - [ ] T062 [US3] Write `tests/pipelines/changepoint/test_visual_toggle.py` (with `FakeModelWrapper`): visual-off run produces no `agent_context.png`, uses the diagnostics-only prompt, and still yields a forecast + full metrics; visual-on run records a visual result before the decision (SC-006)
 
 **Checkpoint**: visual node cleanly ablatable; both arms produce valid runs.
