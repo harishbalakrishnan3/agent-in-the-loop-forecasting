@@ -1,0 +1,531 @@
+{
+  "scenarios": {
+    "gradual_drift_loses_seasonality": {
+      "detected_changepoints": [
+        {
+          "index": 169,
+          "trend_delta": -0.62507191
+        },
+        {
+          "index": 366,
+          "trend_delta": 0.63422092
+        }
+      ],
+      "fit_end": 760,
+      "full_history_prophet_test_metrics": {
+        "mae": 7.3203897412179595,
+        "rmse": 9.392307764855307,
+        "smape": 4.537145156359742,
+        "wape": 4.528651797781139
+      },
+      "full_history_prophet_val_metrics": {
+        "mae": 9.68050626724551,
+        "rmse": 10.609432933782735,
+        "smape": 4.953499138526782,
+        "wape": 5.0688274694267665
+      },
+      "n_changepoints_to_detect": 2,
+      "naive_candidates": [
+        {
+          "extra": {
+            "window_start": 0
+          },
+          "label": "full_history",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 9.68050626724551,
+            "rmse": 10.609432933782735,
+            "smape": 4.953499138526782,
+            "wape": 5.0688274694267665
+          }
+        },
+        {
+          "extra": {
+            "window_start": 169
+          },
+          "label": "naive_window@169",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 39.99946002880089,
+            "rmse": 46.83145457487287,
+            "smape": 18.504934770412437,
+            "wape": 20.944189917240195
+          }
+        },
+        {
+          "extra": {
+            "window_start": 366
+          },
+          "label": "naive_window@366",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 38.34173242462089,
+            "rmse": 45.09677729342487,
+            "smape": 17.813288786596548,
+            "wape": 20.076184155462457
+          }
+        }
+      ],
+      "naive_selected_window_start": 0,
+      "naive_workflow_test_metrics": {
+        "mae": 7.3203897412179595,
+        "rmse": 9.392307764855307,
+        "smape": 4.537145156359742,
+        "wape": 4.528651797781139
+      },
+      "seasonal_period": 365,
+      "test_horizon": 120,
+      "train_end": 880,
+      "validation_horizon": 120
+    },
+    "level_shift_loses_seasonality": {
+      "detected_changepoints": [
+        {
+          "index": 197,
+          "trend_delta": -0.78573842
+        },
+        {
+          "index": 366,
+          "trend_delta": 1.1254784
+        }
+      ],
+      "fit_end": 760,
+      "full_history_prophet_test_metrics": {
+        "mae": 5.991404650351144,
+        "rmse": 10.231952238132898,
+        "smape": 3.6291567380107552,
+        "wape": 3.6600986532149866
+      },
+      "full_history_prophet_val_metrics": {
+        "mae": 23.493587095543194,
+        "rmse": 25.655491175689484,
+        "smape": 11.413796645254239,
+        "wape": 12.169885007489132
+      },
+      "n_changepoints_to_detect": 2,
+      "naive_candidates": [
+        {
+          "extra": {
+            "window_start": 0
+          },
+          "label": "full_history",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 23.493587095543194,
+            "rmse": 25.655491175689484,
+            "smape": 11.413796645254239,
+            "wape": 12.169885007489132
+          }
+        },
+        {
+          "extra": {
+            "window_start": 197
+          },
+          "label": "naive_window@197",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 41.77295851433885,
+            "rmse": 49.04697096699248,
+            "smape": 19.012079622966244,
+            "wape": 21.63876037638193
+          }
+        },
+        {
+          "extra": {
+            "window_start": 366
+          },
+          "label": "naive_window@366",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 52.21615244902666,
+            "rmse": 59.926437244308076,
+            "smape": 23.171539692229317,
+            "wape": 27.048426800636417
+          }
+        }
+      ],
+      "naive_selected_window_start": 0,
+      "naive_workflow_test_metrics": {
+        "mae": 5.991404650351144,
+        "rmse": 10.231952238132898,
+        "smape": 3.6291567380107552,
+        "wape": 3.6600986532149866
+      },
+      "seasonal_period": 365,
+      "test_horizon": 120,
+      "train_end": 880,
+      "validation_horizon": 120
+    },
+    "many_temporary_events_long_history": {
+      "detected_changepoints": [
+        {
+          "index": 309,
+          "trend_delta": -0.12541415
+        },
+        {
+          "index": 669,
+          "trend_delta": 0.24104765
+        },
+        {
+          "index": 721,
+          "trend_delta": 0.33122104
+        },
+        {
+          "index": 875,
+          "trend_delta": -0.98594731
+        },
+        {
+          "index": 1030,
+          "trend_delta": 0.19501182
+        },
+        {
+          "index": 1081,
+          "trend_delta": 0.51868909
+        }
+      ],
+      "fit_end": 1490,
+      "full_history_prophet_test_metrics": {
+        "mae": 13.953260156898166,
+        "rmse": 14.432318664350518,
+        "smape": 11.301925216041377,
+        "wape": 11.95914181789944
+      },
+      "full_history_prophet_val_metrics": {
+        "mae": 37.75067268477694,
+        "rmse": 38.4895477515231,
+        "smape": 22.84120350250915,
+        "wape": 25.783863732519386
+      },
+      "n_changepoints_to_detect": 6,
+      "naive_candidates": [
+        {
+          "extra": {
+            "window_start": 0
+          },
+          "label": "full_history",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 37.75067268477694,
+            "rmse": 38.4895477515231,
+            "smape": 22.84120350250915,
+            "wape": 25.783863732519386
+          }
+        },
+        {
+          "extra": {
+            "window_start": 309
+          },
+          "label": "naive_window@309",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 50.69127928685569,
+            "rmse": 52.14327250355319,
+            "smape": 29.424496271310474,
+            "wape": 34.62235093062137
+          }
+        },
+        {
+          "extra": {
+            "window_start": 669
+          },
+          "label": "naive_window@669",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 62.90648582548802,
+            "rmse": 65.12080577468322,
+            "smape": 35.146301285426865,
+            "wape": 42.96538692064446
+          }
+        },
+        {
+          "extra": {
+            "window_start": 721
+          },
+          "label": "naive_window@721",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 58.44942388400647,
+            "rmse": 60.118064942557105,
+            "smape": 33.14753033533211,
+            "wape": 39.921195398385834
+          }
+        },
+        {
+          "extra": {
+            "window_start": 875
+          },
+          "label": "naive_window@875",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 81.05614050389156,
+            "rmse": 85.31124579812221,
+            "smape": 42.73274622507015,
+            "wape": 55.36167524450656
+          }
+        },
+        {
+          "extra": {
+            "window_start": 1030
+          },
+          "label": "naive_window@1030",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 103.17955536272054,
+            "rmse": 108.64193453378962,
+            "smape": 51.17313232961007,
+            "wape": 70.47205801254839
+          }
+        },
+        {
+          "extra": {
+            "window_start": 1081
+          },
+          "label": "naive_window@1081",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 104.95788029233398,
+            "rmse": 110.55000507376543,
+            "smape": 51.80283772048432,
+            "wape": 71.68666120757398
+          }
+        }
+      ],
+      "naive_selected_window_start": 0,
+      "naive_workflow_test_metrics": {
+        "mae": 13.953260156898166,
+        "rmse": 14.432318664350518,
+        "smape": 11.301925216041377,
+        "wape": 11.95914181789944
+      },
+      "seasonal_period": 365,
+      "test_horizon": 120,
+      "train_end": 1610,
+      "validation_horizon": 120
+    },
+    "prophet_prior_tuning_recurring_event": {
+      "detected_changepoints": [
+        {
+          "index": 772,
+          "trend_delta": 0.05423394
+        },
+        {
+          "index": 824,
+          "trend_delta": 0.10786637
+        },
+        {
+          "index": 875,
+          "trend_delta": 0.13091409
+        },
+        {
+          "index": 927,
+          "trend_delta": 0.090126081
+        },
+        {
+          "index": 1236,
+          "trend_delta": -0.10249219
+        },
+        {
+          "index": 1287,
+          "trend_delta": -0.10034154
+        }
+      ],
+      "fit_end": 1490,
+      "full_history_prophet_test_metrics": {
+        "mae": 1.7907289655102059,
+        "rmse": 2.2142621406513103,
+        "smape": 1.2232504970994433,
+        "wape": 1.2294149480990335
+      },
+      "full_history_prophet_val_metrics": {
+        "mae": 5.65376294562271,
+        "rmse": 8.006241321219496,
+        "smape": 3.0819840274528834,
+        "wape": 3.133482576815943
+      },
+      "n_changepoints_to_detect": 6,
+      "naive_candidates": [
+        {
+          "extra": {
+            "window_start": 0
+          },
+          "label": "full_history",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 5.65376294562271,
+            "rmse": 8.006241321219496,
+            "smape": 3.0819840274528834,
+            "wape": 3.133482576815943
+          }
+        },
+        {
+          "extra": {
+            "window_start": 772
+          },
+          "label": "naive_window@772",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 20.70815128730012,
+            "rmse": 26.32480986550425,
+            "smape": 11.08555569624891,
+            "wape": 11.47706967570369
+          }
+        },
+        {
+          "extra": {
+            "window_start": 824
+          },
+          "label": "naive_window@824",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 22.80196021258215,
+            "rmse": 27.79594083263444,
+            "smape": 12.130555014872293,
+            "wape": 12.637520485130105
+          }
+        },
+        {
+          "extra": {
+            "window_start": 875
+          },
+          "label": "naive_window@875",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 23.846165707909858,
+            "rmse": 28.638211335491906,
+            "smape": 12.645530374968683,
+            "wape": 13.21625004236386
+          }
+        },
+        {
+          "extra": {
+            "window_start": 927
+          },
+          "label": "naive_window@927",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 24.49480339624788,
+            "rmse": 29.183089811047385,
+            "smape": 12.965365431430714,
+            "wape": 13.57574422608215
+          }
+        },
+        {
+          "extra": {
+            "window_start": 1236
+          },
+          "label": "naive_window@1236",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 28.432860362931073,
+            "rmse": 32.65085941308213,
+            "smape": 14.885511009493332,
+            "wape": 15.758331824871421
+          }
+        },
+        {
+          "extra": {
+            "window_start": 1287
+          },
+          "label": "naive_window@1287",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 27.65034634326576,
+            "rmse": 31.89027096734328,
+            "smape": 14.508504923617243,
+            "wape": 15.324639420305033
+          }
+        }
+      ],
+      "naive_selected_window_start": 0,
+      "naive_workflow_test_metrics": {
+        "mae": 1.7907289655102059,
+        "rmse": 2.2142621406513103,
+        "smape": 1.2232504970994433,
+        "wape": 1.2294149480990335
+      },
+      "seasonal_period": 365,
+      "test_horizon": 120,
+      "train_end": 1610,
+      "validation_horizon": 120
+    },
+    "temporary_event_not_regime_change": {
+      "detected_changepoints": [
+        {
+          "index": 225,
+          "trend_delta": 0.32507344
+        },
+        {
+          "index": 591,
+          "trend_delta": -0.32750449
+        }
+      ],
+      "fit_end": 760,
+      "full_history_prophet_test_metrics": {
+        "mae": 10.408350060512566,
+        "rmse": 11.840267775280084,
+        "smape": 9.92395663227293,
+        "wape": 10.064064437726408
+      },
+      "full_history_prophet_val_metrics": {
+        "mae": 9.198879451853985,
+        "rmse": 10.25780048334661,
+        "smape": 7.069190139454356,
+        "wape": 6.91092535663376
+      },
+      "n_changepoints_to_detect": 2,
+      "naive_candidates": [
+        {
+          "extra": {
+            "window_start": 0
+          },
+          "label": "full_history",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 9.198879451853985,
+            "rmse": 10.25780048334661,
+            "smape": 7.069190139454356,
+            "wape": 6.91092535663376
+          }
+        },
+        {
+          "extra": {
+            "window_start": 225
+          },
+          "label": "naive_window@225",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 10.162641897847369,
+            "rmse": 11.36834920898366,
+            "smape": 7.884725591011842,
+            "wape": 7.634979885301886
+          }
+        },
+        {
+          "extra": {
+            "window_start": 591
+          },
+          "label": "naive_window@591",
+          "test_metrics": null,
+          "val_metrics": {
+            "mae": 20.27836954711826,
+            "rmse": 26.02700211827544,
+            "smape": 13.818852420706943,
+            "wape": 15.234714078802773
+          }
+        }
+      ],
+      "naive_selected_window_start": 0,
+      "naive_workflow_test_metrics": {
+        "mae": 10.408350060512566,
+        "rmse": 11.840267775280084,
+        "smape": 9.92395663227293,
+        "wape": 10.064064437726408
+      },
+      "seasonal_period": 365,
+      "test_horizon": 120,
+      "train_end": 880,
+      "validation_horizon": 120
+    }
+  },
+  "seed": 1729
+}
