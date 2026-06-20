@@ -35,11 +35,12 @@ _REFERENCE_PATH = Path(__file__).resolve().parent / "fixtures" / "poc_parity_ref
 
 def capture() -> dict:
     """Capture deterministic reference values for every committed scenario."""
-    random.seed(SEED)
-    np.random.seed(SEED)
-
     scenarios = {}
     for scenario in load_all_scenarios():
+        # Seed FRESH before each scenario so the result is independent of scenario ordering and of
+        # RNG state left by a prior scenario's Prophet fits (makes the oracle position-independent).
+        random.seed(SEED)
+        np.random.seed(SEED)
         split = scenario.split
         cps = detect_changepoints(
             split.train_df, n_changepoints_to_detect=scenario.n_changepoints_to_detect

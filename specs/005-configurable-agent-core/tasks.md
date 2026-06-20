@@ -98,10 +98,10 @@ match the oracle (floats `1e-6`, structural fields exact). Core contains zero ch
 
 ### Detector + diagnostics
 
-- [ ] T026 [P] [US1] Write KNOWN-injected-ground-truth tests in `tests/pipelines/changepoint/test_detector.py`: precision/recall/FPR vs `audit_only.true_injected_boundaries` (±15-row window; event-pair starts → nearest detected) + clean single-effect synthetic series (research Decision 18)
-- [ ] T027 [US1] Implement `src/ailf/pipelines/changepoint/detector.py` (deterministic Prophet trend-delta changepoints, honors `n_changepoints_to_detect`) — make T026 pass
-- [ ] T028 [P] [US1] Write failing tests in `tests/pipelines/changepoint/test_diagnostics.py`: all 13 fields computed; `to_agent_dict(enabled)` filters; **golden byte-identity** of the all-enabled filtered view vs the POC `asdict` (parity guard)
-- [ ] T029 [US1] Implement `src/ailf/pipelines/changepoint/diagnostics.py` (13-field `DiagnosticsBundle`; full bundle always computed; `to_agent_dict(enabled: set[str])`) — make T028 pass
+- [X] T026 [P] [US1] Write KNOWN-injected-ground-truth tests in `tests/pipelines/changepoint/test_detector.py`: precision/recall/FPR vs `audit_only.true_injected_boundaries` (±15-row window; event-pair starts → nearest detected) + clean single-effect synthetic series (research Decision 18)
+- [X] T027 [US1] Implement `src/ailf/pipelines/changepoint/detector.py` (deterministic Prophet trend-delta changepoints, honors `n_changepoints_to_detect`) — make T026 pass
+- [X] T028 [P] [US1] Write failing tests in `tests/pipelines/changepoint/test_diagnostics.py`: all 13 fields computed; `to_agent_dict(enabled)` filters; **golden byte-identity** of the all-enabled filtered view vs the POC `asdict` (parity guard)
+- [X] T029 [US1] Implement `src/ailf/pipelines/changepoint/diagnostics.py` (13-field `DiagnosticsBundle`; full bundle always computed; `to_agent_dict(enabled: set[str])`) — make T028 pass
 
 ### Tool registry + gate + the five tools
 
@@ -114,8 +114,8 @@ match the oracle (floats `1e-6`, structural fields exact). Core contains zero ch
 
 ### Baselines + LLM schemas + prompts
 
-- [ ] T036 [P] [US1] Write failing tests for baselines in `tests/pipelines/changepoint/test_baselines.py` (full-history Prophet val metrics; naive-window candidate selection by val MAE)
-- [ ] T037 [US1] Implement `src/ailf/pipelines/changepoint/baselines.py` (full-history + naive workflow, `CandidateResult`, `NaiveWorkflowResult`, `fit_predict_prophet` helper) — make T036 pass
+- [X] T036 [P] [US1] Write failing tests for baselines in `tests/pipelines/changepoint/test_baselines.py` (full-history Prophet val metrics; naive-window candidate selection by val MAE)
+- [X] T037 [US1] Implement `src/ailf/pipelines/changepoint/baselines.py` (full-history + naive workflow, `CandidateResult`, `NaiveWorkflowResult`, `fit_predict_prophet` helper) — make T036 pass
 - [ ] T038 [P] [US1] Add `src/ailf/pipelines/changepoint/schemas.py`: pydantic `VisualInspectionResult` + `InterventionChoice` (LLM I/O only)
 - [ ] T039 [P] [US1] Promote `prompts/visual_inspection_v1.md` UNCHANGED; author `prompts/react_decision_v2.md` with a `{{tool_menu}}` placeholder (visual-on arm; menu generated from `for_run()` registry — research Decision 7)
 
@@ -132,7 +132,7 @@ match the oracle (floats `1e-6`, structural fields exact). Core contains zero ch
 - [ ] T045 [P] [US1] Implement `src/ailf/core/reporting/run_dir.py` (create `reports/changepoint/<run_id>/`; stamp seed) and `src/ailf/core/reporting/artifacts.py` (`write_metrics_json`, `write_agent_trace` via strict `to_json`, `write_report_md` narrative with before/after deltas vs naive + agent limitations — Principle VI)
 - [ ] T046 [P] [US1] Implement `src/ailf/pipelines/changepoint/viz.py`: `render_agent_context` (training-only image) + `render_forecast_comparison` (human-only, post-final; never re-fed to an agent)
 - [ ] T047 [US1] Implement `src/ailf/pipelines/changepoint/pipeline.py` single-scenario entrypoint: seed(1729) FIRST → deterministic prelude (detector, both baselines, diagnostics) → build visual-on `GraphSpec` from golden config → `build_agent_graph` + invoke (NullEmitter for now) → write artifacts (research Decision 17)
-- [ ] T048 [US1] Write the **SC-001 parity test** `tests/core/parity/test_poc_parity.py`: the promoted core path matches `poc_parity_reference.json` for all 5 scenarios (floats `1e-6`; structural fields exact)
+- [X] T048 [US1] Write the **SC-001 parity test** `tests/core/parity/test_poc_parity.py`: the promoted core path matches `poc_parity_reference.json` for all 5 scenarios (floats `1e-6`; structural fields exact)
 - [ ] T049 [US1] Write end-to-end smoke test `tests/pipelines/changepoint/test_pipeline_smoke.py`: golden run with `FakeModelWrapper` produces the full artifact set (image, comparison plot, `metrics.json`, `agent_trace.json`)
 
 **Checkpoint**: golden-config single-scenario run reproduces POC metrics end-to-end (MVP). 🎯
