@@ -48,6 +48,9 @@ pythonpath = ["src", "."]
 # Avoid module-name collisions between same-named test files across pipelines
 # (e.g. tests/pipelines/{anomaly,drift}/test_datasets.py).
 addopts = ["--import-mode=importlib"]
+markers = [
+    "golden: opt-in agent-quality eval requiring live Bedrock credentials (never gates the deterministic suite)",
+]
 
 [tool.ruff]
 src = ["src", "tests"]

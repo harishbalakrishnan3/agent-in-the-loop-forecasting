@@ -152,8 +152,8 @@ diagnostic hidden (still computed) and the tool removed; both runs record their 
 - [X] T051 [US2] Implement `src/ailf/core/config/resolve.py`: deep-merge override → validate → return `EffectiveConfig`; `ConfigError` (contracts/config_schema.md) — make T050 pass
 - [X] T052 [US2] Implement `assert_config_in_lockstep(diagnostics_field_names, structural_tool_names, cfg_diagnostics, cfg_tools)` in `resolve.py` (symmetric diff → `ConfigError`; scopes tools to structural)
 - [X] T053 [US2] Write `tests/pipelines/changepoint/test_config_lockstep.py`: reflect `dataclasses.fields(DiagnosticsBundle)` + live registry structural names; assert committed `config.yaml` key-sets equal them exactly (SC-003)
-- [ ] T054 [P] [US2] Write failing tests for split override in `tests/core/backtest/test_split.py` (extend): ratios sum-to-1.0 rounding (`floor_test_val_train_absorbs`); absolute units; ambiguous (ratio+absolute) → `SplitError`; segment≥1 / sum≤n / test>rows guards; **ratio vs equivalent-absolute resolve identically on n=1000 and n=1730** (SC-009)
-- [ ] T055 [US2] Extend `src/ailf/core/backtest/split.py` with `SplitSpec` units (ratios/absolute) + rounding rule + ambiguity + validation — make T054 pass
+- [X] T054 [P] [US2] Write failing tests for split override in `tests/core/backtest/test_split.py` (extend): ratios sum-to-1.0 rounding (`floor_test_val_train_absorbs`); absolute units; ambiguous (ratio+absolute) → `SplitError`; segment≥1 / sum≤n / test>rows guards; **ratio vs equivalent-absolute resolve identically on n=1000 and n=1730** (SC-009)
+- [X] T055 [US2] Extend `src/ailf/core/backtest/split.py` with `SplitSpec` units (ratios/absolute) + rounding rule + ambiguity + validation — make T054 pass
 - [X] T056 [US2] Wire toggles + override into the entrypoint: `pipeline.py` accepts `--override` (JSON), resolves config, derives `enabled_diagnostics`/`enabled_tools`, builds `for_run()` registry projection, and threads them via `RunContext`; the `diagnostics` node hides via `to_agent_dict(enabled)`, the decision menu + gate use the projected registry (FR-013/FR-014)
 - [X] T057 [US2] Write integration test `tests/pipelines/changepoint/test_toggles.py` (with `FakeModelWrapper`): a disabled diagnostic is absent from the decision input but present in the full recorded bundle; a disabled tool is absent from menu + `allowed_names()` and never accepted; trace records `hidden_diagnostics`/`removed_tools`
 
@@ -232,10 +232,10 @@ reproduces identical deterministic metrics with stable provenance.
 **Independent Test**: open a run dir → all of the above present; re-run with the recorded
 `effective_config.json` as override → identical deterministic metrics; provenance stable (golden→golden, override→override).
 
-- [ ] T078 [US6] Stamp `effective_config.json` in `run_dir.py`: `EffectiveConfig.to_dict` + `SplitProvenance` (source, units, resolved absolute rows, rounding_rule, derived indices) + model ids + recorded seed (FR-021/SC-012)
-- [ ] T079 [US6] Enrich `write_agent_trace` (artifacts.py) to record `visual_analysis_enabled`, sorted `hidden_diagnostics`, sorted `removed_tools`, decision/visual prompt ids+versions actually loaded, and `{visual_model_id, decision_model_id}` (SC-004/005/012)
-- [ ] T080 [P] [US6] Write the **SC-007 round-trip test** `tests/core/backtest/test_split_roundtrip.py` + `tests/pipelines/changepoint/test_config_roundtrip.py`: re-ingesting a recorded `effective_config.json` as override reproduces identical deterministic metrics; provenance is stable for both a golden-source and an override-source original run (research Decision 14)
-- [ ] T081 [US6] Implement the round-trip resolution rule in `resolve.py`/`split.py`: a recorded `source=golden` re-derives golden verbatim (stays `golden`); a recorded `source=override` re-resolves from recorded absolute rows (no re-rounding) — make T080 pass
+- [X] T078 [US6] Stamp `effective_config.json` in `run_dir.py`: `EffectiveConfig.to_dict` + `SplitProvenance` (source, units, resolved absolute rows, rounding_rule, derived indices) + model ids + recorded seed (FR-021/SC-012)
+- [X] T079 [US6] Enrich `write_agent_trace` (artifacts.py) to record `visual_analysis_enabled`, sorted `hidden_diagnostics`, sorted `removed_tools`, decision/visual prompt ids+versions actually loaded, and `{visual_model_id, decision_model_id}` (SC-004/005/012)
+- [X] T080 [P] [US6] Write the **SC-007 round-trip test** `tests/core/backtest/test_split_roundtrip.py` + `tests/pipelines/changepoint/test_config_roundtrip.py`: re-ingesting a recorded `effective_config.json` as override reproduces identical deterministic metrics; provenance is stable for both a golden-source and an override-source original run (research Decision 14)
+- [X] T081 [US6] Implement the round-trip resolution rule in `resolve.py`/`split.py`: a recorded `source=golden` re-derives golden verbatim (stays `golden`); a recorded `source=override` re-resolves from recorded absolute rows (no re-rounding) — make T080 pass
 
 **Checkpoint**: every run is fully reproducible and self-describing.
 
@@ -245,12 +245,12 @@ reproduces identical deterministic metrics with stable provenance.
 
 **Purpose**: Honesty fixes, the opt-in golden eval, and final validation.
 
-- [ ] T082 [P] Correct the `src/ailf/core/backtest/__init__.py` docstring: describe the **single validation-holdout gate** as the current contract and note rolling-origin as a future extension (plan Deviation 2 / SC-002 "verifiable by inspection")
-- [ ] T083 [P] Update the `src/ailf/core/models/__init__.py` docstring to scope the uniform-forecaster interface as deferred (this feature's `models/` is the LLM wrapper only — research Decision 2)
-- [ ] T084 [P] Write the opt-in golden-set eval `tests/pipelines/changepoint/test_golden_eval.py` behind `@pytest.mark.golden` + a Bedrock-credential guard: accepted/best-val tool family matches each scenario's `expected_intervention_family`; holiday tool selected only on the recurring-event scenario (Principle III; never gates the deterministic suite). NOTE: SC-008's behavioral half has no hard CI gate — by design (Principle III / plan Deviation 3); FR-031's deterministic half is gated by T032.
-- [ ] T085 [P] Register the `golden` pytest marker in `pyproject.toml` (`[tool.pytest.ini_options].markers`)
-- [ ] T086 Run the full deterministic suite `uv run pytest tests/core tests/pipelines/changepoint` green; then walk `quickstart.md` steps 1–6 end-to-end and confirm each SC
-- [ ] T087 [P] Document the before/after golden-set capture for the two agent-affecting changes (new `react_decision_v2.md` + generated menu) in the PR description (Principle III sign-off — plan Deviation 3)
+- [X] T082 [P] Correct the `src/ailf/core/backtest/__init__.py` docstring: describe the **single validation-holdout gate** as the current contract and note rolling-origin as a future extension (plan Deviation 2 / SC-002 "verifiable by inspection")
+- [X] T083 [P] Update the `src/ailf/core/models/__init__.py` docstring to scope the uniform-forecaster interface as deferred (this feature's `models/` is the LLM wrapper only — research Decision 2)
+- [X] T084 [P] Write the opt-in golden-set eval `tests/pipelines/changepoint/test_golden_eval.py` behind `@pytest.mark.golden` + a Bedrock-credential guard: accepted/best-val tool family matches each scenario's `expected_intervention_family`; holiday tool selected only on the recurring-event scenario (Principle III; never gates the deterministic suite). NOTE: SC-008's behavioral half has no hard CI gate — by design (Principle III / plan Deviation 3); FR-031's deterministic half is gated by T032.
+- [X] T085 [P] Register the `golden` pytest marker in `pyproject.toml` (`[tool.pytest.ini_options].markers`)
+- [X] T086 Run the full deterministic suite `uv run pytest tests/core tests/pipelines/changepoint` green; then walk `quickstart.md` steps 1–6 end-to-end and confirm each SC
+- [X] T087 [P] Document the before/after golden-set capture for the two agent-affecting changes (new `react_decision_v2.md` + generated menu) in the PR description (Principle III sign-off — plan Deviation 3)
 
 ---
 
