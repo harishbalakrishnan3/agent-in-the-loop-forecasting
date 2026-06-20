@@ -66,11 +66,11 @@ uv run python -m pocs.changepoint.slope_change.export_plots
 
 ## 6. Confirm deliverables
 
-- [ ] 10 datasets generate with ground-truth metadata (step 1)
-- [ ] Per-dataset Prophet results table produced (step 2)
-- [ ] All tests pass (step 3)
-- [ ] Interactive + static visualizations render (steps 4–5)
-- [ ] `slope_change_poc.md` summary report exists with the results table and the explicit
+- [x] 10 datasets generate with ground-truth metadata (step 1)
+- [x] Per-dataset Prophet results table produced (step 2)
+- [x] All tests pass (step 3)
+- [x] Interactive + static visualizations render (steps 4–5)
+- [x] `slope_change_poc.md` summary report exists with the results table and the explicit
       "complex datasets where naive Prophet fails" section (FR-021/FR-022)
-- [ ] No imports from `level_shift/` or `src/ailf/*` — verify:
+- [x] No imports from `level_shift/` or `src/ailf/*` — verify:
       `grep -rE "level_shift|ailf" pocs/changepoint/slope_change/*.py` returns nothing (SC-008)

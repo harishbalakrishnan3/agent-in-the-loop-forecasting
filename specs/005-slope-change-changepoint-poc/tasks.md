@@ -164,11 +164,11 @@ decision.)
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T026 [P] Verify self-containment: `grep -rE "level_shift|ailf" pocs/changepoint/slope_change/*.py` returns nothing.
+- [X] T026 [P] Verify self-containment: `grep -rE "level_shift|ailf" pocs/changepoint/slope_change/*.py` returns nothing.
   - **Acceptance**: Command outputs no matches (FR-017, SC-008).
-- [ ] T027 Run the full `quickstart.md` validation (steps 1–6) and confirm each expected outcome.
+- [X] T027 Run the full `quickstart.md` validation (steps 1–6) and confirm each expected outcome.
   - **Acceptance**: All 6 quickstart checkboxes pass; `uv run pytest pocs/changepoint/slope_change/ -v` is fully green (SC-007).
-- [ ] T028 [P] Commit a small sample of exported PNGs (or confirm `plots/` handling matches repo gitignore policy) and ensure `uv.lock` is unchanged (no new deps were needed).
+- [X] T028 [P] Commit a small sample of exported PNGs (or confirm `plots/` handling matches repo gitignore policy) and ensure `uv.lock` is unchanged (no new deps were needed).
   - **Acceptance**: `git status` shows only intended POC files; `uv.lock` not modified.
 
 ---
