@@ -1,0 +1,265 @@
+{
+  "scenario_id": "temporary_event_not_regime_change",
+  "seed": 1729,
+  "model_ids": {
+    "visual": "us.anthropic.claude-opus-4-8",
+    "react": "us.anthropic.claude-sonnet-4-6"
+  },
+  "visual": {
+    "observations": [
+      "Daily-resolution series spanning ~2019-01 to mid-2021, with high-frequency noise on top of a smooth annual cycle.",
+      "Clear seasonal pattern: troughs around late summer/early autumn (Aug-Sep 2019 ~80) and peaks in late winter/early spring (Feb-Mar levels higher each year).",
+      "Baseline appears to drift upward year over year: 2019 peak ~130, early-2020 elevated, 2021 spring peak ~140.",
+      "Several short rectangular plateaus that jump up and then return to the surrounding level: a brief ~115-120 block around Sep 2019, a ~175 block in Feb-Mar 2020, and a ~150 block in Aug-Sep 2020.",
+      "These elevated blocks have flat tops and abrupt start/end edges, sitting well above the local seasonal curve before snapping back.",
+      "Near the forecast origin (mid-2021) the series sits around 120-125, descending slightly off the spring peak with the usual daily noise; no anomalous block right at the end."
+    ],
+    "pattern_summary": "A noisy annual-seasonal series with mild upward drift, punctuated by several temporary elevated plateaus that spike and revert rather than shift the baseline permanently.",
+    "hypotheses": [
+      "A forecast trained on only the most recent window could miss the full annual cycle if the window is shorter than one season.",
+      "If a recent temporary plateau were included near the window's edge, the forecast might mistake it for the new baseline and over/under-shoot.",
+      "The mild year-over-year drift could be extrapolated too aggressively or ignored entirely depending on window length.",
+      "Starting near a post-peak descent at the origin, a naive method might over-extend the local downward slope instead of following the seasonal turn."
+    ],
+    "uncertainties": [
+      "Cannot confirm exact dates, sampling frequency, or units from the image alone.",
+      "Cannot tell whether the elevated blocks are genuine temporary events or data artifacts.",
+      "Cannot determine whether the upward drift is a sustained trend or part of a longer multi-year cycle.",
+      "Cannot verify the post-origin behavior or whether any shift will turn out permanent."
+    ]
+  },
+  "diagnostics": {
+    "detected_changepoints": [
+      {
+        "index": 225,
+        "ds": "2019-08-14",
+        "trend_delta": 0.32507344
+      },
+      {
+        "index": 591,
+        "ds": "2020-08-14",
+        "trend_delta": -0.32750449
+      }
+    ],
+    "latest_changepoint": {
+      "index": 591,
+      "ds": "2020-08-14",
+      "trend_delta": -0.32750449
+    },
+    "primary_changepoint": {
+      "index": 591,
+      "ds": "2020-08-14",
+      "trend_delta": -0.32750449
+    },
+    "post_changepoint_history_len": 289,
+    "post_changepoint_shorter_than_season": true,
+    "seasonal_period": 365,
+    "segment_stats": [
+      {
+        "start": 0,
+        "end": 225,
+        "mean": 110.91633864712539,
+        "std": 12.713821140711591
+      },
+      {
+        "start": 225,
+        "end": 591,
+        "mean": 114.16632053949803,
+        "std": 23.425440797804157
+      },
+      {
+        "start": 591,
+        "end": 880,
+        "mean": 120.2033728661265,
+        "std": 18.80141541856746
+      }
+    ],
+    "candidate_event_blocks": [
+      {
+        "start": 250,
+        "end": 268,
+        "start_ds": "2019-09-08",
+        "end_ds": "2019-09-25",
+        "duration": 18,
+        "mean_excess": 30.67269735770929,
+        "closed_before_origin": true
+      },
+      {
+        "start": 420,
+        "end": 444,
+        "start_ds": "2020-02-25",
+        "end_ds": "2020-03-19",
+        "duration": 24,
+        "mean_excess": 42.64709893803801,
+        "closed_before_origin": true
+      },
+      {
+        "start": 575,
+        "end": 615,
+        "start_ds": "2020-07-29",
+        "end_ds": "2020-09-06",
+        "duration": 40,
+        "mean_excess": 55.01357375549138,
+        "closed_before_origin": true
+      }
+    ],
+    "recurring_event_summary": {
+      "is_calendar_recurring": false,
+      "period_days": null,
+      "windows": [
+        {
+          "start_ds": "2019-09-08",
+          "end_ds": "2019-09-25"
+        },
+        {
+          "start_ds": "2020-02-25",
+          "end_ds": "2020-03-19"
+        },
+        {
+          "start_ds": "2020-07-29",
+          "end_ds": "2020-09-06"
+        }
+      ],
+      "dominant_month": 9,
+      "confidence": 0.3333333333333333
+    },
+    "local_boundary_jumps": [
+      {
+        "index": 225,
+        "jump": -3.58519775477383
+      },
+      {
+        "index": 591,
+        "jump": -2.321316380924742
+      }
+    ],
+    "candidate_drift_intervals": [
+      {
+        "start": 225,
+        "end": 591,
+        "start_ds": "2019-08-14",
+        "end_ds": "2020-08-14",
+        "slope_per_step": 0.13134243376016003,
+        "total_delta": 48.07133075621857
+      }
+    ],
+    "transient_event_score": 0.3499483059643774,
+    "permanent_shift_magnitude": 9.287034219001114
+  },
+  "naive_summary": {
+    "candidates": [
+      {
+        "label": "full_history",
+        "val_metrics": {
+          "mae": 9.198879451853985,
+          "rmse": 10.25780048334661,
+          "wape": 6.91092535663376,
+          "smape": 7.069190139454356
+        },
+        "test_metrics": null,
+        "extra": {
+          "window_start": 0
+        }
+      },
+      {
+        "label": "naive_window@225",
+        "val_metrics": {
+          "mae": 10.162641897847369,
+          "rmse": 11.36834920898366,
+          "wape": 7.634979885301886,
+          "smape": 7.884725591011842
+        },
+        "test_metrics": null,
+        "extra": {
+          "window_start": 225
+        }
+      },
+      {
+        "label": "naive_window@591",
+        "val_metrics": {
+          "mae": 20.27836954711826,
+          "rmse": 26.02700211827544,
+          "wape": 15.234714078802773,
+          "smape": 13.818852420706943
+        },
+        "test_metrics": null,
+        "extra": {
+          "window_start": 591
+        }
+      }
+    ],
+    "selected": {
+      "label": "full_history",
+      "val_metrics": {
+        "mae": 9.198879451853985,
+        "rmse": 10.25780048334661,
+        "wape": 6.91092535663376,
+        "smape": 7.069190139454356
+      },
+      "test_metrics": null,
+      "extra": {
+        "window_start": 0
+      }
+    },
+    "selected_window_start": 0
+  },
+  "iterations": [
+    {
+      "i": 1,
+      "proposal": {
+        "tool": "full_history_clean_event",
+        "params": {
+          "blocks": "all_closed"
+        },
+        "action_signature": "full_history_clean_event|{\"blocks\": \"all_closed\"}",
+        "visual_first_rationale": "The chart shows three visually distinct rectangular plateaus with flat tops and abrupt start/end edges that sit well above the local seasonal curve before snapping back to the surrounding level: a ~115\u2013120 block around Sep 2019, a ~175 block in Feb\u2013Mar 2020, and a ~150 block in Aug\u2013Sep 2020. These are the defining visual feature \u2014 short-duration spikes that do NOT shift the baseline permanently; the series returns to its seasonal trajectory each time. This visual read is fully consistent with the numeric diagnostics: three candidate_event_blocks are identified (Sep 2019 mean_excess +30.7, Feb\u2013Mar 2020 mean_excess +42.6, Jul\u2013Sep 2020 mean_excess +55.0), all closed strictly before the forecast origin, and the transient_event_score (0.35) is material while permanent_shift_magnitude (9.3) is modest. The recurring_event_summary shows is_calendar_recurring = false with confidence only 0.33, ruling out the holidays tool. The naive full_history baseline is already the best naive candidate (MAE 9.20), meaning the contamination from these elevated blocks is currently inflating the model's sense of the normal level \u2014 interpolating over them should give the model a cleaner picture of the underlying seasonal curve and baseline drift, allowing it to beat the naive bar.",
+        "expected_effect": "Interpolating over the three temporary elevated plateaus will remove their distorting influence on the model's learned baseline and seasonality. The model will no longer conflate these transient spikes with the true seasonal amplitude, leading to better-calibrated seasonal peaks and a lower forecast error (MAE/RMSE/WAPE) on the holdout compared to the naive full_history baseline."
+      },
+      "val_result": {
+        "val_metrics": {
+          "mae": 1.5199250647441398,
+          "rmse": 1.8669524976010397,
+          "wape": 1.1418878489603905,
+          "smape": 1.1475283163299246
+        },
+        "naive_val_mae": 9.198879451853985
+      },
+      "beat_naive": true
+    }
+  ],
+  "rejected_signatures": [],
+  "accepted": {
+    "proposal": {
+      "tool": "full_history_clean_event",
+      "params": {
+        "blocks": "all_closed"
+      },
+      "action_signature": "full_history_clean_event|{\"blocks\": \"all_closed\"}",
+      "visual_first_rationale": "The chart shows three visually distinct rectangular plateaus with flat tops and abrupt start/end edges that sit well above the local seasonal curve before snapping back to the surrounding level: a ~115\u2013120 block around Sep 2019, a ~175 block in Feb\u2013Mar 2020, and a ~150 block in Aug\u2013Sep 2020. These are the defining visual feature \u2014 short-duration spikes that do NOT shift the baseline permanently; the series returns to its seasonal trajectory each time. This visual read is fully consistent with the numeric diagnostics: three candidate_event_blocks are identified (Sep 2019 mean_excess +30.7, Feb\u2013Mar 2020 mean_excess +42.6, Jul\u2013Sep 2020 mean_excess +55.0), all closed strictly before the forecast origin, and the transient_event_score (0.35) is material while permanent_shift_magnitude (9.3) is modest. The recurring_event_summary shows is_calendar_recurring = false with confidence only 0.33, ruling out the holidays tool. The naive full_history baseline is already the best naive candidate (MAE 9.20), meaning the contamination from these elevated blocks is currently inflating the model's sense of the normal level \u2014 interpolating over them should give the model a cleaner picture of the underlying seasonal curve and baseline drift, allowing it to beat the naive bar.",
+      "expected_effect": "Interpolating over the three temporary elevated plateaus will remove their distorting influence on the model's learned baseline and seasonality. The model will no longer conflate these transient spikes with the true seasonal amplitude, leading to better-calibrated seasonal peaks and a lower forecast error (MAE/RMSE/WAPE) on the holdout compared to the naive full_history baseline."
+    },
+    "val_result": {
+      "val_metrics": {
+        "mae": 1.5199250647441398,
+        "rmse": 1.8669524976010397,
+        "wape": 1.1418878489603905,
+        "smape": 1.1475283163299246
+      },
+      "naive_val_mae": 9.198879451853985
+    }
+  },
+  "final_candidate": {
+    "label": "agent:full_history_clean_event|{\"blocks\": \"all_closed\"}",
+    "tool": "full_history_clean_event",
+    "params": {
+      "blocks": "all_closed"
+    },
+    "test_metrics": {
+      "mae": 1.5288656366566087,
+      "rmse": 1.9589926141512524,
+      "wape": 1.4782940806643081,
+      "smape": 1.4953319646417578
+    }
+  },
+  "final_case": "accepted_beat_naive"
+}

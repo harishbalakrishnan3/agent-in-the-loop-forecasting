@@ -1,0 +1,28 @@
+{
+  "scenario_id": "many_temporary_events_long_history",
+  "horizon": 120,
+  "methods": {
+    "full_history_prophet": {
+      "mae": 13.9533,
+      "rmse": 14.4323,
+      "wape": 11.9591,
+      "smape": 11.3019
+    },
+    "naive_workflow": {
+      "mae": 13.9533,
+      "rmse": 14.4323,
+      "wape": 11.9591,
+      "smape": 11.3019,
+      "selected_window": "window_start=0"
+    },
+    "agent": {
+      "mae": 1.8217,
+      "rmse": 2.2449,
+      "wape": 1.5614,
+      "smape": 1.5435,
+      "tool": "full_history_clean_event",
+      "final_case": "accepted_beat_naive"
+    }
+  },
+  "winner": "agent"
+}

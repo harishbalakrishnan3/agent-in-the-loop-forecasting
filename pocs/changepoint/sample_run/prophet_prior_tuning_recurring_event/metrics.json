@@ -1,0 +1,28 @@
+{
+  "scenario_id": "prophet_prior_tuning_recurring_event",
+  "horizon": 120,
+  "methods": {
+    "full_history_prophet": {
+      "mae": 1.7907,
+      "rmse": 2.2143,
+      "wape": 1.2294,
+      "smape": 1.2233
+    },
+    "naive_workflow": {
+      "mae": 1.7907,
+      "rmse": 2.2143,
+      "wape": 1.2294,
+      "smape": 1.2233,
+      "selected_window": "window_start=0"
+    },
+    "agent": {
+      "mae": 1.496,
+      "rmse": 1.8873,
+      "wape": 1.0271,
+      "smape": 1.0196,
+      "tool": "full_history_prophet_tuned_holidays",
+      "final_case": "accepted_beat_naive"
+    }
+  },
+  "winner": "agent"
+}
