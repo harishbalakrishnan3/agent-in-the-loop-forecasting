@@ -85,8 +85,8 @@ match the oracle (floats `1e-6`, structural fields exact). Core contains zero ch
 
 - [X] T017 [P] [US1] Write failing tests for config schema round-trip in `tests/core/config/test_schema.py` (`EffectiveConfig`/`ModelConfig`/`SplitSpec`/`ConfigOverride` `to_dict`/`from_dict` lossless)
 - [X] T018 [US1] Implement frozen config dataclasses in `src/ailf/core/config/schema.py` (data-model.md → Configuration domain) — make T017 pass
-- [ ] T019 [US1] Author the pipeline defaults file `src/ailf/pipelines/changepoint/config.yaml` (models, `aws_region`, `visual_analysis_enabled: true`, 13 diagnostics, 5 tools + `full_history_default`, `split: {source: golden}`, `seed: 1729`) per contracts/config_schema.md
-- [ ] T020 [US1] Implement `src/ailf/core/config/loader.py`: read `config.yaml` → `EffectiveConfig` (golden split, derive `enabled_diagnostics`/`enabled_tools`); test in `tests/core/config/test_loader.py`
+- [X] T019 [US1] Author the pipeline defaults file `src/ailf/pipelines/changepoint/config.yaml` (models, `aws_region`, `visual_analysis_enabled: true`, 13 diagnostics, 5 tools + `full_history_default`, `split: {source: golden}`, `seed: 1729`) per contracts/config_schema.md
+- [X] T020 [US1] Implement `src/ailf/core/config/loader.py`: read `config.yaml` → `EffectiveConfig` (golden split, derive `enabled_diagnostics`/`enabled_tools`); test in `tests/core/config/test_loader.py`
 
 ### Split resolver (golden path) + scenario loading
 
@@ -105,12 +105,12 @@ match the oracle (floats `1e-6`, structural fields exact). Core contains zero ch
 
 ### Tool registry + gate + the five tools
 
-- [ ] T030 [P] [US1] Write failing tests for registry types in `tests/core/agent/test_registry.py`: `ToolParamSchema`/`ToolSpec`/`Proposal.action_signature`; `validate_params` raises `ToolBoundsError`; `for_run(enabled)` prunes both `menu()` and `allowed_names()`
-- [ ] T031 [US1] Implement `src/ailf/core/agent/registry.py`: `ToolParamSchema`, `ToolSpec` (incl. non-serialized `invoker`/`precondition`), `ToolRegistry` (`register`/`for_run`/`menu`/`allowed_names`/`validate_params`/`invoke`), `Proposal`, `ToolContext`/`ToolResult` shapes, `ToolBoundsError` (contracts/tool_registry.md) — make T030 pass
-- [ ] T032 [P] [US1] Write failing tests for the changepoint tools in `tests/pipelines/changepoint/test_interventions.py`: each tool's `invoke(ToolContext, params)→yhat` purity (no validation access), bounds via `ToolSpec.allowed`, holiday `precondition` gate, `full_history_default` always-on
-- [ ] T033 [US1] Implement `src/ailf/pipelines/changepoint/interventions.py`: `register_changepoint_registry()` registering the 5 structural tools (grids → `allowed` data) + the always-on `full_history_default` fallback + holiday precondition; invokers reconstruct pandas/Prophet from `ToolContext` — make T032 pass
-- [ ] T034 [P] [US1] Write failing tests for the gate in `tests/core/backtest/test_gate.py`: validate→precondition→invoke→MAE→**strictly** beat naive; failure classification (bounds/precondition/not-beat = normal rejection; `invoke` crash = stage failure)
-- [ ] T035 [US1] Implement `src/ailf/core/backtest/gate.py` (`evaluate_on_validation`/`evaluate_on_test`; sole scoring authority; agent never sees the score) — make T034 pass (FR-025/FR-034)
+- [X] T030 [P] [US1] Write failing tests for registry types in `tests/core/agent/test_registry.py`: `ToolParamSchema`/`ToolSpec`/`Proposal.action_signature`; `validate_params` raises `ToolBoundsError`; `for_run(enabled)` prunes both `menu()` and `allowed_names()`
+- [X] T031 [US1] Implement `src/ailf/core/agent/registry.py`: `ToolParamSchema`, `ToolSpec` (incl. non-serialized `invoker`/`precondition`), `ToolRegistry` (`register`/`for_run`/`menu`/`allowed_names`/`validate_params`/`invoke`), `Proposal`, `ToolContext`/`ToolResult` shapes, `ToolBoundsError` (contracts/tool_registry.md) — make T030 pass
+- [X] T032 [P] [US1] Write failing tests for the changepoint tools in `tests/pipelines/changepoint/test_interventions.py`: each tool's `invoke(ToolContext, params)→yhat` purity (no validation access), bounds via `ToolSpec.allowed`, holiday `precondition` gate, `full_history_default` always-on
+- [X] T033 [US1] Implement `src/ailf/pipelines/changepoint/interventions.py`: `register_changepoint_registry()` registering the 5 structural tools (grids → `allowed` data) + the always-on `full_history_default` fallback + holiday precondition; invokers reconstruct pandas/Prophet from `ToolContext` — make T032 pass
+- [X] T034 [P] [US1] Write failing tests for the gate in `tests/core/backtest/test_gate.py`: validate→precondition→invoke→MAE→**strictly** beat naive; failure classification (bounds/precondition/not-beat = normal rejection; `invoke` crash = stage failure)
+- [X] T035 [US1] Implement `src/ailf/core/backtest/gate.py` (`evaluate_on_validation`/`evaluate_on_test`; sole scoring authority; agent never sees the score) — make T034 pass (FR-025/FR-034)
 
 ### Baselines + LLM schemas + prompts
 
@@ -148,10 +148,10 @@ split knobs (ratios/absolute) take effect.
 **Independent Test**: run once all-on, once with a diagnostic + a tool disabled → trace shows the
 diagnostic hidden (still computed) and the tool removed; both runs record their resolved config.
 
-- [ ] T050 [P] [US2] Write failing tests for override merge in `tests/core/config/test_resolve.py`: scalar replace; `diagnostics`/`agent_tools` key-wise partial merge (no new keys); `split` replace-as-a-unit; validation errors (unknown key, malformed value, empty model id, disabling `full_history_default`) each raise field-naming `ConfigError`
-- [ ] T051 [US2] Implement `src/ailf/core/config/resolve.py`: deep-merge override → validate → return `EffectiveConfig`; `ConfigError` (contracts/config_schema.md) — make T050 pass
-- [ ] T052 [US2] Implement `assert_config_in_lockstep(diagnostics_field_names, structural_tool_names, cfg_diagnostics, cfg_tools)` in `resolve.py` (symmetric diff → `ConfigError`; scopes tools to structural)
-- [ ] T053 [US2] Write `tests/pipelines/changepoint/test_config_lockstep.py`: reflect `dataclasses.fields(DiagnosticsBundle)` + live registry structural names; assert committed `config.yaml` key-sets equal them exactly (SC-003)
+- [X] T050 [P] [US2] Write failing tests for override merge in `tests/core/config/test_resolve.py`: scalar replace; `diagnostics`/`agent_tools` key-wise partial merge (no new keys); `split` replace-as-a-unit; validation errors (unknown key, malformed value, empty model id, disabling `full_history_default`) each raise field-naming `ConfigError`
+- [X] T051 [US2] Implement `src/ailf/core/config/resolve.py`: deep-merge override → validate → return `EffectiveConfig`; `ConfigError` (contracts/config_schema.md) — make T050 pass
+- [X] T052 [US2] Implement `assert_config_in_lockstep(diagnostics_field_names, structural_tool_names, cfg_diagnostics, cfg_tools)` in `resolve.py` (symmetric diff → `ConfigError`; scopes tools to structural)
+- [X] T053 [US2] Write `tests/pipelines/changepoint/test_config_lockstep.py`: reflect `dataclasses.fields(DiagnosticsBundle)` + live registry structural names; assert committed `config.yaml` key-sets equal them exactly (SC-003)
 - [ ] T054 [P] [US2] Write failing tests for split override in `tests/core/backtest/test_split.py` (extend): ratios sum-to-1.0 rounding (`floor_test_val_train_absorbs`); absolute units; ambiguous (ratio+absolute) → `SplitError`; segment≥1 / sum≤n / test>rows guards; **ratio vs equivalent-absolute resolve identically on n=1000 and n=1730** (SC-009)
 - [ ] T055 [US2] Extend `src/ailf/core/backtest/split.py` with `SplitSpec` units (ratios/absolute) + rounding rule + ambiguity + validation — make T054 pass
 - [ ] T056 [US2] Wire toggles + override into the entrypoint: `pipeline.py` accepts `--override` (JSON), resolves config, derives `enabled_diagnostics`/`enabled_tools`, builds `for_run()` registry projection, and threads them via `RunContext`; the `diagnostics` node hides via `to_agent_dict(enabled)`, the decision menu + gate use the projected registry (FR-013/FR-014)
