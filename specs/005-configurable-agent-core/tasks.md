@@ -155,7 +155,7 @@ diagnostic hidden (still computed) and the tool removed; both runs record their 
 - [ ] T054 [P] [US2] Write failing tests for split override in `tests/core/backtest/test_split.py` (extend): ratios sum-to-1.0 rounding (`floor_test_val_train_absorbs`); absolute units; ambiguous (ratio+absolute) → `SplitError`; segment≥1 / sum≤n / test>rows guards; **ratio vs equivalent-absolute resolve identically on n=1000 and n=1730** (SC-009)
 - [ ] T055 [US2] Extend `src/ailf/core/backtest/split.py` with `SplitSpec` units (ratios/absolute) + rounding rule + ambiguity + validation — make T054 pass
 - [X] T056 [US2] Wire toggles + override into the entrypoint: `pipeline.py` accepts `--override` (JSON), resolves config, derives `enabled_diagnostics`/`enabled_tools`, builds `for_run()` registry projection, and threads them via `RunContext`; the `diagnostics` node hides via `to_agent_dict(enabled)`, the decision menu + gate use the projected registry (FR-013/FR-014)
-- [ ] T057 [US2] Write integration test `tests/pipelines/changepoint/test_toggles.py` (with `FakeModelWrapper`): a disabled diagnostic is absent from the decision input but present in the full recorded bundle; a disabled tool is absent from menu + `allowed_names()` and never accepted; trace records `hidden_diagnostics`/`removed_tools`
+- [X] T057 [US2] Write integration test `tests/pipelines/changepoint/test_toggles.py` (with `FakeModelWrapper`): a disabled diagnostic is absent from the decision input but present in the full recorded bundle; a disabled tool is absent from menu + `allowed_names()` and never accepted; trace records `hidden_diagnostics`/`removed_tools`
 
 **Checkpoint**: config overrides + toggles + split knobs take effect and are recorded.
 
@@ -174,7 +174,7 @@ decision; off-trace has no visual result, uses the diagnostics-only prompt, stil
 - [X] T059 [US3] Extend `src/ailf/core/agent/engine.py` to build a **linear** `GraphSpec` (`START → diagnostics → decision → validation → final`) when `visual_enabled` is false — omit the `visual_inspection` node entirely
 - [X] T060 [US3] In `pipeline.py`, when visual is off: select the diagnostics-only prompt, do **not** render or pass `agent_context.png`; record `visual_analysis_enabled=false` in the trace (FR-015)
 - [X] T061 [US3] Confirm the visual-first ordering invariant is enforced as a `StageError` (not a bare `assert`) and **only** when visual is on (`nodes.py`)
-- [ ] T062 [US3] Write `tests/pipelines/changepoint/test_visual_toggle.py` (with `FakeModelWrapper`): visual-off run produces no `agent_context.png`, uses the diagnostics-only prompt, and still yields a forecast + full metrics; visual-on run records a visual result before the decision (SC-006)
+- [X] T062 [US3] Write `tests/pipelines/changepoint/test_visual_toggle.py` (with `FakeModelWrapper`): visual-off run produces no `agent_context.png`, uses the diagnostics-only prompt, and still yields a forecast + full metrics; visual-on run records a visual result before the decision (SC-006)
 
 **Checkpoint**: visual node cleanly ablatable; both arms produce valid runs.
 
@@ -188,11 +188,11 @@ for a contract-equivalent out-of-process stub with no change to the agent loop, 
 **Independent Test**: swap a tool's implementation for a stub with the same
 `(ToolContext, params)→ToolResult` contract → agent loop, gate, prompts, trace, and event format unchanged.
 
-- [ ] T063 [P] [US4] Write the **stub-swap conformance test** `tests/core/agent/test_tool_stub_swap.py` (SC-011): register a stub tool returning a canned `ToolResult` with the same contract as a real tool; assert the gate scores it and the loop/prompt/trace shapes are identical
-- [ ] T064 [P] [US4] Write the **boundary-purity test** `tests/core/agent/test_tool_boundary.py`: assert `ToolContext`/`ToolResult` carry only JSON-native data (records `[{ds,y}]`, ISO timestamps, plain dicts, `yhat` floats) — no `SeriesSplit`, `DiagnosticsBundle` object, or Prophet/model handle crosses
-- [ ] T065 [P] [US4] Write **import-guard tests** `tests/core/agent/test_import_guards.py` (SC-002): `langgraph` importable only via `ailf.core.agent.engine`; `langchain_aws` only via `ailf.core.models.llm`; importing `ailf.core.backtest`/`ailf.core.agent`/`ailf.core.events` does NOT transitively import `ailf.core.datasets`; the changepoint pipeline imports only `ailf.core.*` + stdlib (not another pipeline, not `ailf.core.datasets`)
-- [ ] T066 [US4] Write **disabled-tool pruning test** `tests/core/agent/test_menu_pruning.py` (FR-014/SC-005): a disabled tool is absent from the generated `{{tool_menu}}` AND `allowed_names()`; if force-proposed it is rejected by the gate (depends on US2 toggles)
-- [ ] T067 [US4] Resolve any boundary-purity failures from T063–T066 in `src/ailf/core/agent/registry.py` / `src/ailf/pipelines/changepoint/interventions.py` (make the contract genuinely relocatable)
+- [X] T063 [P] [US4] Write the **stub-swap conformance test** `tests/core/agent/test_tool_stub_swap.py` (SC-011): register a stub tool returning a canned `ToolResult` with the same contract as a real tool; assert the gate scores it and the loop/prompt/trace shapes are identical
+- [X] T064 [P] [US4] Write the **boundary-purity test** `tests/core/agent/test_tool_boundary.py`: assert `ToolContext`/`ToolResult` carry only JSON-native data (records `[{ds,y}]`, ISO timestamps, plain dicts, `yhat` floats) — no `SeriesSplit`, `DiagnosticsBundle` object, or Prophet/model handle crosses
+- [X] T065 [P] [US4] Write **import-guard tests** `tests/core/agent/test_import_guards.py` (SC-002): `langgraph` importable only via `ailf.core.agent.engine`; `langchain_aws` only via `ailf.core.models.llm`; importing `ailf.core.backtest`/`ailf.core.agent`/`ailf.core.events` does NOT transitively import `ailf.core.datasets`; the changepoint pipeline imports only `ailf.core.*` + stdlib (not another pipeline, not `ailf.core.datasets`)
+- [X] T066 [US4] Write **disabled-tool pruning test** `tests/core/agent/test_menu_pruning.py` (FR-014/SC-005): a disabled tool is absent from the generated `{{tool_menu}}` AND `allowed_names()`; if force-proposed it is rejected by the gate (depends on US2 toggles)
+- [X] T067 [US4] Resolve any boundary-purity failures from T063–T066 in `src/ailf/core/agent/registry.py` / `src/ailf/pipelines/changepoint/interventions.py` (make the contract genuinely relocatable)
 
 **Checkpoint**: tool registry is provably lift-and-shift ready.
 
