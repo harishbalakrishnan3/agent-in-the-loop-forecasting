@@ -153,9 +153,9 @@ and ≥1 complex dataset fails.
 results. (Scope is strictly **naive** Prophet — no tuning — per spec FR-008 and the user's
 decision.)
 
-- [ ] T024 [US2] Implement `summarize(results) -> str` in `pocs/changepoint/slope_change/prophet_eval.py` rendering a per-dataset markdown table (detection precision/recall + held-out MAE/RMSE/MAPE + classification) and a dedicated "Complex datasets where naive Prophet fails" section listing every `fail` with its metrics.
+- [X] T024 [US2] Implement `summarize(results) -> str` in `pocs/changepoint/slope_change/prophet_eval.py` rendering a per-dataset markdown table (detection precision/recall + held-out MAE/RMSE/MAPE + classification) and a dedicated "Complex datasets where naive Prophet fails" section listing every `fail` with its metrics.
   - **Acceptance**: Returned string contains a 10-row table and an explicit failure section (FR-013, FR-021, FR-022).
-- [ ] T025 [US2] Write `pocs/changepoint/slope_change/slope_change_poc.md` (mirroring `level_shift/level_shift_poc.md` structure) embedding the generated naive-Prophet results table, the failure section, and links to the `plots/` PNGs.
+- [X] T025 [US2] Write `pocs/changepoint/slope_change/slope_change_poc.md` (mirroring `level_shift/level_shift_poc.md` structure) embedding the generated naive-Prophet results table, the failure section, and links to the `plots/` PNGs.
   - **Acceptance**: File exists with the per-dataset naive-Prophet results table and the explicit complex-dataset failure section (FR-020–FR-022, SC-009).
 
 **Checkpoint**: Final deliverables present — datasets, PNGs, passing tests, and the naive Prophet results report with the complex-dataset failure section.
