@@ -178,3 +178,52 @@ def test_validation_rejects_invalid_config():
         generate_slope_change_series(
             length=400, changepoint_indices=[200, 150], slope_deltas=[0.5, 0.5]
         )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# T022 / T023 — naive Prophet evaluation smoke (simple passes, complex fails)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Prophet fitting is slow; keep these as a small, focused smoke set.
+from pocs.changepoint.slope_change.prophet_eval import (  # noqa: E402
+    FAIL_MAPE,
+    PASS_MAPE,
+    SlopeChangeEvalResult,
+    evaluate_dataset,
+)
+
+
+def _result_fully_populated(r: SlopeChangeEvalResult) -> bool:
+    return all(
+        getattr(r, f) is not None
+        for f in (
+            "dataset_id", "train_end_index", "horizon", "n_true_changepoints",
+            "detected_changepoint_indices", "detected_changepoint_dates",
+            "matched_true_indices", "detection_precision", "detection_recall",
+            "mae", "rmse", "mape", "classification",
+        )
+    )
+
+
+def test_eval_result_schema_populated():
+    ts, meta = generate_all_datasets()["S1_single_gentle"]
+    r = evaluate_dataset(ts, meta)
+    assert _result_fully_populated(r)
+    assert r.horizon > 0
+    assert r.classification in {"pass", "borderline", "fail"}
+
+
+def test_simple_dataset_passes():
+    # A gentle single slope change well inside training should be easy.
+    ts, meta = generate_all_datasets()["S2_single_sharp"]
+    r = evaluate_dataset(ts, meta)
+    assert r.mape < FAIL_MAPE  # comfortably below the failure band
+    assert r.classification == "pass"
+
+
+def test_complex_dataset_fails():
+    # A strong late slope change Prophet's default changepoints can't reach.
+    ts, meta = generate_all_datasets()["S10_frequent_changes"]
+    r = evaluate_dataset(ts, meta)
+    assert r.mape > PASS_MAPE  # not a clean pass
+    assert r.classification == "fail"

@@ -116,31 +116,31 @@ and ≥1 complex dataset fails.
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Define tunable constants (`TRAIN_FRACTION=0.8`, `PASS_MAPE=10.0`, `FAIL_MAPE=25.0`, `MATCH_TOL_FRACTION=0.05`, `DELTA_KEEP_FRACTION=0.01`) and the `SlopeChangeEvalResult` dataclass (fields per data-model.md) in `pocs/changepoint/slope_change/prophet_eval.py`.
+- [X] T014 [US2] Define tunable constants (`TRAIN_FRACTION=0.8`, `PASS_MAPE=10.0`, `FAIL_MAPE=25.0`, `MATCH_TOL_FRACTION=0.05`, `DELTA_KEEP_FRACTION=0.01`) and the `SlopeChangeEvalResult` dataclass (fields per data-model.md) in `pocs/changepoint/slope_change/prophet_eval.py`.
   - **Acceptance**: Module imports; `SlopeChangeEvalResult` has every field listed in data-model.md "Prophet evaluation result".
-- [ ] T015 [US2] Implement a train/forecast helper in `pocs/changepoint/slope_change/prophet_eval.py`: convert a `TimeSeries` to a Prophet `ds,y` frame, fit default `Prophet()` on the first `TRAIN_FRACTION`, forecast the held-out tail, and return forecast vs. actual arrays.
+- [X] T015 [US2] Implement a train/forecast helper in `pocs/changepoint/slope_change/prophet_eval.py`: convert a `TimeSeries` to a Prophet `ds,y` frame, fit default `Prophet()` on the first `TRAIN_FRACTION`, forecast the held-out tail, and return forecast vs. actual arrays.
   - **Acceptance**: Helper fits with no custom args (naive, contract E1) and returns held-out forecast aligned to held-out actuals of equal length (E2).
-- [ ] T016 [US2] Implement forecast metrics (MAE, RMSE, MAPE) on the held-out horizon in `pocs/changepoint/slope_change/prophet_eval.py`.
+- [X] T016 [US2] Implement forecast metrics (MAE, RMSE, MAPE) on the held-out horizon in `pocs/changepoint/slope_change/prophet_eval.py`.
   - **Acceptance**: On a flat/easy series MAPE is small (<10); functions handle the held-out arrays without divide-by-zero (levels are positive).
-- [ ] T017 [US2] Implement Prophet changepoint extraction in `pocs/changepoint/slope_change/prophet_eval.py`: take fitted Prophet changepoints, keep those with `|delta| ≥ DELTA_KEEP_FRACTION × max|delta|`, map their dates to series indices, and match to ground-truth indices within `±MATCH_TOL_FRACTION × length`; compute precision/recall.
+- [X] T017 [US2] Implement Prophet changepoint extraction in `pocs/changepoint/slope_change/prophet_eval.py`: take fitted Prophet changepoints, keep those with `|delta| ≥ DELTA_KEEP_FRACTION × max|delta|`, map their dates to series indices, and match to ground-truth indices within `±MATCH_TOL_FRACTION × length`; compute precision/recall.
   - **Acceptance**: Returns detected indices + matched-truth list; control S9 (zero true CPs) yields recall 1.0 by convention and counts any detection against precision (contracts E3, E5).
-- [ ] T018 [US2] Implement `evaluate_dataset(series, metadata) -> SlopeChangeEvalResult` and `evaluate_all() -> list[SlopeChangeEvalResult]` (with MAPE-band classification pass/borderline/fail) in `pocs/changepoint/slope_change/prophet_eval.py`, plus a `__main__` that prints the per-dataset table.
+- [X] T018 [US2] Implement `evaluate_dataset(series, metadata) -> SlopeChangeEvalResult` and `evaluate_all() -> list[SlopeChangeEvalResult]` (with MAPE-band classification pass/borderline/fail) in `pocs/changepoint/slope_change/prophet_eval.py`, plus a `__main__` that prints the per-dataset table.
   - **Acceptance**: `uv run python -m pocs.changepoint.slope_change.prophet_eval` prints a 10-row table; every result has all fields populated, none missing (E4, E6, SC-005).
-- [ ] T019 [US2] Tune `DATASET_CONFIGS` (in `datasets.py`) and/or thresholds so that across the catalog at least one simple dataset (S1/S2/S9) classifies `pass` and at least one complex dataset (target S10, likely also S3/S5/S8) classifies `fail`; record the realized outcome.
+- [X] T019 [US2] Tune `DATASET_CONFIGS` (in `datasets.py`) and/or thresholds so that across the catalog at least one simple dataset (S1/S2/S9) classifies `pass` and at least one complex dataset (target S10, likely also S3/S5/S8) classifies `fail`; record the realized outcome.
   - **Acceptance**: `evaluate_all()` yields ≥1 `pass` and ≥1 `fail` (FR-012, SC-004); change is reproducible under fixed seeds.
 
 ### Extend visualizations with Prophet overlays
 
-- [ ] T020 [US2] Extend `build_figure()` in `visualize.py` to overlay, per dataset, Prophet's detected changepoints and the forecast-vs-actual line over the held-out horizon (calling `prophet_eval`).
+- [X] T020 [US2] Extend `build_figure()` in `visualize.py` to overlay, per dataset, Prophet's detected changepoints and the forecast-vs-actual line over the held-out horizon (calling `prophet_eval`).
   - **Acceptance**: Each dataset view now shows ground-truth markers, Prophet changepoints (distinct color), and forecast-vs-actual on the held-out tail (FR-014, completes SC-006).
-- [ ] T021 [US2] Extend `export_plots.py` so each exported PNG also shows Prophet changepoints and the forecast-vs-actual overlay.
+- [X] T021 [US2] Extend `export_plots.py` so each exported PNG also shows Prophet changepoints and the forecast-vs-actual overlay.
   - **Acceptance**: Re-running export writes 10 PNGs that include the Prophet overlay.
 
 ### Tests for User Story 2
 
-- [ ] T022 [P] [US2] Add `test_eval_result_schema_populated` and `test_simple_dataset_passes` to `pocs/changepoint/slope_change/test_slope_change.py` (run `evaluate_dataset` on S1/S2; assert all fields set and MAPE below `FAIL_MAPE`).
+- [X] T022 [P] [US2] Add `test_eval_result_schema_populated` and `test_simple_dataset_passes` to `pocs/changepoint/slope_change/test_slope_change.py` (run `evaluate_dataset` on S1/S2; assert all fields set and MAPE below `FAIL_MAPE`).
   - **Acceptance**: Tests pass.
-- [ ] T023 [P] [US2] Add `test_complex_dataset_fails` to `pocs/changepoint/slope_change/test_slope_change.py` (run `evaluate_dataset` on S10; assert MAPE above `PASS_MAPE` / classification not `pass`).
+- [X] T023 [P] [US2] Add `test_complex_dataset_fails` to `pocs/changepoint/slope_change/test_slope_change.py` (run `evaluate_dataset` on S10; assert MAPE above `PASS_MAPE` / classification not `pass`).
   - **Acceptance**: Test passes, demonstrating the baseline breakdown.
 
 **Checkpoint**: Naive Prophet evaluation complete; detection + forecast metrics reported for all 10 datasets; simple-vs-complex breakdown demonstrated and tested.

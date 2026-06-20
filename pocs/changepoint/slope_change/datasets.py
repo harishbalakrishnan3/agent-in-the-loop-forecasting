@@ -183,7 +183,10 @@ DATASET_CONFIGS = {
     "S4_multiple_changes": dict(
         length=600,
         initial_slope=0.1,
-        changepoint_indices=[120, 300, 450],
+        # Three changes Prophet can see (all within its default changepoint
+        # range, ≤ index 384), so it tracks the trend reasonably; this is the
+        # "medium" multi-change case that naive Prophet mostly handles.
+        changepoint_indices=[120, 250, 380],
         slope_deltas=[0.6, -0.9, 0.7],
         noise_std=3.0,
         seed=45,
@@ -220,9 +223,14 @@ DATASET_CONFIGS = {
     ),
     "S8_close_together": dict(
         length=500,
-        initial_slope=0.1,
-        changepoint_indices=[200, 230],
-        slope_deltas=[1.0, -1.3],
+        initial_slope=0.8,
+        # Two changes only 30 points apart and LATE (split at 400): the second
+        # sits just before the split and is strong, so naive Prophet — whose
+        # default changepoints stop around index 320 — cannot place a knot there
+        # and extrapolates the wrong slope into the held-out horizon.
+        # Segment slopes: 0.8, 1.6, -1.4.
+        changepoint_indices=[360, 390],
+        slope_deltas=[0.8, -3.0],
         noise_std=4.0,
         seed=49,
         dataset_id="S8_close_together",
@@ -238,11 +246,15 @@ DATASET_CONFIGS = {
     ),
     "S10_frequent_changes": dict(
         length=600,
-        initial_slope=0.1,
-        # Several changes, with the last two inside the held-out horizon
-        # (split at 480 for length=600): 360 < 480 ≤ 500, 540.
-        changepoint_indices=[120, 240, 360, 500, 540],
-        slope_deltas=[0.8, -1.1, 0.9, -1.4, 1.2],
+        initial_slope=0.5,
+        # Several early changes Prophet can fit, then a STRONG reversal at 440 —
+        # past Prophet's default changepoint range (~first 80% of training =
+        # index 384) and just before the 80% split (480). Naive Prophet cannot
+        # adapt a changepoint there, so it extrapolates the prior (rising) trend
+        # while the held-out horizon (480–600) keeps falling steeply.
+        # Segment slopes: 0.5, 1.0, 0.3, 0.9, -1.6.
+        changepoint_indices=[120, 250, 380, 440],
+        slope_deltas=[0.5, -0.7, 0.6, -2.5],
         noise_std=5.0,
         seed=51,
         dataset_id="S10_frequent_changes",
