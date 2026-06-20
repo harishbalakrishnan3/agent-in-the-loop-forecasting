@@ -27,6 +27,11 @@ def generate_level_shift_series(
     magnitudes: list[float] | None = None,
     seasonality_period: int | None = None,
     seasonality_amplitude: float = 0.0,
+    seasonality_end_index: int | None = None,
+    spike_indices: list[int] | None = None,
+    spike_magnitudes: list[float] | None = None,
+    spike_duration: int = 20,
+    noise_std_after: float | None = None,
     seed: int = 42,
     dataset_id: str = "unnamed",
 ) -> tuple[TimeSeries, dict]:
@@ -43,6 +48,11 @@ def generate_level_shift_series(
         magnitudes: List of shift magnitudes (positive = up, negative = down).
         seasonality_period: Period of seasonal component (None = no seasonality).
         seasonality_amplitude: Amplitude of the seasonal component.
+        seasonality_end_index: Index after which seasonality stops (None = full series).
+        spike_indices: Indices where temporary spikes start (revert after spike_duration).
+        spike_magnitudes: Magnitudes of each temporary spike.
+        spike_duration: Number of points each spike lasts before reverting.
+        noise_std_after: Noise std after the first changepoint (variance regime change).
         seed: Random seed for reproducibility.
         dataset_id: Identifier for this dataset configuration.
 
@@ -58,6 +68,12 @@ def generate_level_shift_series(
     for idx in changepoint_indices:
         if idx < 0 or idx >= length:
             raise ValueError(f"Changepoint index {idx} out of range [0, {length})")
+    if spike_indices is None:
+        spike_indices = []
+    if spike_magnitudes is None:
+        spike_magnitudes = []
+    if len(spike_indices) != len(spike_magnitudes):
+        raise ValueError("spike_indices and spike_magnitudes must have the same length")
 
     rng = np.random.default_rng(seed)
 
@@ -69,15 +85,28 @@ def generate_level_shift_series(
     for cp_idx, magnitude in zip(changepoint_indices, magnitudes):
         values[cp_idx:] += magnitude
 
-    # Add seasonality
+    # Inject temporary spikes (revert after spike_duration)
+    for sp_idx, sp_mag in zip(spike_indices, spike_magnitudes):
+        sp_end = min(sp_idx + spike_duration, length)
+        values[sp_idx:sp_end] += sp_mag
+
+    # Add seasonality (optionally ending at seasonality_end_index)
     if seasonality_period is not None and seasonality_amplitude > 0:
         seasonal = seasonality_amplitude * np.sin(
             2 * np.pi * time_steps / seasonality_period
         )
+        if seasonality_end_index is not None:
+            seasonal[seasonality_end_index:] = 0.0
         values += seasonal
 
-    # Add noise
-    noise = rng.normal(0, noise_std, length)
+    # Add noise (with optional variance regime change)
+    if noise_std_after is not None and changepoint_indices:
+        first_cp = changepoint_indices[0]
+        noise_before = rng.normal(0, noise_std, first_cp)
+        noise_after = rng.normal(0, noise_std_after, length - first_cp)
+        noise = np.concatenate([noise_before, noise_after])
+    else:
+        noise = rng.normal(0, noise_std, length)
     values += noise
 
     # Build Darts TimeSeries
@@ -102,6 +131,11 @@ def generate_level_shift_series(
         "base_slope": base_slope,
         "seasonality_period": seasonality_period,
         "seasonality_amplitude": seasonality_amplitude,
+        "seasonality_end_index": seasonality_end_index,
+        "spike_indices": spike_indices,
+        "spike_magnitudes": spike_magnitudes,
+        "spike_duration": spike_duration,
+        "noise_std_after": noise_std_after,
         "seed": seed,
     }
 
@@ -196,11 +230,62 @@ DATASET_CONFIGS = {
         seed=51,
         dataset_id="D10_small_magnitude_large_series",
     ),
+    # ═══════════════════════════════════════════════════════════════════════════
+    # Complex datasets (D11–D15): scenarios where naive approaches fail
+    # ═══════════════════════════════════════════════════════════════════════════
+    "D11_shift_loses_seasonality": dict(
+        length=500,
+        changepoint_indices=[250],
+        magnitudes=[30.0],
+        noise_std=3.0,
+        seasonality_period=7,
+        seasonality_amplitude=10.0,
+        seasonality_end_index=250,
+        seed=60,
+        dataset_id="D11_shift_loses_seasonality",
+    ),
+    "D12_temporary_spike": dict(
+        length=500,
+        changepoint_indices=[],
+        magnitudes=[],
+        spike_indices=[200],
+        spike_magnitudes=[50.0],
+        spike_duration=20,
+        noise_std=5.0,
+        seed=61,
+        dataset_id="D12_temporary_spike",
+    ),
+    "D13_shift_with_trend": dict(
+        length=500,
+        base_slope=0.15,
+        changepoint_indices=[250],
+        magnitudes=[20.0],
+        noise_std=5.0,
+        seed=62,
+        dataset_id="D13_shift_with_trend",
+    ),
+    "D14_mixed_magnitudes": dict(
+        length=600,
+        changepoint_indices=[100, 250, 400, 500],
+        magnitudes=[40.0, 5.0, -30.0, 8.0],
+        noise_std=4.0,
+        seed=63,
+        dataset_id="D14_mixed_magnitudes",
+    ),
+    "D15_shift_plus_noise_regime": dict(
+        length=500,
+        changepoint_indices=[250],
+        magnitudes=[25.0],
+        noise_std=3.0,
+        noise_std_after=15.0,
+        seed=64,
+        dataset_id="D15_shift_plus_noise_regime",
+    ),
 }
 
 
 def generate_all_datasets() -> dict[str, tuple[TimeSeries, dict]]:
-    """Generate all 10 pre-configured datasets.
+    """Generate all pre-configured datasets (D1–D15).
 
     Returns:
         Dict mapping dataset name to (TimeSeries, metadata) tuples.
