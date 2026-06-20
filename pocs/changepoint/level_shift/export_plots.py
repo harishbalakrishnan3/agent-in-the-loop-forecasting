@@ -26,7 +26,7 @@ from pocs.changepoint.level_shift.datasets import (
 )
 from pocs.changepoint.level_shift.detector import detect_level_shift
 
-OUTPUT_DIR = Path(__file__).parent / "plots"
+OUTPUT_DIR = Path(__file__).parent / "plots" / "detection"
 
 
 def _compute_segment_means(
