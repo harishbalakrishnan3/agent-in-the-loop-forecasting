@@ -16,6 +16,10 @@ import json
 import random
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import numpy as np
 
 from ailf.core.agent.engine import build_agent_graph
