@@ -47,7 +47,7 @@ def _run_scenario(scenario: Scenario, run_dir: Path, config, *, debug_plots: boo
     naive = naive_workflow(split, changepoints)
     _full = full_history_prophet(split)  # validation comparability (test computed at final stage)
 
-    image_path = render_agent_context(split, f"{scenario.scenario_id} — training history", sdir / "agent_context.png")
+    image_path = render_agent_context(split, "training history", sdir / "agent_context.png")
 
     ctx = RunContext(
         config=config,

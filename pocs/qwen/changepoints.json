@@ -1,0 +1,161 @@
+{
+  "graph_i_neg_yr2q3": [
+    {
+      "index": 630,
+      "type": "sudden",
+      "direction": "negative",
+      "confidence": 0.95,
+      "reason": "sharp drop from 0.2 to -20.8",
+      "timestamp": "2021-09-22",
+      "series": "graph_i_neg_yr2q3"
+    },
+    {
+      "index": 1722,
+      "type": "gradual",
+      "direction": "positive",
+      "confidence": 0.9,
+      "reason": "steady rise culminating in peak at 9.3",
+      "timestamp": "2024-09-18",
+      "series": "graph_i_neg_yr2q3"
+    },
+    {
+      "index": 462,
+      "type": "sudden",
+      "direction": "negative",
+      "confidence": 0.85,
+      "reason": "drop from 0.6 to -0.1 after sustained growth",
+      "timestamp": "2021-04-07",
+      "series": "graph_i_neg_yr2q3"
+    },
+    {
+      "index": 756,
+      "type": "gradual",
+      "direction": "positive",
+      "confidence": 0.88,
+      "reason": "consistent upward trend ending at 0.9",
+      "timestamp": "2022-01-26",
+      "series": "graph_i_neg_yr2q3"
+    },
+    {
+      "index": 357,
+      "type": "sudden",
+      "direction": "positive",
+      "confidence": 0.92,
+      "reason": "significant jump from -0.1 to 6.6",
+      "timestamp": "2020-12-23",
+      "series": "graph_i_neg_yr2q3"
+    }
+  ],
+  "graph_ii_q4up_q1down": [
+    {
+      "index": 294,
+      "type": "sudden",
+      "direction": "positive",
+      "confidence": 0.85,
+      "reason": "sharp rise from -3.6 to 10.9",
+      "timestamp": "2020-10-21",
+      "series": "graph_ii_q4up_q1down"
+    },
+    {
+      "index": 630,
+      "type": "gradual",
+      "direction": "negative",
+      "confidence": 0.78,
+      "reason": "drop after sustained increase",
+      "timestamp": "2021-09-22",
+      "series": "graph_ii_q4up_q1down"
+    },
+    {
+      "index": 651,
+      "type": "sudden",
+      "direction": "positive",
+      "confidence": 0.92,
+      "reason": "rapid jump from -2.4 to 21.5",
+      "timestamp": "2021-10-13",
+      "series": "graph_ii_q4up_q1down"
+    },
+    {
+      "index": 1386,
+      "type": "gradual",
+      "direction": "positive",
+      "confidence": 0.75,
+      "reason": "steady climb over multiple points",
+      "timestamp": "2023-10-18",
+      "series": "graph_ii_q4up_q1down"
+    },
+    {
+      "index": 1470,
+      "type": "sudden",
+      "direction": "negative",
+      "confidence": 0.9,
+      "reason": "sharp decline from peak 52.0 to 31.5",
+      "timestamp": "2024-01-10",
+      "series": "graph_ii_q4up_q1down"
+    }
+  ],
+  "graph_iii_neg_q2up": [
+    {
+      "index": 126,
+      "type": "sudden",
+      "direction": "positive",
+      "confidence": 0.85,
+      "reason": "sharp rise from -3.1 to 13.9",
+      "timestamp": "2020-05-06",
+      "series": "graph_iii_neg_q2up"
+    },
+    {
+      "index": 462,
+      "type": "sudden",
+      "direction": "positive",
+      "confidence": 0.82,
+      "reason": "rapid increase from -1.3 to 17.5",
+      "timestamp": "2021-04-07",
+      "series": "graph_iii_neg_q2up"
+    },
+    {
+      "index": 840,
+      "type": "sudden",
+      "direction": "positive",
+      "confidence": 0.88,
+      "reason": "jump from -1.5 to 17.6",
+      "timestamp": "2022-04-20",
+      "series": "graph_iii_neg_q2up"
+    },
+    {
+      "index": 924,
+      "type": "gradual",
+      "direction": "negative",
+      "confidence": 0.75,
+      "reason": "steady decline after peak at 903",
+      "timestamp": "2022-07-13",
+      "series": "graph_iii_neg_q2up"
+    },
+    {
+      "index": 1197,
+      "type": "sudden",
+      "direction": "positive",
+      "confidence": 0.86,
+      "reason": "sharp spike from 2.7 to 20.7",
+      "timestamp": "2023-04-12",
+      "series": "graph_iii_neg_q2up"
+    },
+    {
+      "index": 1449,
+      "type": "gradual",
+      "direction": "negative",
+      "confidence": 0.78,
+      "reason": "slow drop before recovery at 1470",
+      "timestamp": "2023-12-20",
+      "series": "graph_iii_neg_q2up"
+    },
+    {
+      "index": 1554,
+      "type": "sudden",
+      "direction": "positive",
+      "confidence": 0.9,
+      "reason": "major peak from 2.8 to 22.8",
+      "timestamp": "2024-04-03",
+      "series": "graph_iii_neg_q2up"
+    }
+  ]
+}
