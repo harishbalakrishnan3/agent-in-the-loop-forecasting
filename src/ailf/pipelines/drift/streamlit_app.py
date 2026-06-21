@@ -213,17 +213,26 @@ with st.sidebar:
     if is_ollama:
         ollama_url = st.text_input("Ollama URL", value="http://localhost:11434")
 
+    # Bedrock model settings — greyed out (disabled) when not a Bedrock model (§10 note)
+    _is_bedrock_model = actual_model_id.startswith("bedrock/")
     visual_model_id = st.text_input(
         "visual_model_id",
         value="us.anthropic.claude-opus-4-8",
-        help="Bedrock model ID for the visual-inspection node.",
+        help="Bedrock model ID for the visual-inspection node. Active only for Bedrock.",
+        disabled=not _is_bedrock_model,
     )
     decision_model_id = st.text_input(
         "decision_model_id",
         value="us.anthropic.claude-sonnet-4-6",
-        help="Bedrock model ID for the decision node.",
+        help="Bedrock model ID for the decision node. Active only for Bedrock.",
+        disabled=not _is_bedrock_model,
     )
-    aws_region = st.text_input("aws_region", value="us-west-2")
+    aws_region = st.text_input(
+        "aws_region", value="us-west-2",
+        disabled=not _is_bedrock_model,
+    )
+    if not _is_bedrock_model:
+        st.caption("ℹ️ Bedrock model settings are greyed out — select a Bedrock model above to enable.")
 
     st.divider()
 
@@ -377,38 +386,64 @@ def _build_chart(
     fut_part: pd.DataFrame,
     changepoints: list[dict],
     test_df: pd.DataFrame | None = None,
+    agent_fut: pd.DataFrame | None = None,
 ) -> go.Figure:
+    """Build the forecast chart.
+
+    Traces:
+    - Historical (solid dark blue)
+    - naive forecast (orange dashed) — plain Prophet auto-changepoints
+    - 95% CI shaded band (for naive forecast)
+    - agent-in-the-loop forecast (dotted light purple, §14) — when agent_fut is provided
+    - Actual holdout (green solid)
+    - Changepoints (dotted red verticals)
+    """
     fig = go.Figure()
 
+    # Historical solid line
     fig.add_trace(go.Scatter(
         x=df["ds"], y=df["y"],
         mode="lines", name="Historical (train)",
         line=dict(color="#1a3a5c", width=2),
     ))
+
+    # CI band (naive forecast)
     fig.add_trace(go.Scatter(
         x=fut_part["ds"], y=fut_part["yhat_upper"],
-        mode="lines", name="Upper bound",
+        mode="lines", name="Naive CI upper",
         line=dict(width=0), showlegend=False,
     ))
     fig.add_trace(go.Scatter(
         x=fut_part["ds"], y=fut_part["yhat_lower"],
-        fill="tonexty", fillcolor="rgba(70,130,180,0.15)",
-        mode="lines", name="95% CI",
+        fill="tonexty", fillcolor="rgba(70,130,180,0.12)",
+        mode="lines", name="Naive 95% CI",
         line=dict(width=0),
     ))
+
+    # Naive forecast (orange dashed)
     fig.add_trace(go.Scatter(
         x=fut_part["ds"], y=fut_part["yhat"],
-        mode="lines", name="Forecast (Prophet)",
+        mode="lines", name="naive forecast",
         line=dict(color="#e05c00", width=2, dash="dash"),
     ))
 
+    # Agent-in-the-loop forecast (dotted light purple, §14)
+    if agent_fut is not None and not agent_fut.empty:
+        fig.add_trace(go.Scatter(
+            x=agent_fut["ds"], y=agent_fut["yhat"],
+            mode="lines", name="agent-in-the-loop forecast",
+            line=dict(color="#b57bee", width=2, dash="dot"),
+        ))
+
+    # Actual holdout (green)
     if test_df is not None and not test_df.empty:
         fig.add_trace(go.Scatter(
             x=test_df["ds"], y=test_df["y"],
-            mode="lines", name="Actual (year 5 holdout)",
+            mode="lines", name="Actual (holdout)",
             line=dict(color="#2ca02c", width=2),
         ))
 
+    # Changepoint vertical markers
     for cp in changepoints:
         ts = cp.get("timestamp")
         if ts:
@@ -424,16 +459,130 @@ def _build_chart(
                 annotation_font_size=9,
             )
 
+    agent_note = " | +agent-in-the-loop" if agent_fut is not None else ""
     fig.update_layout(
-        title=f"Historical vs. Forecast — horizon: {len(fut_part)} days"
-              + (f" | {len(changepoints)} changepoints" if changepoints else ""),
+        title=(
+            f"Historical vs. Forecast — horizon: {len(fut_part)} days"
+            + (f" | {len(changepoints)} changepoints" if changepoints else "")
+            + agent_note
+        ),
         xaxis=dict(title="Date", rangeslider=dict(visible=True)),
         yaxis=dict(title="y"),
-        legend=dict(orientation="h", y=-0.2),
+        legend=dict(orientation="h", y=-0.25),
         hovermode="x unified",
-        height=480,
+        height=500,
     )
     return fig
+
+
+def _run_agent_forecast(
+    train_df: pd.DataFrame,
+    changepoints: list[dict],
+    prediction_length: int,
+    freq: str,
+    test_df: pd.DataFrame | None = None,
+    scenario_id: str | None = None,
+    override_payload: dict | None = None,
+    use_pipeline_api: bool = False,
+    csv_path: str | None = None,
+    split_ratio: float = 0.8,
+    detect_with_model: str = "",
+    anthropic_api_key: str = "",
+    ollama_url: str = "http://localhost:11434",
+) -> tuple[pd.DataFrame | None, str]:
+    """Return (forecast_df | None, source_label) for the agent-in-the-loop forecast line.
+
+    Strategy (§14 + §Forecasting 3):
+    1. When use_pipeline_api=True AND FastAPI is up:
+       call POST /changepoint/run → extract agent yhat from _final_eval.
+    2. When Bedrock toggle is OFF: use fallback.py (Claude/Qwen tool-call loop →
+       Prophet with chosen intervention).
+    3. Last resort: plain changepoint-injection Prophet.
+
+    Returns (None, "") when all paths fail or no changepoints.
+    Never raises.
+    """
+    # ── Path 1: run_scenario via FastAPI (Bedrock pipeline) ──────────────
+    if use_pipeline_api and scenario_id:
+        try:
+            payload: dict = {
+                "scenario_id": scenario_id,
+                "override": override_payload or {},
+                "split_ratio": split_ratio,
+            }
+            if csv_path:
+                payload["csv_path"] = csv_path
+            resp, _resp_err = _api_post("/changepoint/run", payload, timeout=300)
+            if resp and resp.get("status") == "ok":
+                fe = resp.get("final_eval") or {}
+                agent_yhat = (fe.get("agent") or {}).get("yhat")
+                if agent_yhat and test_df is not None:
+                    n_test = len(test_df)
+                    if len(agent_yhat) >= n_test:
+                        yhat_aligned = agent_yhat[-n_test:]
+                    else:
+                        yhat_aligned = agent_yhat + [agent_yhat[-1]] * (n_test - len(agent_yhat))
+                    df_out = pd.DataFrame({
+                        "ds": test_df["ds"].values,
+                        "yhat": yhat_aligned,
+                        "yhat_lower": yhat_aligned,
+                        "yhat_upper": yhat_aligned,
+                    })
+                    return df_out, "run_scenario (Bedrock)"
+        except Exception:
+            pass  # fall through
+
+    # ── Path 2: fallback.py — Claude/Qwen tool-call loop (§Forecasting 3) ─
+    if not changepoints:
+        return None, ""
+
+    try:
+        from ailf.pipelines.drift.fallback import run_fallback_pipeline  # noqa: PLC0415
+        return run_fallback_pipeline(
+            train_df=train_df,
+            test_df=test_df,
+            changepoints=changepoints,
+            prediction_length=prediction_length,
+            freq=freq,
+            detect_with_model=detect_with_model,
+            anthropic_api_key=anthropic_api_key,
+            ollama_url=ollama_url,
+        )
+    except Exception:
+        pass  # fall through to plain changepoint injection
+
+    # ── Path 3: plain changepoint-injection Prophet (last resort) ─────────
+    try:
+        from prophet import Prophet  # noqa: PLC0415
+
+        cp_dates = [
+            pd.Timestamp(cp["timestamp"])
+            for cp in changepoints
+            if cp.get("timestamp")
+        ]
+        if not cp_dates:
+            return None, ""
+
+        actual_periods = len(test_df) if test_df is not None else prediction_length
+        m = Prophet(
+            changepoints=cp_dates,
+            daily_seasonality=False,
+            weekly_seasonality=True,
+            yearly_seasonality=True,
+        )
+        regressor_cols = [c for c in train_df.columns if c not in ("ds", "y")]
+        for col in regressor_cols:
+            m.add_regressor(col)
+        m.fit(train_df[["ds", "y"] + regressor_cols])
+        future = m.make_future_dataframe(periods=actual_periods, freq=freq)
+        for col in regressor_cols:
+            future[col] = train_df[col].iloc[-1]
+        forecast = m.predict(future)
+        cutoff = train_df["ds"].max()
+        fut = forecast[forecast["ds"] > cutoff][["ds", "yhat", "yhat_lower", "yhat_upper"]]
+        return fut, "changepoint-injection Prophet"
+    except Exception:
+        return None, ""
 
 
 def _build_override_json() -> str:
@@ -465,8 +614,10 @@ def _api_get(path: str, timeout: int = 5) -> dict | list | None:
         return None
 
 
-def _api_post(path: str, payload: dict, timeout: int = 120) -> dict | None:
-    """POST JSON to the FastAPI server; returns None on connection error."""
+def _api_post(path: str, payload: dict, timeout: int = 300) -> tuple[dict | None, str]:
+    """POST JSON to the FastAPI server. Returns (response_dict, error_msg).
+    On success error_msg is "". On any error response_dict is None."""
+    import urllib.error as _ue
     import urllib.request as _ur
     data = json.dumps(payload).encode()
     req = _ur.Request(
@@ -477,9 +628,17 @@ def _api_post(path: str, payload: dict, timeout: int = 120) -> dict | None:
     )
     try:
         with _ur.urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read().decode())
-    except Exception:
-        return None
+            return json.loads(r.read().decode()), ""
+    except _ue.HTTPError as exc:
+        try:
+            body = exc.read().decode()
+        except Exception:
+            body = str(exc)
+        return None, f"HTTP {exc.code}: {body[:300]}"
+    except _ue.URLError as exc:
+        return None, f"Connection error: {exc.reason}"
+    except Exception as exc:
+        return None, f"{type(exc).__name__}: {exc}"
 
 
 def _load_run_artifacts(run_id: str) -> dict:
@@ -606,13 +765,13 @@ if run_btn and bedrock_pipeline_enabled:
         st.stop()
 
     with st.spinner(f"Running Bedrock pipeline for `{scenario_id}`…"):
-        _bp_resp = _api_post("/changepoint/run", {
+        _bp_resp, _bp_err = _api_post("/changepoint/run", {
             "scenario_id": scenario_id,
             "override": _ov_payload,
         })
 
     if _bp_resp is None:
-        st.error("❌ API request failed.")
+        st.error(f"❌ API request failed: {_bp_err}")
         st.stop()
 
     _bp_status = _bp_resp.get("status")
@@ -665,7 +824,10 @@ elif run_btn:
     )
     st.subheader(f"Series: `{series_label}`  ({len(df)} rows{split_note})")
 
-    # ── Step 1: Agent detection ──────────────────────────────────────────
+    # ── Step 1: Agent detection — with graceful fallback (§15) ──────────
+    from ailf.pipelines.drift.llm_reason import DetectionResult as _DetResult  # noqa: PLC0415
+    _cusum_fallback = _DetResult(changepoints=[], reasoning="", source="cusum", model="cusum")
+
     is_streaming = actual_model_id.startswith("claude-") or actual_model_id.startswith("bedrock/")
 
     agent_col, _ = st.columns([2, 1])
@@ -676,18 +838,22 @@ elif run_btn:
                 reasoning_placeholder = st.empty()
                 cp_placeholder = st.empty()
 
-                with st.spinner("🤖 Agent detecting changepoints and drifts…"):
-                    stream = detect_streaming(
-                        train_df,
-                        model=actual_model_id,
-                        ollama_url=ollama_url,
-                        langsmith_tracing=langsmith_tracing,
-                    )
-                    chunks: list[str] = []
-                    for chunk in stream:
-                        chunks.append(chunk)
-                        reasoning_placeholder.markdown("".join(chunks))
-                    detection = stream.detection_result
+                try:
+                    with st.spinner("🤖 Agent detecting changepoints and drifts…"):
+                        stream = detect_streaming(
+                            train_df,
+                            model=actual_model_id,
+                            ollama_url=ollama_url,
+                            langsmith_tracing=langsmith_tracing,
+                        )
+                        chunks: list[str] = []
+                        for chunk in stream:
+                            chunks.append(chunk)
+                            reasoning_placeholder.markdown("".join(chunks))
+                        detection = stream.detection_result
+                except Exception as _det_exc:
+                    st.warning(f"⚠️ Detection error: {_det_exc} — using CUSUM fallback.")
+                    detection = _cusum_fallback
 
                 if detection.changepoints:
                     st.subheader(f"Detected changepoints ({len(detection.changepoints)})")
@@ -698,14 +864,18 @@ elif run_btn:
                 else:
                     cp_placeholder.info("No changepoints detected.")
 
-                if detection.langsmith_run_url:
+                if getattr(detection, "langsmith_run_url", ""):
                     if detection.langsmith_run_url.startswith("http"):
                         st.markdown(f"🔗 [View LangSmith trace]({detection.langsmith_run_url})")
                     else:
                         st.caption(f"LangSmith: {detection.langsmith_run_url}")
         else:
-            with st.spinner("🤖 Agent detecting changepoints and drifts…"):
-                detection = detect(train_df, model=actual_model_id, ollama_url=ollama_url)
+            try:
+                with st.spinner("🤖 Agent detecting changepoints and drifts…"):
+                    detection = detect(train_df, model=actual_model_id, ollama_url=ollama_url)
+            except Exception as _det_exc:
+                st.warning(f"⚠️ Detection error: {_det_exc} — using CUSUM fallback.")
+                detection = _cusum_fallback
 
             source_label = (
                 f"✅ Qwen via Ollama (`{detection.model}`)"
@@ -730,24 +900,79 @@ elif run_btn:
                 else:
                     st.info("No changepoints detected.")
 
-    # ── Step 2: Prophet forecast ─────────────────────────────────────────
-    with st.spinner("📈 Fitting Prophet forecast…"):
+    # ── Step 2: Prophet forecast (naive + agent-in-the-loop) ─────────────
+    with st.spinner("📈 Fitting Prophet forecasts…"):
         try:
-            fut_part, full_forecast = _run_prophet(train_df, prediction_length, freq, test_df)
+            fut_part, _ = _run_prophet(train_df, prediction_length, freq, test_df)
         except Exception as exc:
-            st.error(f"Prophet error: {exc}")
+            st.error(f"Prophet (naive) error: {exc}")
             st.stop()
 
+        # Agent-in-the-loop forecast (§14)
+        # Path 1: run_scenario via FastAPI when Bedrock pipeline toggle is on
+        # Path 2: Prophet with agent-detected changepoints injected (universal fallback)
+        agent_fut: pd.DataFrame | None = None
+        agent_source: str = ""
+        _override_payload = {
+            "models": {
+                "visual_model_id": visual_model_id,
+                "decision_model_id": decision_model_id,
+                "aws_region": aws_region,
+            },
+            "visual_analysis_enabled": visual_analysis_enabled,
+            "seed": int(seed),
+            "diagnostics": diag_values,
+            "agent_tools": tool_values,
+        }
+        # Resolve csv_path for pocs/data/ CSVs (§14i)
+        _csv_path_for_api: str | None = None
+        if selected_series is not None:
+            _csv_path_for_api = str(selected_series)
+
+        # Resolve Anthropic API key for fallback.py
+        try:
+            from ailf.pipelines.drift.llm_reason import _claude_api_key as _get_anthropic_key  # noqa: PLC0415
+            _anthropic_key = _get_anthropic_key() or ""
+        except Exception:
+            _anthropic_key = ""
+
+        with st.spinner("🔬 Computing agent-in-the-loop forecast…"):
+            try:
+                agent_fut, agent_source = _run_agent_forecast(
+                    train_df,
+                    detection.changepoints,
+                    prediction_length,
+                    freq,
+                    test_df,
+                    scenario_id=scenario_id,
+                    override_payload=_override_payload,
+                    use_pipeline_api=bedrock_pipeline_enabled and _api_get("/changepoint/scenarios") is not None,
+                    csv_path=_csv_path_for_api,
+                    split_ratio=split_ratio / 100.0,
+                    detect_with_model=actual_model_id,
+                    anthropic_api_key=_anthropic_key,
+                    ollama_url=ollama_url,
+                )
+            except Exception as exc:
+                st.warning(f"Agent-in-the-loop forecast skipped: {exc}")
+
     st.subheader("Forecast")
-    fig = _build_chart(train_df, fut_part, detection.changepoints, test_df)
+    if agent_fut is not None:
+        st.caption(
+            f"🟣 **agent-in-the-loop forecast** ({agent_source}) — "
+            "changepoints drive Prophet | "
+            "🟠 **naive forecast** — plain Prophet auto-changepoints"
+        )
+    fig = _build_chart(train_df, fut_part, detection.changepoints, test_df, agent_fut)
     st.plotly_chart(fig, use_container_width=True)
 
     # Metrics
-    mc1, mc2, mc3, mc4 = st.columns(4)
+    mc1, mc2, mc3, mc4, mc5 = st.columns(5)
     mc1.metric("Train rows",       len(train_df))
     mc2.metric("Holdout rows",     len(test_df) if test_df is not None else "—")
     mc3.metric("Forecast horizon", f"{len(fut_part)} days")
     mc4.metric("Changepoints",     len(detection.changepoints))
+    mc5.metric("Agent forecast",   agent_source if agent_source else "—")
 
 else:
     st.info(

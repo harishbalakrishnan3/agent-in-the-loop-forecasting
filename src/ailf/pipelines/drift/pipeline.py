@@ -850,6 +850,11 @@ class ChangepointOverride(BaseModel):
 class ChangepointRunRequest(BaseModel):
     scenario_id: str
     override: ChangepointOverride = ChangepointOverride()
+    # §14i: optional CSV path from pocs/data/ for non-registered scenarios
+    csv_path: str | None = None
+    split_ratio: float = 0.8           # §14ii: from Split Dataset Ratio control
+    seasonal_period: int = 365         # default for 5-year daily series
+    n_changepoints_to_detect: int = 3  # default changepoint count
 
 
 class ChangepointRunResponse(BaseModel):
@@ -901,11 +906,15 @@ def changepoint_run(body: ChangepointRunRequest) -> ChangepointRunResponse:
     ``metrics.json``, ``agent_trace.json``, ``forecast_comparison.png``, etc.
     Retrieve them via **GET /changepoint/artifacts/{scenario_id}**.
     """
-    if body.scenario_id not in _VALID_SCENARIOS:
+    # Widen gate: registered scenarios use metadata; pocs/data CSVs use csv_path (§14i)
+    if body.scenario_id not in _VALID_SCENARIOS and not body.csv_path:
         raise HTTPException(
             status_code=422,
-            detail=f"Unknown scenario '{body.scenario_id}'. "
-                   f"Valid values: {sorted(_VALID_SCENARIOS)}",
+            detail=(
+                f"Unknown scenario '{body.scenario_id}' and no csv_path provided. "
+                f"Registered scenarios: {sorted(_VALID_SCENARIOS)}. "
+                "Or set csv_path to a pocs/data/*_train.csv path."
+            ),
         )
 
     cli = _build_cli_command(body.scenario_id, body.override)
@@ -929,7 +938,28 @@ def changepoint_run(body: ChangepointRunRequest) -> ChangepointRunResponse:
         from ailf.core.config.schema import ConfigOverride  # noqa: PLC0415
         override_obj = ConfigOverride.from_dict(ov_dict) if ov_dict else None
 
-        result = run_scenario(body.scenario_id, override=override_obj, emit_events=True)
+        # §14i: load DataFrame from csv_path for non-registered scenarios
+        series_df = None
+        if body.csv_path:
+            import pandas as _pd  # noqa: PLC0415
+            csv_file = pathlib.Path(body.csv_path)
+            if not csv_file.exists():
+                return ChangepointRunResponse(
+                    status="error",
+                    error=f"csv_path not found: {body.csv_path}",
+                    cli_command=cli,
+                )
+            series_df = _pd.read_csv(csv_file, parse_dates=["ds"])
+
+        result = run_scenario(
+            body.scenario_id,
+            override=override_obj,
+            emit_events=True,
+            series_df=series_df,
+            split_ratio=body.split_ratio,
+            seasonal_period=body.seasonal_period,
+            n_changepoints_to_detect=body.n_changepoints_to_detect,
+        )
 
         return ChangepointRunResponse(
             status="ok",

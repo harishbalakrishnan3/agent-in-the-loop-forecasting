@@ -75,6 +75,52 @@ def _render_menu(registry) -> str:
     return "\n".join(lines)
 
 
+def _series_split_from_df(
+    df: "pd.DataFrame",
+    split_ratio: float = 0.8,
+    val_ratio: float = 0.1,
+) -> "SeriesSplit":
+    """Build a SeriesSplit directly from an arbitrary DataFrame (no metadata required).
+
+    Used for pocs/data/ CSVs that are not registered as golden scenarios (§14i).
+
+    Split: ``train_ratio`` for fit+val, ``test_ratio = 1 - train_ratio - val_ratio``.
+    ``val_ratio`` is taken from inside the train portion so the agent sees only training data.
+    """
+    from ailf.core.backtest.split import ResolvedSplit  # noqa: PLC0415
+    from ailf.pipelines.changepoint.scenarios import SeriesSplit  # noqa: PLC0415
+
+    n = len(df)
+    test_ratio = 1.0 - split_ratio
+    # Distribute the split_ratio between train (fit) and val
+    actual_val_ratio = min(val_ratio, split_ratio - 0.05)  # guard: keep ≥5% for train fit
+    actual_train_ratio = split_ratio - actual_val_ratio
+
+    test_rows = max(1, int(test_ratio * n))
+    val_rows  = max(1, int(actual_val_ratio * n))
+    train_rows = n - test_rows - val_rows
+    if train_rows < 1:
+        raise ValueError(
+            f"split_ratio={split_ratio} leaves no training rows for n={n} rows. "
+            "Increase the split ratio."
+        )
+    resolved = ResolvedSplit.from_lengths(
+        train_rows=train_rows,
+        val_rows=val_rows,
+        test_rows=test_rows,
+        source="override",
+        units="ratios",
+        requested={"train_ratio": split_ratio, "val_ratio": actual_val_ratio, "test_ratio": test_ratio},
+        rounding_rule="floor_test_val_train_absorbs",
+        n_rows=n,
+    )
+    return SeriesSplit(
+        ds=df["ds"].reset_index(drop=True),
+        y=df["y"].astype(float).reset_index(drop=True),
+        resolved=resolved,
+    )
+
+
 def run_scenario(
     scenario_id: str,
     *,
@@ -82,8 +128,19 @@ def run_scenario(
     model_wrappers: tuple | None = None,
     reports_root: Path | None = None,
     emit_events: bool = True,
+    series_df: "pd.DataFrame | None" = None,
+    split_ratio: float = 0.8,
+    seasonal_period: int = 365,
+    n_changepoints_to_detect: int = 3,
 ) -> dict:
-    """Execute one scenario end-to-end and write artifacts; returns the metrics report dict."""
+    """Execute one scenario end-to-end and write artifacts; returns the metrics report dict.
+
+    When ``series_df`` is provided the registered metadata lookup is bypassed and the split
+    is built directly from the DataFrame using ``split_ratio`` (§14i).  This enables pocs/data/
+    CSVs (e.g. sec9_*, sec10_*) to be used without golden scenario fixtures.
+
+    ``seasonal_period`` and ``n_changepoints_to_detect`` are used only when ``series_df`` is set.
+    """
     # 1. Resolve config (merge → validate → lockstep).
     defaults = load_config_yaml(_CONFIG_PATH)
     cfg = resolve_config(
@@ -97,13 +154,26 @@ def run_scenario(
     random.seed(cfg.seed)
     np.random.seed(cfg.seed)
 
-    # 3. Resolve split (golden default or override) and load the scenario on it.
-    meta = next(m for m in load_metadata()["scenarios"] if m["scenario_id"] == scenario_id)
-    scenario_probe = load_scenario(scenario_id)
-    n_rows = len(scenario_probe.split.ds)
-    golden = golden_split_from_metadata(meta, n_rows)
-    resolved = resolve_split(cfg.split, n_rows=n_rows, golden=golden)
-    scenario = load_scenario(scenario_id, resolved=resolved)
+    # 3. Resolve split and load the scenario.
+    if series_df is not None:
+        # §14i: arbitrary CSV path — bypass metadata, build split from DataFrame
+        split = _series_split_from_df(series_df, split_ratio=split_ratio)
+        # Build a minimal Scenario-like object; title uses scenario_id
+        from ailf.pipelines.changepoint.scenarios import Scenario  # noqa: PLC0415
+        scenario = Scenario(
+            scenario_id=scenario_id,
+            title=scenario_id,
+            split=split,
+            n_changepoints_to_detect=n_changepoints_to_detect,
+            seasonal_period=seasonal_period,
+        )
+    else:
+        meta = next(m for m in load_metadata()["scenarios"] if m["scenario_id"] == scenario_id)
+        scenario_probe = load_scenario(scenario_id)
+        n_rows = len(scenario_probe.split.ds)
+        golden = golden_split_from_metadata(meta, n_rows)
+        resolved = resolve_split(cfg.split, n_rows=n_rows, golden=golden)
+        scenario = load_scenario(scenario_id, resolved=resolved)
     split = scenario.split
 
     run_id = f"{scenario_id}-{cfg.seed}"
