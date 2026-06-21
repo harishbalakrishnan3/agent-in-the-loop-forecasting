@@ -1,3 +1,4 @@
+
 """LLM provider abstraction — Bedrock (primary) and Anthropic direct API (fallback).
 
 This is the ONLY module that imports provider SDKs (``langchain_aws``, ``anthropic``), so the
@@ -17,17 +18,25 @@ Provider selection
     the ``ChatBedrockConverse.with_structured_output`` contract ``ModelWrapper`` depends on.
     Uses ``ANTHROPIC_API_KEY`` / ``ANTHROPIC_BASE_URL`` from env (same as boto reads ``AWS_*``).
     TLS: validated with the system CA bundle (Walmart proxy); never ``verify=False``.
+
 """
 
 from __future__ import annotations
 
 import base64
+
 import json
+
+import os
+
 import time
 from pathlib import Path
 from typing import Any, TypeVar
 
-from langchain_aws import ChatBedrockConverse
+# SWAP: Original Bedrock import (uncomment to revert)
+# from langchain_aws import ChatBedrockConverse
+# SWAP: Anthropic direct API (comment out to revert)
+from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, ValidationError
 
@@ -35,6 +44,7 @@ T = TypeVar("T", bound=BaseModel)
 
 _MAX_PARSE_RETRIES = 3
 _RETRY_DELAY_S = 2.0
+
 
 # System CA bundle used for Anthropic calls (trusts the Walmart gateway proxy certificate).
 _SYSTEM_CA_BUNDLE = "/opt/homebrew/etc/openssl@3/cert.pem"
@@ -173,6 +183,26 @@ def build_visual_model(
     return ChatBedrockConverse(model=model_id, region_name=region_name, max_tokens=max_tokens)
 
 
+class ModelUnavailableError(RuntimeError):
+    """Raised when a configured model id cannot be used — no fallback is attempted."""
+
+
+# SWAP: Original Bedrock builders (uncomment to revert)
+# def build_visual_model(model_id: str, region_name: str, *, max_tokens: int = 2000) -> ChatBedrockConverse:
+#     return ChatBedrockConverse(model=model_id, region_name=region_name, max_tokens=max_tokens)
+#
+# def build_decision_model(model_id: str, region_name: str, *, max_tokens: int = 2400) -> ChatBedrockConverse:
+#     return ChatBedrockConverse(model=model_id, region_name=region_name, max_tokens=max_tokens)
+
+# SWAP: Anthropic direct API builders (comment out to revert)
+def build_visual_model(model_id: str, region_name: str, *, max_tokens: int = 2000) -> ChatAnthropic:
+    return ChatAnthropic(
+        model=_resolve_model_id(model_id),
+        api_key=os.environ.get("ANTHROPIC_API_KEY"),
+        max_tokens=max_tokens,
+    )
+
+
 def build_decision_model(
     model_id: str,
     region_name: str,
@@ -186,6 +216,7 @@ def build_decision_model(
     return ChatBedrockConverse(model=model_id, region_name=region_name, max_tokens=max_tokens)
 
 
+
 # ---------------------------------------------------------------------------
 # Retry + error helpers
 # ---------------------------------------------------------------------------
@@ -193,7 +224,7 @@ def build_decision_model(
 def _wrap_model_error(model_id: str, exc: Exception) -> ModelUnavailableError:
     return ModelUnavailableError(
         f"Model '{model_id}' could not be invoked ({type(exc).__name__}: {exc}). "
-        "Verify the configured visual/decision model id and provider access. "
+        "Verify the configured visual/decision model id and API access. "
         "The system does not silently substitute a different model."
     )
 
@@ -220,7 +251,7 @@ def _invoke_with_retry(structured, messages, model_id: str):
 # ---------------------------------------------------------------------------
 
 class ModelWrapper:
-    """Thin wrapper over an LLM client for one node (visual or decision).
+    """Thin wrapper over a chat model client for one node (visual or decision).
 
     The single seam the agent talks to. Tests inject a ``FakeModelWrapper`` implementing the same
     two methods, so no production code reaches the provider SDK during deterministic graph tests.
