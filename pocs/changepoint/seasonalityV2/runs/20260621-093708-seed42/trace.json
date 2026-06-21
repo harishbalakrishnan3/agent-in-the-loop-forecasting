@@ -1,0 +1,10 @@
+[
+  {
+    "iteration": 1,
+    "hypothesis": "[LLM unavailable]",
+    "proposed_config": {},
+    "val_mae": null,
+    "decision": "exhausted",
+    "rejection_reason": "Budget exhausted. Carrying best-val-MAE proposal."
+  }
+]

@@ -135,6 +135,47 @@ def _invoke_ramp(ctx: ToolContext, params: dict) -> ToolResult:
     return {"yhat": yhat.tolist(), "resolved_params": params}
 
 
+def _resolve_event_block(entry: object, blocks: list[dict]) -> dict:
+    """Map one ``blocks`` selection entry to a candidate block (interventions contract).
+
+    The agent references a candidate block one of three equivalent ways — a positional integer
+    index, a ``{start_ds, end_ds}`` date dict, or a ``{start, end}`` integer-bound dict — all of
+    which it can read straight off the ``candidate_event_blocks`` diagnostic. Every entry MUST
+    resolve to an EXISTING candidate block (the tool only cleans detected event blocks); anything
+    else is a NORMAL bounds rejection (re-prompt), never a crash.
+    """
+    from ailf.core.agent.errors import ToolBoundsError
+
+    if isinstance(entry, bool):  # bool is an int subclass — exclude before the int branch
+        raise ToolBoundsError(f"clean_event.blocks entry must be an index or block dict, got {entry!r}")
+    if isinstance(entry, int):
+        if not (0 <= entry < len(blocks)):
+            raise ToolBoundsError(
+                f"clean_event.blocks index out of range for {len(blocks)} candidate blocks: {entry!r}"
+            )
+        return blocks[entry]
+    if isinstance(entry, dict):
+        if "start_ds" in entry and "end_ds" in entry:
+            match = next(
+                (b for b in blocks if b["start_ds"] == entry["start_ds"] and b["end_ds"] == entry["end_ds"]),
+                None,
+            )
+        elif "start" in entry and "end" in entry:
+            match = next(
+                (b for b in blocks if b["start"] == entry["start"] and b["end"] == entry["end"]), None
+            )
+        else:
+            raise ToolBoundsError(
+                f"clean_event.blocks dict must carry start_ds/end_ds or start/end, got {entry!r}"
+            )
+        if match is None:
+            raise ToolBoundsError(
+                f"clean_event.blocks entry matches no candidate_event_blocks: {entry!r}"
+            )
+        return match
+    raise ToolBoundsError(f"clean_event.blocks entry must be an index or block dict, got {entry!r}")
+
+
 def _invoke_clean_event(ctx: ToolContext, params: dict) -> ToolResult:
     from ailf.core.agent.errors import ToolBoundsError
 
@@ -144,18 +185,13 @@ def _invoke_clean_event(ctx: ToolContext, params: dict) -> ToolResult:
     if sel == "all_closed":
         chosen = [b for b in blocks if b["closed_before_origin"]]
     elif isinstance(sel, list):
-        # The list must contain integer indices into candidate_event_blocks. The agent may emit
-        # non-int entries (e.g. block dicts) or out-of-range ints — treat both as a NORMAL bounds
-        # rejection (the agent re-prompts), never a crash.
-        if not all(isinstance(i, int) and not isinstance(i, bool) for i in sel):
-            raise ToolBoundsError(
-                f"clean_event.blocks list must contain integer indices, got {sel!r}"
-            )
-        if any(not (0 <= i < len(blocks)) for i in sel):
-            raise ToolBoundsError(
-                f"clean_event.blocks index out of range for {len(blocks)} candidate blocks: {sel!r}"
-            )
-        chosen = [blocks[i] for i in sel]
+        # The agent may reference candidate blocks by index OR by echoing the block dict it was
+        # shown; resolve both against candidate_event_blocks (de-duped, order preserved).
+        resolved = [_resolve_event_block(entry, blocks) for entry in sel]
+        chosen = []
+        for b in resolved:
+            if b not in chosen:
+                chosen.append(b)
         if any(not b["closed_before_origin"] for b in chosen):
             raise ToolBoundsError("clean_event may only clean blocks closed before the origin (FR-026a)")
     else:

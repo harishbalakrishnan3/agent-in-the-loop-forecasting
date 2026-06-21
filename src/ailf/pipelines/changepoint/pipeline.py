@@ -16,6 +16,10 @@ import json
 import random
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import numpy as np
 
 from ailf.core.agent.engine import build_agent_graph
@@ -45,14 +49,28 @@ _CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
 _PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
 
 
+def _render_param(p: dict) -> str:
+    """One param's agent-facing description: its bounded set, or a kind-specific format hint.
+
+    Enum/grid params carry an ``allowed`` set; ``block_list`` has none, so without a hint the menu
+    rendered just the bare word ``blocks`` and the agent had no way to learn the accepted shape
+    (it echoed candidate_event_blocks objects back and got bounds-rejected). Advertise both forms.
+    """
+    if p["allowed"]:
+        return f"{p['name']} ∈ {p['allowed']}"
+    if p["kind"] == "block_list":
+        return (
+            f'{p["name"]} ∈ "all_closed" | a list selecting candidate_event_blocks '
+            "(each an integer index, or a {start_ds,end_ds} / {start,end} block dict)"
+        )
+    return f"{p['name']}"
+
+
 def _render_menu(registry) -> str:
     """Render the enabled-tools menu for the decision prompt's {{tool_menu}} placeholder."""
     lines = []
     for i, spec in enumerate(registry.menu(), 1):
-        params = "; ".join(
-            f"{p['name']} ∈ {p['allowed']}" if p["allowed"] else f"{p['name']}"
-            for p in spec["params"]
-        ) or "(no params)"
+        params = "; ".join(_render_param(p) for p in spec["params"]) or "(no params)"
         lines.append(f"{i}. `{spec['name']}` — {spec['description']} params: {params}")
     return "\n".join(lines)
 
@@ -143,10 +161,12 @@ def run_scenario(
         visual_model, decision_model = model_wrappers
     else:
         visual_model = ModelWrapper(
-            build_visual_model(cfg.models.visual_model_id, cfg.models.aws_region), cfg.models.visual_model_id
+            build_visual_model(cfg.models.visual_model_id, cfg.models.aws_region, llm_provider=cfg.models.llm_provider),
+            cfg.models.visual_model_id,
         )
         decision_model = ModelWrapper(
-            build_decision_model(cfg.models.decision_model_id, cfg.models.aws_region), cfg.models.decision_model_id
+            build_decision_model(cfg.models.decision_model_id, cfg.models.aws_region, llm_provider=cfg.models.llm_provider),
+            cfg.models.decision_model_id,
         )
 
     ctx = RunContext(
