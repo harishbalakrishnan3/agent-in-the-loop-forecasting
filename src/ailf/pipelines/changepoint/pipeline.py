@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import numpy as np
+import pandas as pd
 
 from ailf.core.agent.engine import build_agent_graph
 from ailf.core.agent.runtime import RunContext
@@ -195,7 +196,7 @@ def run_scenario(
         StageStatus.COMPLETE,
         ev.config_resolved(cfg.to_dict(), hidden_diagnostics=hidden, removed_tools=removed, visual_enabled=cfg.visual_analysis_enabled),
     )
-    emitter.emit(StageId.SPLIT_BUILT, StageStatus.COMPLETE, ev.split_built(resolved.provenance.to_dict()))
+    emitter.emit(StageId.SPLIT_BUILT, StageStatus.COMPLETE, ev.split_built(split.resolved.provenance.to_dict()))
 
     # 4. Deterministic prelude: detect → baselines → diagnostics (each emits).
     with emitter.stage(StageId.CHANGEPOINT_DETECTION) as p:
@@ -278,7 +279,7 @@ def run_scenario(
     stamp_effective_config(
         run_dir,
         effective_config=cfg.to_dict(),
-        split_provenance=resolved.provenance.to_dict(),
+        split_provenance=split.resolved.provenance.to_dict(),
         seed=cfg.seed,
     )
     metrics_report = write_metrics_json(
@@ -290,7 +291,7 @@ def run_scenario(
         "visual_analysis_enabled": cfg.visual_analysis_enabled,
         "hidden_diagnostics": hidden,
         "removed_tools": removed,
-        "split_provenance": resolved.provenance.to_dict(),
+        "split_provenance": split.resolved.provenance.to_dict(),
         "prompt_ids": ctx.prompt_ids,
         "model_ids": {"visual": cfg.models.visual_model_id, "decision": cfg.models.decision_model_id},
         "visual": final_state.get("visual", {}),
@@ -319,6 +320,51 @@ def run_scenario(
         out_path=run_dir / "forecast_comparison.png",
     )
 
+    # §Forecasting 4/5: save forecast CSV — training region + forecast region in one file
+    # so Streamlit can render a continuous zoom-in/out/pan chart.
+    # Columns: ds, y_actual (NaN in forecast region), region ("train"|"forecast"),
+    #          yhat_full_history, yhat_naive, yhat_agent (NaN in training region).
+    try:
+        train_hist = split.train_df.copy()
+        test_hist  = split.test_df.copy()
+        n_test     = len(test_hist)
+
+        # Training region: actual values, NaN for forecast yhats
+        _nan = float("nan")
+        train_rows: list[dict] = []
+        for _, row in train_hist.iterrows():
+            train_rows.append({
+                "ds":               row["ds"].strftime("%Y-%m-%d"),
+                "y_actual":         round(float(row["y"]), 6),
+                "region":           "train",
+                "yhat_full_history": _nan,
+                "yhat_naive":        _nan,
+                "yhat_agent":        _nan,
+            })
+
+        # Forecast region: NaN for y_actual, actual yhat values
+        fh_yhat = [round(float(v), 6) for v in fe["full_history_prophet"]["yhat"][:n_test]]
+        nw_yhat = [round(float(v), 6) for v in fe["naive_workflow"]["yhat"][:n_test]]
+        ag_yhat = [round(float(v), 6) for v in fe["agent"]["yhat"][:n_test]]
+
+        fc_rows: list[dict] = []
+        for i, (_, row) in enumerate(test_hist.iterrows()):
+            fc_rows.append({
+                "ds":               row["ds"].strftime("%Y-%m-%d"),
+                "y_actual":         round(float(row["y"]), 6),  # keep actuals for comparison
+                "region":           "forecast",
+                "yhat_full_history": fh_yhat[i] if i < len(fh_yhat) else _nan,
+                "yhat_naive":        nw_yhat[i] if i < len(nw_yhat) else _nan,
+                "yhat_agent":        ag_yhat[i] if i < len(ag_yhat) else _nan,
+            })
+
+        csv_df = pd.DataFrame(train_rows + fc_rows)
+        csv_path = run_dir / "forecast_comparison.csv"
+        csv_df.to_csv(csv_path, index=False)
+    except Exception as _csv_exc:
+        # Non-fatal: PNG already written; log and continue.
+        print(f"  [warn] forecast_comparison.csv not written: {_csv_exc}")
+
     # 9. Final-evaluation + run-complete events (test metrics first appear here — FR-029).
     emitter.emit(
         StageId.FINAL_EVALUATION,
@@ -342,7 +388,7 @@ def run_scenario(
 
     print(f"  {scenario_id}: winner={metrics_report['winner']} agent_tool={fe['agent']['tool']} "
           f"run_dir={run_dir}")
-    return metrics_report
+    return {**metrics_report, "run_id": run_id, "final_eval": fe}
 
 
 def main() -> None:

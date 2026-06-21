@@ -41,7 +41,7 @@ from ailf.pipelines.drift.llm_reason import (  # noqa: E402
 
 # ── Constants ────────────────────────────────────────────────────────────
 _DATA_DIR = _PROJECT_ROOT / "pocs" / "data"
-_REPORTS_DIR = _PROJECT_ROOT / "reports"
+_REPORTS_DIR = _PROJECT_ROOT / "reports" / "changepoint"
 
 _SCENARIOS = [
     "level_shift_loses_seasonality",
@@ -132,34 +132,17 @@ with st.sidebar:
             help="Must have `ds` (date) and `y` (numeric) columns.",
         )
     else:
-        # Always show the 5 committed changepoint scenarios + any extra pocs/data CSVs
-        _cp_scenarios = list(_SCENARIOS)
-        _extra_csvs = [
-            p for p in sorted(_DATA_DIR.glob("*_train.csv")) if _DATA_DIR.exists()
-            if p.stem.replace("_train", "") not in _cp_scenarios
-        ] if _DATA_DIR.exists() else []
-        _all_scenario_names = _cp_scenarios + [p.stem.replace("_train", "") for p in _extra_csvs]
-
+        # Show only the 5 committed changepoint scenarios (§Forecasting 7)
         _scenario_idx = st.selectbox(
             "Data Scenario",
-            range(len(_all_scenario_names)),
-            format_func=lambda i: _all_scenario_names[i],
+            range(len(_SCENARIOS)),
+            format_func=lambda i: _SCENARIOS[i],
         )
-        _chosen_scenario_name = _all_scenario_names[_scenario_idx]
+        _chosen_scenario_name = _SCENARIOS[_scenario_idx]
 
-        # Try to find a matching CSV in pocs/data/
+        # Try to find a matching CSV in pocs/data/ (silently — no warning shown)
         _csv_candidate = _DATA_DIR / f"{_chosen_scenario_name}_train.csv"
-        if _csv_candidate.exists():
-            selected_series = _csv_candidate
-        elif _scenario_idx >= len(_cp_scenarios):
-            # Extra CSV from pocs/data
-            selected_series = _extra_csvs[_scenario_idx - len(_cp_scenarios)]
-        else:
-            selected_series = None
-            st.info(
-                f"No CSV found for `{_chosen_scenario_name}` in `pocs/data/`. "
-                "Use the pipeline panel below to run and generate artifacts."
-            )
+        selected_series = _csv_candidate if _csv_candidate.exists() else None
 
     # Derive scenario_id from selection (used by pipeline panel below)
     if source_mode == "Data Scenario":
@@ -192,6 +175,7 @@ with st.sidebar:
     # Detect with (moved here per §10)
     _model_options: dict[str, str] = {
         f"Qwen via Ollama ({DEFAULT_MODEL})": DEFAULT_MODEL,
+        "Claude Sonnet 4.6  (needs ANTHROPIC_API_KEY)": "claude-sonnet-4-6",
         "Claude Sonnet 4.5  (needs ANTHROPIC_API_KEY)": "claude-sonnet-4-5",
         "Claude Opus 4.5  (needs ANTHROPIC_API_KEY)": "claude-opus-4-5",
         "Claude 3.5 Sonnet  (needs ANTHROPIC_API_KEY)": "claude-3-5-sonnet-20241022",
@@ -217,7 +201,7 @@ with st.sidebar:
     _is_bedrock_model = actual_model_id.startswith("bedrock/")
     visual_model_id = st.text_input(
         "visual_model_id",
-        value="us.anthropic.claude-opus-4-8",
+        value="us.anthropic.claude-sonnet-4-6",
         help="Bedrock model ID for the visual-inspection node. Active only for Bedrock.",
         disabled=not _is_bedrock_model,
     )
@@ -266,16 +250,15 @@ with st.sidebar:
     tool_values: dict[str, bool] = {}
     for t in _ALL_TOOLS:
         if t == "full_history_default":
-            st.checkbox(
-                t, value=True, disabled=True, key=f"tool_{t}",
-                help=_TOOL_HELP.get(t, "Always-on fallback — cannot be disabled."),
-            )
+            # Must stay enabled (FR-016: guaranteed-valid fallback, cannot be disabled).
+            # The agent prompt strongly discourages choosing it when changepoints exist.
+            st.checkbox(t, value=True, disabled=True, key=f"tool_{t}",
+                        help="Always enabled — required safety net (FR-016). "
+                             "The agent is prompted to prefer recent_window/step_regressor.")
             tool_values[t] = True
         else:
-            tool_values[t] = st.checkbox(
-                t, value=True, key=f"tool_{t}",
-                help=_TOOL_HELP.get(t, ""),
-            )
+            tool_values[t] = st.checkbox(t, value=True, key=f"tool_{t}",
+                                         help=_TOOL_HELP.get(t, ""))
 
     st.divider()
 
@@ -292,34 +275,43 @@ with st.sidebar:
         ),
     )
     if langsmith_tracing:
-        st.caption(
-            "Traces sent to `LANGSMITH_API_URL` (default: "
-            "`https://apac.smith.langchain.com`) under project "
-            "`agent-in-the-loop-forecasting`. Trace URL appears after detection."
-        )
+        import os as _os
+        _ls_key = _os.environ.get("LANGSMITH_API_KEY", "").strip()
+        if not _ls_key:
+            # Try reading from .env
+            try:
+                _env_path = _PROJECT_ROOT / ".env"
+                if _env_path.exists():
+                    for _line in _env_path.read_text().splitlines():
+                        if _line.startswith("LANGSMITH_API_KEY="):
+                            _ls_key = _line.split("=", 1)[1].strip().strip('"').strip("'")
+            except Exception:
+                pass
+        if _ls_key:
+            st.caption(
+                "Traces sent to `LANGSMITH_API_URL` (default: "
+                "`https://apac.smith.langchain.com`) under project "
+                "`agent-in-the-loop-forecasting`. Trace URL appears after detection."
+            )
+        else:
+            st.warning("⚠️ `LANGSMITH_API_KEY` not set in `.env` — tracing will be skipped.")
 
     st.divider()
 
-    # ── Bedrock Changepoint Pipeline toggle (§13) ─────────────────────────
+    # ── Bedrock Changepoint Pipeline toggle (§13, ON by default per §8) ────
     bedrock_pipeline_enabled = st.toggle(
         "Bedrock Changepoint Pipeline",
-        value=False,
+        value=True,
         help=(
-            "When ON: clicking the button below runs the full Bedrock agent pipeline "
-            "via POST /changepoint/run and shows its artifacts. "
-            "Requires FastAPI server running and AWS Bedrock creds in .env. "
-            "When OFF: runs the standard drift detection + Prophet forecast."
+            "When ON: runs run_scenario directly (or via FastAPI fallback) using "
+            "Bedrock / Claude creds from .env. "
+            "When OFF: runs standard drift detection + Prophet forecast."
         ),
     )
-    if bedrock_pipeline_enabled:
-        st.caption(
-            "⚠️ Bedrock pipeline active — the button below invokes "
-            "`ailf.pipelines.changepoint.pipeline` on the server."
-        )
 
     if bedrock_pipeline_enabled:
         run_btn = st.button(
-            "▶️ Run Bedrock Pipeline",
+            "▶️ Run Forecast",
             type="primary",
             use_container_width=True,
             help="POST /changepoint/run with current scenario + override settings.",
@@ -489,8 +481,8 @@ def _run_agent_forecast(
     detect_with_model: str = "",
     anthropic_api_key: str = "",
     ollama_url: str = "http://localhost:11434",
-) -> tuple[pd.DataFrame | None, str]:
-    """Return (forecast_df | None, source_label) for the agent-in-the-loop forecast line.
+) -> tuple[pd.DataFrame | None, str, dict]:
+    """Return (forecast_df | None, source_label, metrics_report) for the agent-in-the-loop line.
 
     Strategy (§14 + §Forecasting 3):
     1. When use_pipeline_api=True AND FastAPI is up:
@@ -499,7 +491,7 @@ def _run_agent_forecast(
        Prophet with chosen intervention).
     3. Last resort: plain changepoint-injection Prophet.
 
-    Returns (None, "") when all paths fail or no changepoints.
+    Returns (None, "", {}) when all paths fail or no changepoints.
     Never raises.
     """
     # ── Path 1: run_scenario via FastAPI (Bedrock pipeline) ──────────────
@@ -512,7 +504,7 @@ def _run_agent_forecast(
             }
             if csv_path:
                 payload["csv_path"] = csv_path
-            resp, _resp_err = _api_post("/changepoint/run", payload, timeout=300)
+            resp = _api_post("/changepoint/run", payload, timeout=300)
             if resp and resp.get("status") == "ok":
                 fe = resp.get("final_eval") or {}
                 agent_yhat = (fe.get("agent") or {}).get("yhat")
@@ -528,17 +520,17 @@ def _run_agent_forecast(
                         "yhat_lower": yhat_aligned,
                         "yhat_upper": yhat_aligned,
                     })
-                    return df_out, "run_scenario (Bedrock)"
+                    return df_out, "run_scenario (Bedrock)", resp
         except Exception:
             pass  # fall through
 
-    # ── Path 2: fallback.py — Claude/Qwen tool-call loop (§Forecasting 3) ─
+    # ── Path 2: fallback.py — full pipeline with baseline comparison (§Forecasting 3) ─
     if not changepoints:
-        return None, ""
+        return None, "", {}
 
     try:
         from ailf.pipelines.drift.fallback import run_fallback_pipeline  # noqa: PLC0415
-        return run_fallback_pipeline(
+        fb_df, fb_label, fb_metrics = run_fallback_pipeline(
             train_df=train_df,
             test_df=test_df,
             changepoints=changepoints,
@@ -548,6 +540,8 @@ def _run_agent_forecast(
             anthropic_api_key=anthropic_api_key,
             ollama_url=ollama_url,
         )
+        if fb_df is not None:
+            return fb_df, fb_label, fb_metrics
     except Exception:
         pass  # fall through to plain changepoint injection
 
@@ -561,7 +555,7 @@ def _run_agent_forecast(
             if cp.get("timestamp")
         ]
         if not cp_dates:
-            return None, ""
+            return None, "", {}
 
         actual_periods = len(test_df) if test_df is not None else prediction_length
         m = Prophet(
@@ -580,9 +574,9 @@ def _run_agent_forecast(
         forecast = m.predict(future)
         cutoff = train_df["ds"].max()
         fut = forecast[forecast["ds"] > cutoff][["ds", "yhat", "yhat_lower", "yhat_upper"]]
-        return fut, "changepoint-injection Prophet"
+        return fut, "changepoint-injection Prophet", {}
     except Exception:
-        return None, ""
+        return None, "", {}
 
 
 def _build_override_json() -> str:
@@ -614,10 +608,8 @@ def _api_get(path: str, timeout: int = 5) -> dict | list | None:
         return None
 
 
-def _api_post(path: str, payload: dict, timeout: int = 300) -> tuple[dict | None, str]:
-    """POST JSON to the FastAPI server. Returns (response_dict, error_msg).
-    On success error_msg is "". On any error response_dict is None."""
-    import urllib.error as _ue
+def _api_post(path: str, payload: dict, timeout: int = 300) -> dict | None:
+    """POST JSON to the FastAPI server; returns parsed response dict or None on error."""
     import urllib.request as _ur
     data = json.dumps(payload).encode()
     req = _ur.Request(
@@ -628,17 +620,9 @@ def _api_post(path: str, payload: dict, timeout: int = 300) -> tuple[dict | None
     )
     try:
         with _ur.urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read().decode()), ""
-    except _ue.HTTPError as exc:
-        try:
-            body = exc.read().decode()
-        except Exception:
-            body = str(exc)
-        return None, f"HTTP {exc.code}: {body[:300]}"
-    except _ue.URLError as exc:
-        return None, f"Connection error: {exc.reason}"
-    except Exception as exc:
-        return None, f"{type(exc).__name__}: {exc}"
+            return json.loads(r.read().decode())
+    except Exception:
+        return None
 
 
 def _load_run_artifacts(run_id: str) -> dict:
@@ -649,7 +633,8 @@ def _load_run_artifacts(run_id: str) -> dict:
     api_arts = _api_get(f"/changepoint/artifacts/{run_id}")
     if isinstance(api_arts, list) and api_arts:
         latest = api_arts[-1]
-        out: dict = {"_from_api": True}
+        _api_run_id = latest.get("run_id", run_id)
+        out: dict = {"_from_api": True, "run_id": _api_run_id}
         if latest.get("metrics"):
             out["metrics.json"] = latest["metrics"]
         if latest.get("final_eval"):
@@ -658,7 +643,18 @@ def _load_run_artifacts(run_id: str) -> dict:
             out["agent_iterations"] = latest["agent_iterations"]
         out["has_forecast_png"] = latest.get("has_forecast_png", False)
         out["has_context_png"]  = latest.get("has_context_png", False)
-        out["run_id"] = latest.get("run_id", run_id)
+        out["has_forecast_csv"] = latest.get("has_forecast_csv", False)
+        # Resolve local paths — Streamlit and FastAPI share the same filesystem
+        run_local = _REPORTS_DIR / _api_run_id
+        for _fname, _flag in (
+            ("forecast_comparison.png", "has_forecast_png"),
+            ("agent_context.png",       "has_context_png"),
+            ("forecast_comparison.csv", "has_forecast_csv"),
+        ):
+            if latest.get(_flag):
+                _p = run_local / _fname
+                if _p.exists():
+                    out[_fname] = _p
         return out
 
     # Fallback: read from disk
@@ -674,15 +670,19 @@ def _load_run_artifacts(run_id: str) -> dict:
                 out[fname] = json.loads(p.read_text())
             except Exception:
                 pass
-    for img in ("forecast_comparison.png", "agent_context.png"):
-        p = run_dir / img
+    for item in ("forecast_comparison.png", "agent_context.png", "forecast_comparison.csv"):
+        p = run_dir / item
         if p.exists():
-            out[img] = p
+            out[item] = p
     return out
 
 
-def _render_artifacts(arts: dict) -> None:
-    """Render pre-computed run artifacts in the expander."""
+def _render_artifacts(arts: dict, train_df: pd.DataFrame | None = None) -> None:
+    """Render pre-computed run artifacts in the expander.
+
+    When ``train_df`` is provided (the training split), the forecast chart is
+    extended to show the full historical context + forecast in a single view.
+    """
     if arts.get("_from_api"):
         st.success(f"✅ Artifacts loaded via API — run `{arts.get('run_id','')}`")
     elif "run_dir" in arts:
@@ -719,20 +719,126 @@ def _render_artifacts(arts: dict) -> None:
                 f"{prop.get('rationale','')[:100]}"
             )
 
-    # Images (disk path or flag only)
-    for img_key in ("forecast_comparison.png", "agent_context.png"):
-        img_path = arts.get(img_key)
-        if img_path and pathlib.Path(str(img_path)).exists():
-            st.image(str(img_path), caption=img_key, use_container_width=True)
-        elif arts.get(f"has_{img_key.replace('.png','').replace('forecast_comparison','forecast').replace('agent_context','context')}_png"):
-            st.info(f"`{img_key}` exists on server disk — view at `reports/`.")
+    # ── Forecast chart: prefer CSV (interactive Plotly), fall back to PNG ──
+    csv_path = arts.get("forecast_comparison.csv")
+    if csv_path and pathlib.Path(str(csv_path)).exists():
+        try:
+            fc_df = pd.read_csv(str(csv_path), parse_dates=["ds"])
+            fig_fc = go.Figure()
+
+            # Split into train/forecast regions (new CSV has 'region' column)
+            has_region = "region" in fc_df.columns
+            _train_rows = fc_df[fc_df["region"] == "train"] if has_region else pd.DataFrame()
+            _fc_rows    = fc_df[fc_df["region"] == "forecast"] if has_region else fc_df
+
+            # ── Historical training data from CSV ───────────────────────────
+            if not _train_rows.empty and "y_actual" in _train_rows.columns:
+                fig_fc.add_trace(go.Scatter(
+                    x=_train_rows["ds"], y=_train_rows["y_actual"],
+                    mode="lines", name="Historical (train)",
+                    line=dict(color="#1a3a5c", width=2),
+                ))
+                # Train/test boundary marker
+                _split_ts = _train_rows["ds"].max()
+                fig_fc.add_vline(
+                    x=_split_ts.value // 10**6,
+                    line_width=1.5, line_dash="dash", line_color="rgba(100,100,100,0.45)",
+                    annotation_text="train│test",
+                    annotation_position="top right",
+                    annotation_font_size=9,
+                )
+            elif train_df is not None and not train_df.empty:
+                # Fallback: use passed train_df
+                fig_fc.add_trace(go.Scatter(
+                    x=train_df["ds"], y=train_df["y"],
+                    mode="lines", name="Historical (train)",
+                    line=dict(color="#1a3a5c", width=2),
+                ))
+
+            # ── Test-period actual values ────────────────────────────────────
+            if "y_actual" in _fc_rows.columns:
+                fig_fc.add_trace(go.Scatter(
+                    x=_fc_rows["ds"], y=_fc_rows["y_actual"],
+                    mode="lines", name="Actual (holdout)",
+                    line=dict(color="#2ca02c", width=2),
+                ))
+
+            # ── Three forecast lines ─────────────────────────────────────────
+            if "yhat_full_history" in _fc_rows.columns:
+                fig_fc.add_trace(go.Scatter(
+                    x=_fc_rows["ds"], y=_fc_rows["yhat_full_history"],
+                    mode="lines", name="Full-history Prophet",
+                    line=dict(color="#aec7e8", width=1.5, dash="dot"),
+                ))
+            if "yhat_naive" in _fc_rows.columns:
+                fig_fc.add_trace(go.Scatter(
+                    x=_fc_rows["ds"], y=_fc_rows["yhat_naive"],
+                    mode="lines", name="naive forecast",
+                    line=dict(color="#e05c00", width=2, dash="dash"),
+                ))
+            if "yhat_agent" in _fc_rows.columns:
+                fig_fc.add_trace(go.Scatter(
+                    x=_fc_rows["ds"], y=_fc_rows["yhat_agent"],
+                    mode="lines", name="agent-in-the-loop forecast",
+                    line=dict(color="#b57bee", width=2, dash="dot"),
+                ))
+
+            # ── Changepoint verticals from agent_trace (if available) ────────
+            _trace = arts.get("agent_trace.json") or {}
+            for _cp in _trace.get("changepoints", []):
+                _ts = _cp.get("timestamp") or _cp.get("ds")
+                if _ts:
+                    try:
+                        _x = pd.Timestamp(_ts)
+                        fig_fc.add_vline(
+                            x=_x.value // 10**6,
+                            line_width=1.2, line_dash="dot", line_color="rgba(220,53,69,0.55)",
+                            annotation_text=_cp.get("type", "cp"),
+                            annotation_position="top left",
+                            annotation_font_size=9,
+                        )
+                    except Exception:
+                        pass
+
+            _has_train = train_df is not None and not train_df.empty
+            fig_fc.update_layout(
+                title="Historical + Forecast comparison (run_scenario)" if _has_train
+                      else "Forecast comparison (from run_scenario)",
+                xaxis=dict(title="Date", rangeslider=dict(visible=True)),
+                yaxis=dict(title="y"),
+                legend=dict(orientation="h", y=-0.25),
+                hovermode="x unified",
+                height=520 if _has_train else 420,
+            )
+            st.plotly_chart(fig_fc, use_container_width=True)
+        except Exception as _csv_plot_exc:
+            st.warning(f"CSV chart failed: {_csv_plot_exc} — showing PNG instead.")
+            csv_path = None  # trigger PNG fallback
+
+    if not csv_path:
+        # PNG fallback — show static image
+        png_path = arts.get("forecast_comparison.png")
+        if png_path and pathlib.Path(str(png_path)).exists():
+            st.image(str(png_path), caption="forecast_comparison.png", use_container_width=True)
+        elif arts.get("has_forecast_png"):
+            st.info("`forecast_comparison.png` on server — check `reports/`.")
+
+    # Agent context image (visual node)
+    ctx_path = arts.get("agent_context.png")
+    if ctx_path and pathlib.Path(str(ctx_path)).exists():
+        st.image(str(ctx_path), caption="agent_context.png (training-only)", use_container_width=True)
+    elif arts.get("has_context_png"):
+        st.info("`agent_context.png` on server — check `reports/`.")
 
 
 
 # ── Execution ─────────────────────────────────────────────────────────────
 
 if run_btn and bedrock_pipeline_enabled:
-    # ── Bedrock pipeline path (§13) ──────────────────────────────────────
+    # ── Bedrock / run_scenario path (§13 / §Forecasting 4) ───────────────
+    # Calls run_scenario directly in-process (lazy import). Falls back to
+    # FastAPI /changepoint/run if the in-process call fails (e.g. missing creds).
+    # Results are displayed in the same UI layout as Detect & Forecast.
     st.subheader(f"🔬 Bedrock Changepoint Pipeline — `{scenario_id}`")
 
     _ov_payload: dict = {
@@ -752,55 +858,117 @@ if run_btn and bedrock_pipeline_enabled:
         f"--scenario {scenario_id} "
         f"--override '{_override_str}'"
     )
-    with st.expander("Command being executed", expanded=False):
+    with st.expander("CLI equivalent", expanded=False):
         st.code(_echo_cmd, language="bash")
 
-    _bp_alive = _api_get("/changepoint/scenarios") is not None
-    if not _bp_alive:
-        st.error(
-            "❌ FastAPI server is not running. "
-            "Start it with: `uvicorn ailf.pipelines.drift.pipeline:app --reload`"
-        )
-        st.code(_echo_cmd, language="bash")
-        st.stop()
+    # Determine csv_path for non-registered scenarios
+    _bp_csv_path: str | None = None
+    if selected_series is not None:
+        _bp_csv_path = str(selected_series)
 
-    with st.spinner(f"Running Bedrock pipeline for `{scenario_id}`…"):
-        _bp_resp, _bp_err = _api_post("/changepoint/run", {
+    _bp_result: dict | None = None
+    _bp_error: str = ""
+
+    with st.spinner(f"⚙️ Running run_scenario for `{scenario_id}` (may take 30–120 s)…"):
+        try:
+            from ailf.pipelines.changepoint.pipeline import run_scenario as _run_scenario  # noqa: PLC0415
+            from ailf.core.config.schema import ConfigOverride as _ConfigOverride  # noqa: PLC0415
+
+            _override_obj = _ConfigOverride.from_dict(_ov_payload)
+            _bp_series_df = None
+            if _bp_csv_path:
+                _bp_series_df = pd.read_csv(_bp_csv_path, parse_dates=["ds"])
+
+            _bp_result = _run_scenario(
+                scenario_id,
+                override=_override_obj,
+                series_df=_bp_series_df,
+                split_ratio=split_ratio / 100.0,
+                emit_events=True,
+            )
+        except (ImportError, ModuleNotFoundError) as _bp_imp_exc:
+            _bp_error = f"Missing dependency: {_bp_imp_exc}"
+        except Exception as _bp_exc:
+            _bp_error = str(_bp_exc)
+
+    # If in-process failed, try FastAPI as fallback
+    if _bp_result is None:
+        st.warning(f"⚠️ Direct run_scenario failed: {_bp_error}")
+        _bp_api_resp = _api_post("/changepoint/run", {
             "scenario_id": scenario_id,
             "override": _ov_payload,
+            "csv_path": _bp_csv_path,
+            "split_ratio": split_ratio / 100.0,
         })
-
-    if _bp_resp is None:
-        st.error(f"❌ API request failed: {_bp_err}")
-        st.stop()
-
-    _bp_status = _bp_resp.get("status")
-    if _bp_status == "ok":
-        st.success(f"✅ Pipeline complete — run ID: `{_bp_resp.get('run_id')}`")
-
-        # MAE comparison
-        _bp_fe = _bp_resp.get("final_eval") or {}
-        if _bp_fe:
-            _bc1, _bc2, _bc3 = st.columns(3)
-            for _bcol, _blbl, _bkey in [
-                (_bc1, "Full-history Prophet", "full_history_prophet"),
-                (_bc2, "Naive workflow", "naive_workflow"),
-                (_bc3, "Agent-in-the-loop", "agent"),
-            ]:
-                _bmets = (_bp_fe.get(_bkey) or {}).get("test_metrics", {})
-                _bmae = _bmets.get("mae")
-                _bcol.metric(_blbl + " MAE", f"{_bmae:.4f}" if isinstance(_bmae, float) else "—")
-
-        # Show all artifacts from disk/API
-        _bp_arts = _load_run_artifacts(scenario_id)
-        if _bp_arts:
-            _render_artifacts(_bp_arts)
-
-    elif _bp_status == "unavailable":
-        st.warning(f"⚠️ Bedrock unavailable: {_bp_resp.get('error')}")
-        st.info("Run the CLI command above manually once Bedrock creds are configured in `.env`.")
+        if _bp_api_resp and _bp_api_resp.get("status") == "ok":
+            _bp_result = _bp_api_resp
+            st.info("✅ Completed via FastAPI fallback.")
+        elif _bp_api_resp and _bp_api_resp.get("status") == "unavailable":
+            st.error(f"❌ Bedrock unavailable: {_bp_api_resp.get('error')}")
+            st.info("Configure AWS creds in `.env` and try again.")
+            st.stop()
+        else:
+            err = (_bp_api_resp or {}).get("error", "API unreachable") if _bp_api_resp else "API unreachable"
+            st.error(f"❌ Both in-process and API failed. Last error: {err}")
+            st.stop()
     else:
-        st.error(f"Pipeline error: {_bp_resp.get('error')}")
+        st.success(f"✅ run_scenario complete — run ID: `{_bp_result.get('run_id', '—')}`")
+
+    # ── Display results in same layout as Detect & Forecast ──────────────
+    _bp_fe = _bp_result.get("final_eval") or {}
+    _bp_winner = _bp_result.get("winner", "—")
+    st.caption(f"Winner: **{_bp_winner}**")
+
+    # Forecast chart from CSV (preferred) or stored artifacts
+    _bp_arts = _load_run_artifacts(scenario_id)
+    if _bp_arts:
+        _bp_train_slice = None
+        if _bp_series_df is not None and not _bp_series_df.empty:
+            _n_train = int(len(_bp_series_df) * split_ratio / 100.0)
+            _bp_train_slice = _bp_series_df.iloc[:_n_train].copy()
+        _render_artifacts(_bp_arts, train_df=_bp_train_slice)
+    elif _bp_fe:
+        # Build inline chart from yhat arrays in final_eval
+        try:
+            _bp_test_n = len((_bp_fe.get("agent") or {}).get("yhat") or [])
+            if _bp_test_n > 0:
+                _bp_ds = pd.date_range(
+                    end=pd.Timestamp("today"), periods=_bp_test_n, freq="D"
+                )
+                _bp_fig = go.Figure()
+                for _bpname, _bpkey, _bpcolor, _bpdash in [
+                    ("Full-history Prophet", "full_history_prophet", "#aec7e8", "dot"),
+                    ("naive forecast",       "naive_workflow",        "#e05c00", "dash"),
+                    ("agent-in-the-loop",    "agent",                 "#b57bee", "dot"),
+                ]:
+                    _bpy = (_bp_fe.get(_bpkey) or {}).get("yhat", [])
+                    if _bpy:
+                        _bp_fig.add_trace(go.Scatter(
+                            x=_bp_ds, y=_bpy[:_bp_test_n],
+                            mode="lines", name=_bpname,
+                            line=dict(color=_bpcolor, width=2, dash=_bpdash),
+                        ))
+                _bp_fig.update_layout(
+                    title="Forecast comparison (run_scenario)",
+                    xaxis=dict(title="Date"), yaxis=dict(title="y"),
+                    legend=dict(orientation="h", y=-0.25),
+                    hovermode="x unified", height=400,
+                )
+                st.plotly_chart(_bp_fig, use_container_width=True)
+        except Exception:
+            pass
+
+    # MAE metrics row
+    if _bp_fe:
+        _bc1, _bc2, _bc3 = st.columns(3)
+        for _bcol, _blbl, _bkey in [
+            (_bc1, "Full-history Prophet", "full_history_prophet"),
+            (_bc2, "Naive workflow",       "naive_workflow"),
+            (_bc3, "Agent-in-the-loop",   "agent"),
+        ]:
+            _bmets = (_bp_fe.get(_bkey) or {}).get("test_metrics", {})
+            _bmae  = _bmets.get("mae")
+            _bcol.metric(_blbl + " MAE", f"{_bmae:.4f}" if isinstance(_bmae, float) else "—")
 
 elif run_btn:
     # Resolve data
@@ -872,7 +1040,7 @@ elif run_btn:
         else:
             try:
                 with st.spinner("🤖 Agent detecting changepoints and drifts…"):
-                    detection = detect(train_df, model=actual_model_id, ollama_url=ollama_url)
+                    detection = detect(train_df, model=actual_model_id, ollama_url=ollama_url, langsmith_tracing=langsmith_tracing)
             except Exception as _det_exc:
                 st.warning(f"⚠️ Detection error: {_det_exc} — using CUSUM fallback.")
                 detection = _cusum_fallback
@@ -913,6 +1081,7 @@ elif run_btn:
         # Path 2: Prophet with agent-detected changepoints injected (universal fallback)
         agent_fut: pd.DataFrame | None = None
         agent_source: str = ""
+        agent_metrics: dict = {}
         _override_payload = {
             "models": {
                 "visual_model_id": visual_model_id,
@@ -936,9 +1105,9 @@ elif run_btn:
         except Exception:
             _anthropic_key = ""
 
-        with st.spinner("🔬 Computing agent-in-the-loop forecast…"):
+        with st.spinner("🔬 Running agent-in-the-loop pipeline…"):
             try:
-                agent_fut, agent_source = _run_agent_forecast(
+                agent_fut, agent_source, agent_metrics = _run_agent_forecast(
                     train_df,
                     detection.changepoints,
                     prediction_length,
@@ -955,6 +1124,7 @@ elif run_btn:
                 )
             except Exception as exc:
                 st.warning(f"Agent-in-the-loop forecast skipped: {exc}")
+                agent_metrics = {}
 
     st.subheader("Forecast")
     if agent_fut is not None:
@@ -966,13 +1136,80 @@ elif run_btn:
     fig = _build_chart(train_df, fut_part, detection.changepoints, test_df, agent_fut)
     st.plotly_chart(fig, use_container_width=True)
 
-    # Metrics
+    # ── Forecast metrics row ──────────────────────────────────────────────
     mc1, mc2, mc3, mc4, mc5 = st.columns(5)
     mc1.metric("Train rows",       len(train_df))
     mc2.metric("Holdout rows",     len(test_df) if test_df is not None else "—")
     mc3.metric("Forecast horizon", f"{len(fut_part)} days")
     mc4.metric("Changepoints",     len(detection.changepoints))
-    mc5.metric("Agent forecast",   agent_source if agent_source else "—")
+    mc5.metric("Agent forecast",   agent_source[:30] if agent_source else "—")
+
+    # ── §15: Baseline comparison + agent trace tab ────────────────────────
+    if agent_metrics:
+        with st.expander("📊 Baseline Comparison & Agent Trace", expanded=False):
+            fe = agent_metrics.get("final_eval") or {}
+            winner = agent_metrics.get("winner", "—")
+            st.markdown(f"**Winner:** `{winner}` | Source: `{agent_metrics.get('source', '—')}`")
+
+            # MAE comparison table
+            if fe:
+                st.subheader("Test metrics comparison")
+                comparison_rows = []
+                for method_key, label in [
+                    ("full_history_prophet", "Full-history Prophet"),
+                    ("naive_workflow",        "Naive workflow"),
+                    ("agent",                 "Agent-in-the-loop"),
+                ]:
+                    mets = (fe.get(method_key) or {}).get("test_metrics") or {}
+                    comparison_rows.append({
+                        "Method": label,
+                        "MAE":  f"{mets.get('mae', float('nan')):.4f}" if mets else "—",
+                        "RMSE": f"{mets.get('rmse', float('nan')):.4f}" if mets else "—",
+                        "Tool": (fe.get(method_key) or {}).get("tool", ""),
+                    })
+                st.dataframe(
+                    pd.DataFrame(comparison_rows),
+                    use_container_width=True, hide_index=True,
+                )
+
+                # Highlight winner
+                agent_mae  = (fe.get("agent") or {}).get("test_metrics", {}).get("mae")
+                naive_mae  = (fe.get("naive_workflow") or {}).get("test_metrics", {}).get("mae")
+                if isinstance(agent_mae, float) and isinstance(naive_mae, float):
+                    if agent_mae < naive_mae:
+                        st.success(
+                            f"✅ Agent-in-the-loop beat naive by "
+                            f"{naive_mae - agent_mae:.4f} MAE "
+                            f"({100*(naive_mae-agent_mae)/naive_mae:.1f}% improvement)"
+                        )
+                    else:
+                        st.warning(
+                            f"⚠️ Naive workflow won by {agent_mae - naive_mae:.4f} MAE. "
+                            "Consider selecting a different model or adjusting diagnostics."
+                        )
+
+            # Agent trace — iterations
+            iterations = agent_metrics.get("iterations") or []
+            if iterations:
+                st.subheader("Agent iterations")
+                for it in iterations:
+                    prop = it.get("proposal", {})
+                    beat = it.get("beat_naive")
+                    icon = "✅" if beat else "❌"
+                    val_res = it.get("val_result") or {}
+                    st.markdown(
+                        f"{icon} **Iter {it.get('i','')}** — tool: `{prop.get('tool','')}`  "
+                        f"val MAE: {val_res.get('val_mae', '—')}  "
+                        f"naive MAE: {val_res.get('naive_val_mae', '—')}  \n"
+                        f"> {prop.get('rationale','')[:120]}"
+                    )
+
+            # Also load artifacts from disk (metrics.json + agent_trace.json)
+            _disk_arts = _load_run_artifacts(scenario_id)
+            if _disk_arts:
+                st.divider()
+                st.caption("Also showing pre-computed artifacts from disk:")
+                _render_artifacts(_disk_arts)
 
 else:
     st.info(

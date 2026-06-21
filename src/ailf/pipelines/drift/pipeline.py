@@ -28,6 +28,66 @@ from pydantic import BaseModel, field_validator
 from ailf.pipelines.drift.dataset_generator import DriftGenerator, _VALID_TRENDS
 
 # ---------------------------------------------------------------------------
+# Inline Ollama client (duck-types ChatBedrockConverse for ModelWrapper)
+# Kept here so llm.py stays at main-branch without provider-specific extras.
+# ---------------------------------------------------------------------------
+
+class _OllamaStructuredProxy:
+    """Returned by _OllamaClient.with_structured_output(); has .invoke(messages)."""
+
+    def __init__(self, model_id: str, schema, max_tokens: int, ollama_url: str) -> None:
+        self._model_id = model_id
+        self._schema = schema
+        self._max_tokens = max_tokens
+        self._ollama_url = ollama_url
+
+    def invoke(self, messages):
+        import json, urllib.request  # noqa: PLC0415, E401
+        from langchain_core.messages import HumanMessage  # noqa: PLC0415
+
+        parts = []
+        for msg in messages:
+            if isinstance(msg, HumanMessage):
+                c = msg.content
+                if isinstance(c, str):
+                    parts.append(c)
+                elif isinstance(c, list):
+                    parts.extend(p["text"] for p in c if p.get("type") == "text")
+
+        payload = json.dumps({
+            "model": self._model_id,
+            "messages": [{"role": "user", "content": "\n".join(parts)}],
+            "stream": False,
+            "format": "json",
+            "options": {"temperature": 0.1, "num_predict": self._max_tokens},
+        }).encode()
+        req = urllib.request.Request(
+            f"{self._ollama_url}/api/chat",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=120) as r:
+            obj = json.loads(r.read().decode())
+        text = obj.get("message", {}).get("content", "")
+        start, end = text.find("{"), text.rfind("}")
+        data = json.loads(text[start:end + 1]) if start != -1 and end != -1 else {}
+        return self._schema(**data)
+
+
+class _OllamaClient:
+    """Minimal Ollama chat client duck-typing ChatBedrockConverse for ModelWrapper."""
+
+    def __init__(self, model_id: str, *, max_tokens: int = 2400, ollama_url: str = "http://localhost:11434") -> None:
+        self._model_id = model_id
+        self._max_tokens = max_tokens
+        self._ollama_url = ollama_url
+
+    def with_structured_output(self, schema):
+        return _OllamaStructuredProxy(self._model_id, schema, self._max_tokens, self._ollama_url)
+
+
+# ---------------------------------------------------------------------------
 # Bootstrap
 # ---------------------------------------------------------------------------
 
@@ -823,7 +883,7 @@ async def forecast_analyze(
 # langchain_aws or absent AWS creds does NOT break the drift API at load time.
 # ---------------------------------------------------------------------------
 
-_REPORTS_ROOT = pathlib.Path(__file__).parents[4] / "reports"
+_REPORTS_ROOT = pathlib.Path(__file__).parents[4] / "reports" / "changepoint"
 
 _VALID_SCENARIOS = frozenset({
     "level_shift_loses_seasonality",
@@ -951,14 +1011,8 @@ def changepoint_run(body: ChangepointRunRequest) -> ChangepointRunResponse:
                 )
             series_df = _pd.read_csv(csv_file, parse_dates=["ds"])
 
-        result = run_scenario(
-            body.scenario_id,
-            override=override_obj,
-            emit_events=True,
-            series_df=series_df,
-            split_ratio=body.split_ratio,
-            seasonal_period=body.seasonal_period,
-            n_changepoints_to_detect=body.n_changepoints_to_detect,
+        result = _run_with_fallback(
+            run_scenario, body.scenario_id, override_obj, series_df, body
         )
 
         return ChangepointRunResponse(
@@ -969,18 +1023,73 @@ def changepoint_run(body: ChangepointRunRequest) -> ChangepointRunResponse:
             cli_command=cli,
         )
 
-    except (ImportError, ModuleNotFoundError) as exc:
-        return ChangepointRunResponse(
-            status="unavailable",
-            error=f"Missing dependency: {exc}. Install langchain_aws or run via CLI.",
-            cli_command=cli,
-        )
     except Exception as exc:
         return ChangepointRunResponse(
             status="error",
             error=str(exc),
             cli_command=cli,
         )
+
+
+def _run_with_fallback(run_scenario, scenario_id: str, override_obj, series_df, body) -> dict:
+    """Try run_scenario with Bedrock; if unavailable, auto-retry with Qwen via Ollama.
+
+    Bedrock is tried first. On ImportError (no langchain_aws) or any credential /
+    model-unavailable error, the pipeline is re-run with ``OllamaStructuredClient``
+    so the button produces real output even without AWS creds.
+    """
+    from ailf.core.config.schema import ConfigOverride  # noqa: PLC0415
+
+    bedrock_exc: Exception | None = None
+    try:
+        return run_scenario(
+            scenario_id,
+            override=override_obj,
+            emit_events=True,
+            series_df=series_df,
+            split_ratio=body.split_ratio,
+            seasonal_period=body.seasonal_period,
+            n_changepoints_to_detect=body.n_changepoints_to_detect,
+        )
+    except Exception as exc:
+        bedrock_exc = exc
+
+    # ── Bedrock failed — try Qwen (Ollama) fallback ──────────────────────
+    try:
+        from ailf.core.models.llm import ModelWrapper  # noqa: PLC0415
+
+        _ollama_model = "qwen3.5:4b"
+        _ollama_url = "http://localhost:11434"
+        _client = _OllamaClient(_ollama_model, max_tokens=2400, ollama_url=_ollama_url)
+        visual_model = ModelWrapper(_client, _ollama_model)
+        decision_model = ModelWrapper(_client, _ollama_model)
+
+        # Build a Qwen-compatible override: disable visual (text-only) but forward toggles
+        ov_base = override_obj.to_dict() if override_obj else {}
+        qwen_override = ConfigOverride.from_dict({
+            **ov_base,
+            "visual_analysis_enabled": False,
+        })
+
+        result = run_scenario(
+            scenario_id,
+            override=qwen_override,
+            model_wrappers=(visual_model, decision_model),
+            emit_events=True,
+            series_df=series_df,
+            split_ratio=body.split_ratio,
+            seasonal_period=body.seasonal_period,
+            n_changepoints_to_detect=body.n_changepoints_to_detect,
+        )
+        # Tag the result so the UI knows which backend ran
+        result = {**result, "_backend": f"ollama:{_ollama_model} (Bedrock unavailable: {bedrock_exc})"}
+        return result
+    except Exception as qwen_exc:
+        raise RuntimeError(
+            f"Bedrock failed: {bedrock_exc}. "
+            f"Qwen fallback also failed: {qwen_exc}. "
+            "Check Ollama is running (ollama serve) and qwen3.5:4b is available."
+        ) from qwen_exc
 
 
 class ArtifactSummary(BaseModel):
@@ -990,6 +1099,7 @@ class ArtifactSummary(BaseModel):
     has_trace: bool
     has_forecast_png: bool
     has_context_png: bool
+    has_forecast_csv: bool = False   # §Forecasting 4
     metrics: dict[str, Any] | None = None
     final_eval: dict[str, Any] | None = None
     agent_iterations: list[dict[str, Any]] | None = None
@@ -1054,6 +1164,7 @@ def changepoint_artifacts(scenario_id: str) -> list[ArtifactSummary]:
             has_trace=tpath.exists(),
             has_forecast_png=(run_dir / "forecast_comparison.png").exists(),
             has_context_png=(run_dir / "agent_context.png").exists(),
+            has_forecast_csv=(run_dir / "forecast_comparison.csv").exists(),
             metrics=metrics,
             final_eval=final_eval,
             agent_iterations=agent_iters,

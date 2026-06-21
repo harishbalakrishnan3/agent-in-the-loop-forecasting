@@ -135,7 +135,7 @@ forecast_comparison.png
 agent_context.png   # only when visual_analysis_enabled=true
 event_payloads/     # sidecar JSON for large event payloads
 
-When 'Bedrock Changepoint Pipeline' toggle is on, then use the below api contract for the visualization with Streamlit UI for visualization.
+When 'Bedrock Changepoint Pipeline' toggle is on, then use the run_scenario method with all the 'Tools' config from Controls in override to retrieve the forecasted data and agent's reasoning (The UI should remain same as the 'Detect & Forecast') including the model's comparison.
 
 uv run python -m ailf.pipelines.changepoint.pipeline --scenario <scenario_id> --override '<json>'
 
@@ -154,12 +154,18 @@ Events follow this envelope:
   "error": null
 }
 
-15. Graceful fallback if any of the steps is interrupted and exception is thrown.
+15. Add a new tab in UI to look at the baseline comparison metrics that is saved in metrics.json and also show agent_trace.json. Graceful fallback if any of the steps is interrupted and exception is thrown.
+16. Rename 'Run Bedrock Pipeline' to 'Run Forecast'. 
 
 ## Forecasting
 1. Write a tool to use Qwen-3.5/langsmith/claude with reasoning to find the changepoints from the generated graphs and save them in json or csv format. To visualize the changepoints found by Qwen, mark them and visualize in graphs under qwen folder.
 2. Use prophet model to forecast from the split ratio in Controls of generated csvs from above and compare with the actual data of and display on UI.
-3. When 'Bedrock Changepoint Pipeline' toggle is off, the run_scenario pipeline needs to be newly written in a new fallback.py for the claude and anthropic client to perform the tool call and prophet's hyperparameters, since run_scenario only passes changepoints from a png to the hyperparameters of prophet.
+3. When 'Bedrock Changepoint Pipeline' toggle is off, the run_scenario pipeline needs to be newly written in a new fallback.py for the claude and anthropic client to perform all the steps exactly same like run_scenario including validation checks, baseline comparison etc, it should accept a csv and forecast the purple dotted forecast along with the existing naive prophet's orange dotted forecast and green actual line.
+4. When 'Bedrock Changepoint Pipeline' toggle is on, it can directly call the run_scenario with the override tools and other necessary config if it serves better than calling the api to execute the command above.
+5. The current run_scenario saves only the png, check if it can save the csv with numerical values of forecast to visualize in streamlit. Both the split or train and forecasted output needs to be in csv for visualizing in zoom-in/out pan of UI. If the csv data is not possible, use the image generated after the run_scenario pipeline to display in UI. The pipeline also saves metrics.json which can be shown in the UI for comparison.
+6. Perform end to end using run_Scenario with Claude sonnet 4.6 to verify if the flow works end to end rendering the forecasted output in UI, reasoning and comparison from run_scenario to the UI.
+7. Remove the entries under Data Scenario where datasets under pocs/data were displayed. Remove the warning "No CSV found for...".
+8. Make the toggle for 'Bedrock Changepoint Pipeline' to be on by default and remove the warning underneath.
 
 ## Documentation
 Create a mermaid diagram in sessions/ksowmya/architecture-phase1.md to visualize the architecture of the system and the flow of data. The diagram should include the time series generator, the API endpoint, and how they interact with each other. Use appropriate shapes and labels to make the diagram clear and easy to understand.
