@@ -1,281 +1,284 @@
 {
-  "schema_version": "1.1",
-  "description": "CSV fixtures for the agent-in-the-loop changepoint forecasting POC. The forecast origin is placed so the validation window coincides with the original exploration's test window. Audit-only fields must never be passed to the agent.",
-  "scenarios": [
-    {
-      "scenario_id": "level_shift_loses_seasonality",
-      "title": "Multiple permanent level shifts with short post-change seasonal history",
-      "csv_path": "pocs/changepoint/data/csv/level_shift_loses_seasonality.csv",
-      "schema": {
-        "date_column": "ds",
-        "target_column": "y",
-        "frequency": "D"
-      },
-      "row_count": 1000,
-      "date_range": {
-        "start": "2019-01-01",
-        "end": "2021-09-26"
-      },
-      "train_end": 880,
-      "test_horizon": 120,
-      "validation_horizon": 120,
-      "n_changepoints_to_detect": 2,
-      "seasonal_period": 365,
-      "split_dates": {
-        "train_start": "2019-01-01",
-        "train_end_inclusive": "2021-05-29",
-        "test_start": "2021-05-30",
-        "test_end_inclusive": "2021-09-26"
-      },
-      "csv_sha256": "2d831f97d0cc095480efc649932e6a6fa30d96e092ed56d614b0ed4f81f72f90",
-      "agent_exposure_policy": {
-        "agent_may_see_columns": [
-          "ds",
-          "y"
-        ],
-        "agent_may_see_rows": "0:880",
-        "agent_must_not_see_audit_only": true,
-        "agent_must_not_see_test_targets": true
-      },
-      "audit_only": {
-        "note": "Two real structural level shifts occur in training, with the latest close to the forecast origin. Truncating to detected changepoint windows removes the annual seasonal history.",
-        "true_injected_boundaries": [
-          610,
-          700
-        ],
-        "expected_intervention_family": "full_history_step_regressor"
-      }
-    },
-    {
-      "scenario_id": "gradual_drift_loses_seasonality",
-      "title": "Gradual drift over a long transition with short post-drift seasonal history",
-      "csv_path": "pocs/changepoint/data/csv/gradual_drift_loses_seasonality.csv",
-      "schema": {
-        "date_column": "ds",
-        "target_column": "y",
-        "frequency": "D"
-      },
-      "row_count": 1000,
-      "date_range": {
-        "start": "2019-01-01",
-        "end": "2021-09-26"
-      },
-      "train_end": 880,
-      "test_horizon": 120,
-      "validation_horizon": 120,
-      "n_changepoints_to_detect": 2,
-      "seasonal_period": 365,
-      "split_dates": {
-        "train_start": "2019-01-01",
-        "train_end_inclusive": "2021-05-29",
-        "test_start": "2021-05-30",
-        "test_end_inclusive": "2021-09-26"
-      },
-      "csv_sha256": "1955a1b8363c628923af4e8ca63347e2bceb5d40eea9f3532149356ff7c0bae0",
-      "agent_exposure_policy": {
-        "agent_may_see_columns": [
-          "ds",
-          "y"
-        ],
-        "agent_may_see_rows": "0:880",
-        "agent_must_not_see_audit_only": true,
-        "agent_must_not_see_test_targets": true
-      },
-      "audit_only": {
-        "note": "A structural level transition unfolds gradually over many days. Treating the transition as one or two abrupt changepoints either discards seasonal history or uses the wrong intervention shape.",
-        "true_injected_boundaries": [
-          540,
-          720
-        ],
-        "expected_intervention_family": "full_history_ramp_regressor"
-      }
-    },
-    {
-      "scenario_id": "temporary_event_not_regime_change",
-      "title": "Multiple temporary event/outlier blocks misread as changepoints",
-      "csv_path": "pocs/changepoint/data/csv/temporary_event_not_regime_change.csv",
-      "schema": {
-        "date_column": "ds",
-        "target_column": "y",
-        "frequency": "D"
-      },
-      "row_count": 1000,
-      "date_range": {
-        "start": "2019-01-01",
-        "end": "2021-09-26"
-      },
-      "train_end": 880,
-      "test_horizon": 120,
-      "validation_horizon": 120,
-      "n_changepoints_to_detect": 2,
-      "seasonal_period": 365,
-      "split_dates": {
-        "train_start": "2019-01-01",
-        "train_end_inclusive": "2021-05-29",
-        "test_start": "2021-05-30",
-        "test_end_inclusive": "2021-09-26"
-      },
-      "csv_sha256": "17f2909efbadacf15d2c0c79deeaa8030d7f0ae3a0813879351ec8bfc2eaa968",
-      "agent_exposure_policy": {
-        "agent_may_see_columns": [
-          "ds",
-          "y"
-        ],
-        "agent_may_see_rows": "0:880",
-        "agent_must_not_see_audit_only": true,
-        "agent_must_not_see_test_targets": true
-      },
-      "audit_only": {
-        "note": "The series returns to the old regime after short event blocks. Treating the latest detected change as a new permanent regime discards useful history.",
-        "true_injected_boundaries": [
-          250,
-          268,
-          420,
-          444,
-          575,
-          615
-        ],
-        "expected_intervention_family": "full_history_clean_event"
-      }
-    },
-    {
-      "scenario_id": "many_temporary_events_long_history",
-      "title": "Six temporary events over longer history misread as changepoints",
-      "csv_path": "pocs/changepoint/data/csv/many_temporary_events_long_history.csv",
-      "schema": {
-        "date_column": "ds",
-        "target_column": "y",
-        "frequency": "D"
-      },
-      "row_count": 1730,
-      "date_range": {
-        "start": "2019-01-01",
-        "end": "2023-09-26"
-      },
-      "train_end": 1610,
-      "test_horizon": 120,
-      "validation_horizon": 120,
-      "n_changepoints_to_detect": 6,
-      "seasonal_period": 365,
-      "split_dates": {
-        "train_start": "2019-01-01",
-        "train_end_inclusive": "2023-05-29",
-        "test_start": "2023-05-30",
-        "test_end_inclusive": "2023-09-26"
-      },
-      "csv_sha256": "72d18010bb1dd48779e29cdfea7a088aa7578f6a9e6525e46608f321cd2b18f7",
-      "agent_exposure_policy": {
-        "agent_may_see_columns": [
-          "ds",
-          "y"
-        ],
-        "agent_may_see_rows": "0:1610",
-        "agent_must_not_see_audit_only": true,
-        "agent_must_not_see_test_targets": true
-      },
-      "audit_only": {
-        "note": "Six irregular, non-calendar event blocks contaminate a longer history. Their start dates and widths intentionally differ. The latest event sits inside the validation tail, encouraging a changepoint-window workflow to believe the event continues into the forecast period even though the series reverts.",
-        "true_injected_boundaries": [
-          92,
-          105,
-          286,
-          317,
-          548,
-          566,
-          852,
-          901,
-          1320,
-          1344,
-          1441,
-          1482
-        ],
-        "expected_intervention_family": "full_history_clean_event"
-      }
-    },
-    {
-      "scenario_id": "prophet_prior_tuning_recurring_event",
-      "title": "Recurring event plus trend kinks needs Prophet prior tuning",
-      "csv_path": "pocs/changepoint/data/csv/prophet_prior_tuning_recurring_event.csv",
-      "schema": {
-        "date_column": "ds",
-        "target_column": "y",
-        "frequency": "D"
-      },
-      "row_count": 1730,
-      "date_range": {
-        "start": "2019-01-01",
-        "end": "2023-09-26"
-      },
-      "train_end": 1610,
-      "test_horizon": 120,
-      "validation_horizon": 120,
-      "n_changepoints_to_detect": 6,
-      "seasonal_period": 365,
-      "split_dates": {
-        "train_start": "2019-01-01",
-        "train_end_inclusive": "2023-05-29",
-        "test_start": "2023-05-30",
-        "test_end_inclusive": "2023-09-26"
-      },
-      "csv_sha256": "571ceb0c6f57fe0576cecaff04d1b00618994ccf95dc42cc5da308952f99d612",
-      "agent_exposure_policy": {
-        "agent_may_see_columns": [
-          "ds",
-          "y"
-        ],
-        "agent_may_see_rows": "0:1610",
-        "agent_must_not_see_audit_only": true,
-        "agent_must_not_see_test_targets": true
-      },
-      "audit_only": {
-        "note": "A sharp recurring calendar event and two trend kinks stress Prophet defaults. The intervention should preserve long history, encode the recurring event as holidays, and tune changepoint_prior_scale/holiday_prior_scale on historical folds.",
-        "true_injected_boundaries": [
-          875,
-          1250
-        ],
-        "expected_intervention_family": "full_history_prophet_tuned_holidays"
-      }
-    },
-    {
-      "scenario_id": "mixed_magnitudes_with_seasonality",
-      "title": "Four level shifts of mixed magnitudes (+40, +5, -30, +8) with annual seasonality",
-      "csv_path": "pocs/changepoint/data/csv/mixed_magnitudes_with_seasonality.csv",
-      "schema": {
-        "date_column": "ds",
-        "target_column": "y",
-        "frequency": "D"
-      },
-      "row_count": 1000,
-      "date_range": {
-        "start": "2019-01-01",
-        "end": "2021-09-26"
-      },
-      "train_end": 880,
-      "test_horizon": 120,
-      "validation_horizon": 120,
-      "n_changepoints_to_detect": 4,
-      "seasonal_period": 365,
-      "split_dates": {
-        "train_start": "2019-01-01",
-        "train_end_inclusive": "2021-05-29",
-        "test_start": "2021-05-30",
-        "test_end_inclusive": "2021-09-26"
-      },
-      "csv_sha256": "cdc6322db47847b511df12beb88920e84181450c57800d404a515b64a8b15e43",
-      "agent_exposure_policy": {
-        "agent_may_see_columns": [
-          "ds",
-          "y"
-        ],
-        "agent_may_see_rows": "0:880",
-        "agent_must_not_see_audit_only": true,
-        "agent_must_not_see_test_targets": true
-      },
-      "audit_only": {
-        "note": "Four changepoints at indices 167, 417, 667, 833 with mixed magnitudes. The large initial upshift (+40) followed by a reversal (-30) later creates a complex regime pattern that challenges naive windowing. The last shift (+8) is close to the forecast origin.",
-        "true_injected_boundaries": [167, 417, 667, 833],
-        "expected_intervention_family": "full_history_step_regressor"
-      }
-    }
-  ]
+    "schema_version": "1.1",
+    "description": "CSV fixtures for the agent-in-the-loop changepoint forecasting POC. The forecast origin is placed so the validation window coincides with the original exploration's test window. Audit-only fields must never be passed to the agent.",
+    "scenarios": [
+        {
+            "scenario_id": "level_shift_loses_seasonality",
+            "title": "Multiple permanent level shifts with short post-change seasonal history",
+            "csv_path": "pocs/changepoint/data/csv/level_shift_loses_seasonality.csv",
+            "schema": {
+                "date_column": "ds",
+                "target_column": "y",
+                "frequency": "D"
+            },
+            "row_count": 1000,
+            "date_range": {
+                "start": "2019-01-01",
+                "end": "2021-09-26"
+            },
+            "train_end": 880,
+            "test_horizon": 120,
+            "validation_horizon": 120,
+            "n_changepoints_to_detect": 2,
+            "seasonal_period": 365,
+            "split_dates": {
+                "train_start": "2019-01-01",
+                "train_end_inclusive": "2021-05-29",
+                "test_start": "2021-05-30",
+                "test_end_inclusive": "2021-09-26"
+            },
+            "csv_sha256": "2d831f97d0cc095480efc649932e6a6fa30d96e092ed56d614b0ed4f81f72f90",
+            "agent_exposure_policy": {
+                "agent_may_see_columns": [
+                    "ds",
+                    "y"
+                ],
+                "agent_may_see_rows": "0:880",
+                "agent_must_not_see_audit_only": true,
+                "agent_must_not_see_test_targets": true
+            },
+            "audit_only": {
+                "note": "Two real structural level shifts occur in training, with the latest close to the forecast origin. Truncating to detected changepoint windows removes the annual seasonal history.",
+                "true_injected_boundaries": [
+                    610,
+                    700
+                ],
+                "expected_intervention_family": "full_history_step_regressor"
+            }
+        },
+        {
+            "scenario_id": "gradual_drift_loses_seasonality",
+            "title": "Gradual drift over a long transition with short post-drift seasonal history",
+            "csv_path": "pocs/changepoint/data/csv/gradual_drift_loses_seasonality.csv",
+            "schema": {
+                "date_column": "ds",
+                "target_column": "y",
+                "frequency": "D"
+            },
+            "row_count": 1000,
+            "date_range": {
+                "start": "2019-01-01",
+                "end": "2021-09-26"
+            },
+            "train_end": 880,
+            "test_horizon": 120,
+            "validation_horizon": 120,
+            "n_changepoints_to_detect": 2,
+            "seasonal_period": 365,
+            "split_dates": {
+                "train_start": "2019-01-01",
+                "train_end_inclusive": "2021-05-29",
+                "test_start": "2021-05-30",
+                "test_end_inclusive": "2021-09-26"
+            },
+            "csv_sha256": "1955a1b8363c628923af4e8ca63347e2bceb5d40eea9f3532149356ff7c0bae0",
+            "agent_exposure_policy": {
+                "agent_may_see_columns": [
+                    "ds",
+                    "y"
+                ],
+                "agent_may_see_rows": "0:880",
+                "agent_must_not_see_audit_only": true,
+                "agent_must_not_see_test_targets": true
+            },
+            "audit_only": {
+                "note": "A structural level transition unfolds gradually over many days. Treating the transition as one or two abrupt changepoints either discards seasonal history or uses the wrong intervention shape.",
+                "true_injected_boundaries": [
+                    540,
+                    720
+                ],
+                "expected_intervention_family": "full_history_ramp_regressor"
+            }
+        },
+        {
+            "scenario_id": "temporary_event_not_regime_change",
+            "title": "Multiple temporary event/outlier blocks misread as changepoints",
+            "csv_path": "pocs/changepoint/data/csv/temporary_event_not_regime_change.csv",
+            "schema": {
+                "date_column": "ds",
+                "target_column": "y",
+                "frequency": "D"
+            },
+            "row_count": 1000,
+            "date_range": {
+                "start": "2019-01-01",
+                "end": "2021-09-26"
+            },
+            "train_end": 880,
+            "test_horizon": 120,
+            "validation_horizon": 120,
+            "n_changepoints_to_detect": 2,
+            "seasonal_period": 365,
+            "split_dates": {
+                "train_start": "2019-01-01",
+                "train_end_inclusive": "2021-05-29",
+                "test_start": "2021-05-30",
+                "test_end_inclusive": "2021-09-26"
+            },
+            "csv_sha256": "17f2909efbadacf15d2c0c79deeaa8030d7f0ae3a0813879351ec8bfc2eaa968",
+            "agent_exposure_policy": {
+                "agent_may_see_columns": [
+                    "ds",
+                    "y"
+                ],
+                "agent_may_see_rows": "0:880",
+                "agent_must_not_see_audit_only": true,
+                "agent_must_not_see_test_targets": true
+            },
+            "audit_only": {
+                "note": "The series returns to the old regime after short event blocks. Treating the latest detected change as a new permanent regime discards useful history.",
+                "true_injected_boundaries": [
+                    250,
+                    268,
+                    420,
+                    444,
+                    575,
+                    615
+                ],
+                "expected_intervention_family": "full_history_clean_event"
+            }
+        },
+        {
+            "scenario_id": "many_temporary_events_long_history",
+            "title": "Six temporary events over longer history misread as changepoints",
+            "csv_path": "pocs/changepoint/data/csv/many_temporary_events_long_history.csv",
+            "schema": {
+                "date_column": "ds",
+                "target_column": "y",
+                "frequency": "D"
+            },
+            "row_count": 1730,
+            "date_range": {
+                "start": "2019-01-01",
+                "end": "2023-09-26"
+            },
+            "train_end": 1610,
+            "test_horizon": 120,
+            "validation_horizon": 120,
+            "n_changepoints_to_detect": 6,
+            "seasonal_period": 365,
+            "split_dates": {
+                "train_start": "2019-01-01",
+                "train_end_inclusive": "2023-05-29",
+                "test_start": "2023-05-30",
+                "test_end_inclusive": "2023-09-26"
+            },
+            "csv_sha256": "72d18010bb1dd48779e29cdfea7a088aa7578f6a9e6525e46608f321cd2b18f7",
+            "agent_exposure_policy": {
+                "agent_may_see_columns": [
+                    "ds",
+                    "y"
+                ],
+                "agent_may_see_rows": "0:1610",
+                "agent_must_not_see_audit_only": true,
+                "agent_must_not_see_test_targets": true
+            },
+            "audit_only": {
+                "note": "Six irregular, non-calendar event blocks contaminate a longer history. Their start dates and widths intentionally differ. The latest event sits inside the validation tail, encouraging a changepoint-window workflow to believe the event continues into the forecast period even though the series reverts.",
+                "true_injected_boundaries": [
+                    92,
+                    105,
+                    286,
+                    317,
+                    548,
+                    566,
+                    852,
+                    901,
+                    1320,
+                    1344,
+                    1441,
+                    1482
+                ],
+                "expected_intervention_family": "full_history_clean_event"
+            }
+        },
+        {
+            "scenario_id": "prophet_prior_tuning_recurring_event",
+            "title": "Recurring event plus trend kinks needs Prophet prior tuning",
+            "csv_path": "pocs/changepoint/data/csv/prophet_prior_tuning_recurring_event.csv",
+            "schema": {
+                "date_column": "ds",
+                "target_column": "y",
+                "frequency": "D"
+            },
+            "row_count": 1730,
+            "date_range": {
+                "start": "2019-01-01",
+                "end": "2023-09-26"
+            },
+            "train_end": 1610,
+            "test_horizon": 120,
+            "validation_horizon": 120,
+            "n_changepoints_to_detect": 6,
+            "seasonal_period": 365,
+            "split_dates": {
+                "train_start": "2019-01-01",
+                "train_end_inclusive": "2023-05-29",
+                "test_start": "2023-05-30",
+                "test_end_inclusive": "2023-09-26"
+            },
+            "csv_sha256": "571ceb0c6f57fe0576cecaff04d1b00618994ccf95dc42cc5da308952f99d612",
+            "agent_exposure_policy": {
+                "agent_may_see_columns": [
+                    "ds",
+                    "y"
+                ],
+                "agent_may_see_rows": "0:1610",
+                "agent_must_not_see_audit_only": true,
+                "agent_must_not_see_test_targets": true
+            },
+            "audit_only": {
+                "note": "A sharp recurring calendar event and two trend kinks stress Prophet defaults. The intervention should preserve long history, encode the recurring event as holidays, and tune changepoint_prior_scale/holiday_prior_scale on historical folds.",
+                "true_injected_boundaries": [
+                    875,
+                    1250
+                ],
+                "expected_intervention_family": "full_history_prophet_tuned_holidays"
+            }
+        },
+        {
+            "scenario_id": "sustained_anomaly_block",
+            "title": "Sustained 26-day anomaly block in fit window with linear trend and dual seasonality",
+            "csv_path": "src/ailf/pipelines/changepoint/data/csv/sustained_anomaly_block.csv",
+            "schema": {
+                "date_column": "ds",
+                "target_column": "y",
+                "frequency": "D"
+            },
+            "row_count": 1000,
+            "date_range": {
+                "start": "2019-01-01",
+                "end": "2021-09-27"
+            },
+            "train_end": 880,
+            "test_horizon": 120,
+            "validation_horizon": 120,
+            "n_changepoints_to_detect": 2,
+            "seasonal_period": 365,
+            "split_dates": {
+                "train_start": "2019-01-01",
+                "train_end_inclusive": "2021-05-29",
+                "test_start": "2021-05-30",
+                "test_end_inclusive": "2021-09-27"
+            },
+            "csv_sha256": "a69ba3f6926a550b91202895fc2fe850cb8bab8ce0fa5672cde1c77dcaf9c67c",
+            "agent_exposure_policy": {
+                "agent_may_see_columns": [
+                    "ds",
+                    "y"
+                ],
+                "agent_may_see_rows": "0:880",
+                "agent_must_not_see_audit_only": true,
+                "agent_must_not_see_test_targets": true
+            },
+            "audit_only": {
+                "note": "Sustained 26-day elevated block (+50 with jitter, indices 690-715) in fit window. Linear trend + weekly (amp 8) + annual (amp 12) + low noise (sigma 2). Block is broad enough that Prophet cannot downweight it \u2014 it distorts trend estimation, causing systematic overprediction. Cleaning the block removes the distortion.",
+                "true_injected_boundaries": [
+                    690,
+                    716
+                ],
+                "expected_intervention_family": "full_history_clean_event"
+            }
+        }
+    ]
 }
