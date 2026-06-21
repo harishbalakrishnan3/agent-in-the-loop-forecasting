@@ -25,11 +25,7 @@ class DriftGenerator:
 
     def concept_drift(self):
         ...
-2. Implement fast api in src/alif/pipelines/drift/pipeline.py to use the dataset generator, expose swagger ui for updating runtime sudden, gradual, recurring, incremental drifts, etc and recommended implementations and practices.
-   i. The api should have a post endpoint which accepts a csv file and forecast the output.
-    ii. Build an interactive UI with Streamlit or any other easy framework which can help in visualizing the predicted forecast for an input csv file trend by learned Prophet model vs actual output.
-   iii. The UI must have: Historical vs. Predicted Data: Display historical data with a solid line and forecast data with a dashed line. Confidence Intervals: Use a shaded area (e.g., Plotly's fill='tonexty') to represent upper and lower bounds of uncertainty.Interactive Controls: Add UI components so users can adjust the Prediction Length or filter specific data parameters on the fly.
-3. requirements.txt should have all the dependencies and versions pinned.
+2. requirements.txt should have all the dependencies and versions pinned.
 4. Add a README.md with instructions to run the project and details about the architecture and design decisions. Add a section about how to use the API endpoint to change the trend of the time series data during runtime.
 5. Add tests for the time series generator and the API endpoint using pytest.
 6. The DriftGenerator should be able to generate combination of two or more drifts in different types of series like sine, linear, binary, etc.
@@ -44,8 +40,17 @@ class DriftGenerator:
 10. New graph which is a sine wave which has seasonal drift in ampltide only during the third year second and third quarter out of 5 years and recurring drifts during quarter end for a period of 10 days every year.
 11. Update the config.yaml to generate different variety of drift trends and capture atleast 3 mutually exclusive. Task: Generate 3 new graphs with different configs. Goal: Choose the configs such that it is difficult-to-predict drift trends by any naive/prophet model. Capture the config.yaml params in their graphs.
 12. New sinusoidal graph which has covariate drift during the seasonal drift with high amplitude during second year second, third  quarter and covariate shift backs to old in the end of third year, seasonal drifts every december of 5 years and recurrent amplitude drifts every month end for 5 days. Sudden covariate drifts once in first, third year, twice in second, fourth year and fifth year has three sudden drifts.
-13. Save the generated graphs in csv to experiment in UI with prophet model. The csv should be split till fourth year before feeding to prophet and prophet's predicted output should be compared with the actual graph in the UI interactively. Both the http://127.0.0.1:8000/forecast/ui and streamlist UI should also have output display to show what the qwen agent is thinking while detecting the changepoints and drifts before invoking the prophet with input.
-14. Save the predicted output vs actual for all the generated graphs from 9 to 12 in prophet/ dir.
+
+
+## Visualization
+1. Implement fast api in src/alif/pipelines/drift/pipeline.py to use the dataset generator, expose swagger ui for updating runtime sudden, gradual, recurring, incremental drifts, etc and recommended implementations and practices.
+   i. The api should have a post endpoint which accepts a csv file and forecast the output.
+    ii. Build an interactive UI with Streamlit which can help in visualizing the predicted forecast for an input csv file trend by learned Prophet model vs actual output.
+   iii. The UI must have: Historical vs. Predicted Data: Display historical data with a solid line and forecast data with a dashed line. Confidence Intervals: Use a shaded area (e.g., Plotly's fill='tonexty') to represent upper and lower bounds of uncertainty.Interactive Controls: Add UI components so users can adjust the Prediction Length or filter specific data parameters on the fly.
+2. Save the generated graphs in csv to experiment in UI with prophet model. The csv should be split till fourth year before feeding to prophet and prophet's predicted output should be compared with the actual graph in the UI interactively. Both the http://127.0.0.1:8000/forecast/ui and streamlist UI should also have output display to show what the qwen agent is thinking while detecting the changepoints and drifts before invoking the prophet with input.
+3. Save the predicted output vs actual for all the generated graphs from 9 to 12 in prophet/ dir.
+4. In addition to the ollama models, convert it to a drop down to allow selecting langsmith or claude sonnet and claude opus in which case use the api key from the .env file for langsmith for changepoint detection.
+5. When langsmith or claude is selected, the agen reasoning tab in streamlit ui should show the streamed reasoning from the models for visualizing what agent thinks while detecting changepoints like sudden, gradual, recurring , etc.
 
 ## Forecasting
 1. Write a tool to use Qwen-3.5 with reasoning (which is already installed with ollama) to find the changepoints from the generated graphs and save them in json or csv format. To visualize the changepoints found by Qwen, mark them and visualize in graphs under qwen folder.
