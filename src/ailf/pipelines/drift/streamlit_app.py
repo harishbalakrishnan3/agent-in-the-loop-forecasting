@@ -894,27 +894,154 @@ if run_btn and bedrock_pipeline_enabled:
         except Exception:
             pass
 
-    with st.spinner(f"⚙️ Running run_scenario for `{scenario_id}` (may take 30–120 s)…"):
+    # For registered scenarios without a CSV, load the series from scenario metadata
+    if _bp_series_df is None:
+        try:
+            from ailf.pipelines.changepoint.scenarios import load_scenario as _ls  # noqa: PLC0415
+            _sc = _ls(scenario_id)
+            _bp_series_df = pd.concat([_sc.split.train_df, _sc.split.test_df], ignore_index=True)
+        except Exception:
+            pass
+
+    # ── Launch run_scenario in background IMMEDIATELY ─────────────────────
+    # Start the heavy pipeline before the reasoning stream so both run in parallel.
+    import threading as _threading  # noqa: PLC0415
+    _rs_result_holder: list = []
+    _rs_error_holder:  list = []
+
+    def _run_scenario_thread() -> None:
         try:
             from ailf.pipelines.changepoint.pipeline import run_scenario as _run_scenario  # noqa: PLC0415
             from ailf.core.config.schema import ConfigOverride as _ConfigOverride  # noqa: PLC0415
-
-            _override_obj = _ConfigOverride.from_dict(_ov_payload)
-            _bp_result = _run_scenario(
-                scenario_id,
-                override=_override_obj,
-                series_df=_bp_series_df,
-                split_ratio=split_ratio / 100.0,
-                emit_events=True,
+            _ov_obj = _ConfigOverride.from_dict(_ov_payload)
+            _rs_result_holder.append(
+                _run_scenario(
+                    scenario_id,
+                    override=_ov_obj,
+                    series_df=_bp_series_df,
+                    split_ratio=split_ratio / 100.0,
+                    emit_events=True,
+                )
             )
-        except (ImportError, ModuleNotFoundError) as _bp_imp_exc:
-            _bp_error = f"Missing dependency: {_bp_imp_exc}"
-        except Exception as _bp_exc:
-            _bp_error = str(_bp_exc)
+        except Exception as _exc:
+            _rs_error_holder.append(str(_exc))
+
+    _rs_thread = _threading.Thread(target=_run_scenario_thread, daemon=True)
+    _rs_thread.start()
+
+    # ── Step 1: Agent reasoning (live) — runs while pipeline works in background ─
+    _bp_train_df: pd.DataFrame | None = None
+    if _bp_series_df is not None and not _bp_series_df.empty:
+        _bp_train_df, _ = _train_test_split(_bp_series_df, ratio=split_ratio / 100.0)
+
+    if _bp_train_df is not None:
+        from ailf.pipelines.drift.llm_reason import detect_streaming as _bp_detect_stream  # noqa: PLC0415
+        from ailf.pipelines.drift.llm_reason import detect as _bp_detect  # noqa: PLC0415
+        from ailf.pipelines.drift.llm_reason import DetectionResult as _BPDetResult  # noqa: PLC0415
+        _cusum_fb = _BPDetResult(changepoints=[], reasoning="", source="cusum", model="cusum")
+
+        _bp_is_streaming = actual_model_id.startswith("claude-") or actual_model_id.startswith("bedrock/")
+
+        agent_col_bp, _ = st.columns([2, 1])
+        with agent_col_bp:
+            if _bp_is_streaming:
+                with st.expander(f"🤖 Agent Analysis — `{actual_model_id}`", expanded=True):
+                    st.subheader("Agent reasoning (live)")
+                    _bp_reasoning_ph = st.empty()
+                    _bp_cp_ph = st.empty()
+                    _bp_reasoning_ph.markdown("🤖 _Connecting to model…_")
+                    try:
+                        _bp_stream = _bp_detect_stream(
+                            _bp_train_df,
+                            model=actual_model_id,
+                            ollama_url=ollama_url,
+                            langsmith_tracing=langsmith_tracing,
+                            enabled_diagnostics=diag_values,
+                            enabled_tools=tool_values,
+                        )
+                        _bp_chunks: list[str] = []
+                        for _bp_chunk in _bp_stream:
+                            _bp_chunks.append(_bp_chunk)
+                            _bp_reasoning_ph.markdown("".join(_bp_chunks))
+                        _bp_stream_detection = _bp_stream.detection_result
+                    except Exception as _bp_stream_exc:
+                        st.warning(f"⚠️ Live reasoning failed: {_bp_stream_exc}")
+                        _bp_stream_detection = _cusum_fb
+
+                    if _bp_stream_detection.changepoints:
+                        st.subheader(f"Detected changepoints ({len(_bp_stream_detection.changepoints)})")
+                        _bp_cp_df = pd.DataFrame(_bp_stream_detection.changepoints)
+                        _bp_disp_cols = [c for c in ["timestamp", "type", "direction", "confidence", "reason"]
+                                         if c in _bp_cp_df.columns]
+                        _bp_cp_ph.dataframe(_bp_cp_df[_bp_disp_cols], use_container_width=True, hide_index=True)
+                    else:
+                        _bp_cp_ph.info("No changepoints detected in pre-analysis.")
+
+                    if getattr(_bp_stream_detection, "langsmith_run_url", ""):
+                        if _bp_stream_detection.langsmith_run_url.startswith("http"):
+                            st.markdown(f"🔗 [View LangSmith trace]({_bp_stream_detection.langsmith_run_url})")
+                        else:
+                            st.caption(f"LangSmith: {_bp_stream_detection.langsmith_run_url}")
+            else:
+                # Qwen / Ollama — non-streaming, show reasoning in expander
+                try:
+                    with st.spinner("🤖 Agent detecting changepoints and drifts…"):
+                        _bp_qwen_det = _bp_detect(
+                            _bp_train_df, model=actual_model_id,
+                            ollama_url=ollama_url, langsmith_tracing=langsmith_tracing,
+                            enabled_diagnostics=diag_values, enabled_tools=tool_values,
+                        )
+                except Exception as _bp_q_exc:
+                    st.warning(f"⚠️ Detection error: {_bp_q_exc} — using CUSUM fallback.")
+                    _bp_qwen_det = _cusum_fb
+
+                _bp_src_label = (
+                    f"✅ Qwen via Ollama (`{_bp_qwen_det.model}`)"
+                    if _bp_qwen_det.source == "qwen"
+                    else "⚠️ CUSUM fallback"
+                )
+                with st.expander(f"🤖 Agent Analysis — {_bp_src_label}", expanded=True):
+                    if _bp_qwen_det.reasoning:
+                        st.subheader("Agent reasoning")
+                        st.text_area(
+                            label="", value=_bp_qwen_det.reasoning,
+                            height=260, label_visibility="collapsed",
+                        )
+                    if _bp_qwen_det.changepoints:
+                        st.subheader(f"Detected changepoints ({len(_bp_qwen_det.changepoints)})")
+                        _bp_cp_df2 = pd.DataFrame(_bp_qwen_det.changepoints)
+                        _bp_disp2 = [c for c in ["timestamp", "type", "direction", "confidence", "reason"]
+                                     if c in _bp_cp_df2.columns]
+                        st.dataframe(_bp_cp_df2[_bp_disp2], use_container_width=True, hide_index=True)
+                    else:
+                        st.info("No changepoints detected.")
+
+    # ── Wait for pipeline thread — poll so Streamlit can render as soon as done ──
+    import time as _time  # noqa: PLC0415
+    st.divider()
+    _pipe_status = st.empty()
+    _POLL_S = 0.4
+    _MAX_WAIT_S = 300
+    _elapsed = 0
+    _dots = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"]
+    _di = 0
+    while _rs_thread.is_alive() and _elapsed < _MAX_WAIT_S:
+        _pipe_status.info(f"{_dots[_di % len(_dots)]} Agent pipeline running… ({int(_elapsed)}s)")
+        _time.sleep(_POLL_S)
+        _elapsed += _POLL_S
+        _di += 1
+
+    if _rs_thread.is_alive():
+        _rs_error_holder.append(f"run_scenario timed out after {_MAX_WAIT_S}s")
+    _pipe_status.empty()
+
+    if _rs_error_holder:
+        _bp_error = _rs_error_holder[0]
+    elif _rs_result_holder:
+        _bp_result = _rs_result_holder[0]
 
     if _bp_result is None:
-        # Try FastAPI fallback
-        st.warning(f"⚠️ Direct call failed: {_bp_error} — trying FastAPI…")
+        st.warning(f"⚠️ run_scenario failed: {_bp_error} — trying FastAPI…")
         _bp_api_resp = _api_post("/changepoint/run", {
             "scenario_id": scenario_id,
             "override": _ov_payload,
@@ -926,10 +1053,10 @@ if run_btn and bedrock_pipeline_enabled:
             st.success("✅ Completed via FastAPI fallback.")
         else:
             _err = (_bp_api_resp or {}).get("error", "API unreachable") if _bp_api_resp else "API unreachable"
-            st.error(f"❌ Both paths failed. Error: {_err}")
+            st.error(f"❌ Both paths failed: {_err}")
             st.stop()
     else:
-        st.success(f"✅ run_scenario complete — run ID: `{scenario_id}-{int(seed)}`")
+        st.success(f"✅ Pipeline complete — run ID: `{scenario_id}-{int(seed)}`")
 
     # ── Display results in same layout as Detect & Forecast ──────────────
     _bp_fe = _bp_result.get("final_eval") or {}
@@ -996,11 +1123,22 @@ elif run_btn:
         df = _load_df(io.BytesIO(uploaded_file.read()))
         series_label = uploaded_file.name
     else:
-        if selected_series is None:
-            st.error("No series available.")
-            st.stop()
-        df = _load_df(selected_series)
-        series_label = selected_series.stem.replace("_train", "")
+        if selected_series is not None:
+            df = _load_df(selected_series)
+            series_label = selected_series.stem.replace("_train", "")
+        else:
+            # No CSV in pocs/data/ — load from registered scenario metadata
+            try:
+                from ailf.pipelines.changepoint.scenarios import load_scenario as _ls_df  # noqa: PLC0415
+                _sc_df = _ls_df(scenario_id)
+                df = pd.concat(
+                    [_sc_df.split.train_df, _sc_df.split.test_df],
+                    ignore_index=True,
+                )
+                series_label = scenario_id
+            except Exception as _sc_exc:
+                st.error(f"No series available for `{scenario_id}`: {_sc_exc}")
+                st.stop()
 
     train_df, test_df = _train_test_split(df, ratio=split_ratio / 100.0)
     split_note = (
@@ -1015,7 +1153,7 @@ elif run_btn:
     _mpl.use("Agg")
     import matplotlib.pyplot as _plt  # noqa: PLC0415
 
-    _png_path: Path | None = None
+    _png_path: pathlib.Path | None = None
     try:
         _fig, _ax = _plt.subplots(figsize=(13, 5))
         _ax.plot(train_df["ds"], train_df["y"], color="#1f77b4", linewidth=1.2)
@@ -1027,7 +1165,7 @@ elif run_btn:
         _ax.legend(loc="best")
         _fig.tight_layout()
         _tmp = _tf.NamedTemporaryFile(suffix=".png", delete=False)
-        _png_path = Path(_tmp.name)
+        _png_path = pathlib.Path(_tmp.name)
         _tmp.close()
         _fig.savefig(_png_path, dpi=150)
         _plt.close(_fig)
@@ -1045,7 +1183,7 @@ elif run_btn:
             from ailf.pipelines.changepoint.schemas import VisualInspectionResult as _VIR  # noqa: PLC0415
             from ailf.core.prompts.loader import load_prompt as _lp  # noqa: PLC0415
 
-            _cp_prompt_dir = Path(__file__).resolve().parent.parent / "changepoint" / "prompts"
+            _cp_prompt_dir = pathlib.Path(__file__).resolve().parent.parent / "changepoint" / "prompts"
             _visual_prompt = _lp(_cp_prompt_dir, "visual_inspection", 1)
             _vi_client = _AVClient(actual_model_id, max_tokens=2000)
             _vi_wrapper = _MW(_vi_client, actual_model_id)
@@ -1084,19 +1222,21 @@ elif run_btn:
                 reasoning_placeholder = st.empty()
                 cp_placeholder = st.empty()
 
+                reasoning_placeholder.markdown("🤖 _Connecting to model…_")
                 try:
-                    with st.spinner("🤖 Agent detecting changepoints and drifts…"):
-                        stream = detect_streaming(
-                            train_df,
-                            model=actual_model_id,
-                            ollama_url=ollama_url,
-                            langsmith_tracing=langsmith_tracing,
-                        )
-                        chunks: list[str] = []
-                        for chunk in stream:
-                            chunks.append(chunk)
-                            reasoning_placeholder.markdown("".join(chunks))
-                        detection = stream.detection_result
+                    stream = detect_streaming(
+                        train_df,
+                        model=actual_model_id,
+                        ollama_url=ollama_url,
+                        langsmith_tracing=langsmith_tracing,
+                        enabled_diagnostics=diag_values,
+                        enabled_tools=tool_values,
+                    )
+                    chunks: list[str] = []
+                    for chunk in stream:
+                        chunks.append(chunk)
+                        reasoning_placeholder.markdown("".join(chunks))
+                    detection = stream.detection_result
                 except Exception as _det_exc:
                     st.warning(f"⚠️ Detection error: {_det_exc} — using CUSUM fallback.")
                     detection = _cusum_fallback
@@ -1118,7 +1258,8 @@ elif run_btn:
         else:
             try:
                 with st.spinner("🤖 Agent detecting changepoints and drifts…"):
-                    detection = detect(train_df, model=actual_model_id, ollama_url=ollama_url, langsmith_tracing=langsmith_tracing)
+                    detection = detect(train_df, model=actual_model_id, ollama_url=ollama_url, langsmith_tracing=langsmith_tracing,
+                                       enabled_diagnostics=diag_values, enabled_tools=tool_values)
             except Exception as _det_exc:
                 st.warning(f"⚠️ Detection error: {_det_exc} — using CUSUM fallback.")
                 detection = _cusum_fallback
@@ -1145,6 +1286,16 @@ elif run_btn:
                     st.dataframe(cp_df[display_cols], use_container_width=True, hide_index=True)
                 else:
                     st.info("No changepoints detected.")
+
+    # ── Show hidden diagnostics (config_resolved transparency) ────────────
+    _hidden_diags = [k for k, v in diag_values.items() if not v]
+    _hidden_tools = [k for k, v in tool_values.items() if not v]
+    if _hidden_diags or _hidden_tools:
+        with st.expander("🔒 Hidden diagnostics / disabled tools (config_resolved)", expanded=False):
+            if _hidden_diags:
+                st.caption(f"Hidden from agent: {', '.join(_hidden_diags)}")
+            if _hidden_tools:
+                st.caption(f"Disabled tools: {', '.join(_hidden_tools)}")
 
     # ── Step 2: Prophet forecast (naive + agent-in-the-loop) ─────────────
     with st.spinner("📈 Fitting Prophet forecasts…"):

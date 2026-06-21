@@ -189,39 +189,84 @@ def _call_ollama_stream(prompt: str, model: str, base_url: str) -> tuple[str, st
 
 
 def _extract_json(text: str) -> str:
-    """Strip markdown fences and extract the first {...} block."""
-    if text.startswith("```"):
-        text = "\n".join(text.split("\n")[1:])
-    if "```" in text:
-        text = text[: text.rfind("```")]
-    start = text.find("{")
-    end   = text.rfind("}")
+    """Strip markdown fences and extract the outermost valid JSON object.
+
+    Tries progressively more aggressive cleaning when the raw extraction fails.
+    Returns the best candidate string (may still fail json.loads if the model
+    emitted truly broken JSON — caller handles that).
+    """
+    # 1. Strip leading ``` fences
+    t = text.strip()
+    if t.startswith("```"):
+        lines = t.split("\n")
+        t = "\n".join(lines[1:])
+    if "```" in t:
+        t = t[: t.rfind("```")]
+    t = t.strip()
+
+    # 2. If the model echoed back the schema example (contains literal "N," or
+    #    "0.0-1.0"), that's the schema template, not valid JSON — try to find
+    #    the LAST complete {...} block which is more likely to be the real answer.
+    candidates: list[str] = []
+    depth = 0
+    start_idx = -1
+    for i, ch in enumerate(t):
+        if ch == "{":
+            if depth == 0:
+                start_idx = i
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0 and start_idx != -1:
+                candidates.append(t[start_idx: i + 1])
+                start_idx = -1
+
+    # Try each candidate (last first — Qwen often puts the answer after the schema)
+    for cand in reversed(candidates):
+        try:
+            json.loads(cand)
+            return cand
+        except Exception:
+            continue
+
+    # 3. If no candidate parsed cleanly, return the largest one for the caller
+    if candidates:
+        return max(candidates, key=len)
+
+    # 4. Final fallback — original simple extraction
+    start = t.find("{")
+    end   = t.rfind("}")
     if start != -1 and end != -1:
-        return text[start: end + 1].strip()
-    return text.strip()
+        return t[start: end + 1].strip()
+    return t
 
 
-def _qwen_result(df: pd.DataFrame, model: str, base_url: str) -> DetectionResult:
-    sampled = df.iloc[::_STEP].copy()
-    sampled["orig_idx"] = sampled.index
-    pts = " ".join(f"({int(r.orig_idx)},{r.y:.1f})" for r in sampled.itertuples())
-
-    schema = (
-        '{"changepoints":[{"index":N,"type":"sudden|gradual|seasonal|recurring",'
-        '"direction":"positive|negative","confidence":0.0-1.0,"reason":"brief explanation"}]}'
-    )
-    user_msg = (
-        f"Analyse this time series for changepoints and drifts.\n"
-        f"{len(sampled)} sample points (every {_STEP}th of {len(df)} daily observations):\n"
-        f"{pts}\n\n"
-        f"Identify up to 10 changepoints at their original indices. "
-        f"Think carefully about the direction and magnitude of each change. "
-        f"Return ONLY JSON (no markdown): {schema}"
-    )
+def _qwen_result(
+    df: pd.DataFrame,
+    model: str,
+    base_url: str,
+    enabled_diagnostics: dict[str, bool] | None = None,
+    enabled_tools: dict[str, bool] | None = None,
+) -> DetectionResult:
+    user_msg = _build_user_prompt(df, enabled_diagnostics, enabled_tools)
 
     think_text, answer_text = _call_ollama_stream(user_msg, model, base_url)
     cleaned = _extract_json(answer_text)
-    parsed = json.loads(cleaned)
+
+    # Robust parse: if cleaned JSON still fails, try stripping known bad tokens
+    # (e.g. "0.0-1.0" range literals, bare "N" index placeholders from schema echo)
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError:
+        import re as _re
+        # Replace literal schema placeholders: N → 0, 0.0-1.0 → 0.5
+        repaired = _re.sub(r'"index"\s*:\s*N\b', '"index": 0', cleaned)
+        repaired = _re.sub(r'\b0\.0-1\.0\b', '0.5', repaired)
+        try:
+            parsed = json.loads(repaired)
+        except json.JSONDecodeError:
+            # Give up and return CUSUM — caller already catches and wraps
+            raise
     cps = parsed.get("changepoints", [])
 
     # Attach timestamps
@@ -253,22 +298,48 @@ def _qwen_result(df: pd.DataFrame, model: str, base_url: str) -> DetectionResult
 # Claude (Anthropic) backend
 # ---------------------------------------------------------------------------
 
-def _build_user_prompt(df: pd.DataFrame) -> str:
-    """Build the shared user prompt string from a DataFrame."""
+def _build_user_prompt(
+    df: pd.DataFrame,
+    enabled_diagnostics: dict[str, bool] | None = None,
+    enabled_tools: dict[str, bool] | None = None,
+) -> str:
+    """Build the shared user prompt string from a DataFrame.
+
+    When ``enabled_diagnostics`` or ``enabled_tools`` are provided the prompt
+    tells the model which diagnostic dimensions are active and which intervention
+    tools are available — mirroring what the changepoint pipeline passes to its
+    decision node.
+    """
     sampled = df.iloc[::_STEP].copy()
     sampled["orig_idx"] = sampled.index
     pts = " ".join(f"({int(r.orig_idx)},{r.y:.1f})" for r in sampled.itertuples())
     schema = (
-        '{"changepoints":[{"index":N,"type":"sudden|gradual|seasonal|recurring",'
-        '"direction":"positive|negative","confidence":0.0-1.0,"reason":"brief explanation"}]}'
+        '{"changepoints":[{"index":0,"type":"sudden|gradual|seasonal|recurring",'
+        '"direction":"positive|negative","confidence":0.8,"reason":"brief explanation"}]}'
     )
+
+    diag_section = ""
+    if enabled_diagnostics:
+        active = [k for k, v in enabled_diagnostics.items() if v]
+        hidden = [k for k, v in enabled_diagnostics.items() if not v]
+        diag_section = (
+            f"\nActive diagnostics (focus on these): {', '.join(active)}."
+            + (f"\nHidden diagnostics (ignore): {', '.join(hidden)}." if hidden else "")
+        )
+
+    tool_section = ""
+    if enabled_tools:
+        active_tools = [k for k, v in enabled_tools.items() if v]
+        tool_section = f"\nAvailable intervention tools: {', '.join(active_tools)}."
+
     return (
         f"Analyse this time series for changepoints and drifts.\n"
         f"{len(sampled)} sample points (every {_STEP}th of {len(df)} daily observations):\n"
-        f"{pts}\n\n"
+        f"{pts}\n"
+        f"{diag_section}{tool_section}\n\n"
         f"Identify up to 10 changepoints at their original indices. "
         f"Think carefully about the direction and magnitude of each change. "
-        f"Return ONLY JSON (no markdown): {schema}"
+        f"Return ONLY valid JSON (no markdown, no schema, just the answer): {schema}"
     )
 
 
@@ -305,7 +376,12 @@ def _claude_api_key() -> str | None:
     return None
 
 
-def _claude_result(df: pd.DataFrame, model: str) -> DetectionResult:
+def _claude_result(
+    df: pd.DataFrame,
+    model: str,
+    enabled_diagnostics: dict[str, bool] | None = None,
+    enabled_tools: dict[str, bool] | None = None,
+) -> DetectionResult:
     """Call Claude API (non-streaming) and return DetectionResult."""
     key = _claude_api_key()
     if not key:
@@ -316,7 +392,7 @@ def _claude_result(df: pd.DataFrame, model: str) -> DetectionResult:
     try:
         import anthropic
         client = anthropic.Anthropic(api_key=key)
-        user_msg = _build_user_prompt(df)
+        user_msg = _build_user_prompt(df, enabled_diagnostics, enabled_tools)
 
         full_text = ""
         with client.messages.stream(
@@ -355,6 +431,8 @@ def detect_streaming(
     model: str,
     ollama_url: str = OLLAMA_BASE_URL,
     langsmith_tracing: bool = False,
+    enabled_diagnostics: dict[str, bool] | None = None,
+    enabled_tools: dict[str, bool] | None = None,
 ) -> Generator[str, None, DetectionResult]:
     """Generator that yields reasoning text chunks, then populates a DetectionResult.
 
@@ -387,7 +465,7 @@ def detect_streaming(
             try:
                 import anthropic
                 client = anthropic.Anthropic(api_key=key)
-                user_msg = _build_user_prompt(df)
+                user_msg = _build_user_prompt(df, enabled_diagnostics, enabled_tools)
                 full_text = ""
                 yield f"🤖 **Claude ({model}) is thinking…**\n\n"
                 with client.messages.stream(
@@ -430,7 +508,7 @@ def detect_streaming(
             # Bedrock: non-streaming; yield as a single block
             bedrock_model_id = model.removeprefix("bedrock/")
             yield f"☁️ **Bedrock ({bedrock_model_id}) — calling (non-streaming)…**\n\n"
-            res = _bedrock_result(df, bedrock_model_id)
+            res = _bedrock_result(df, bedrock_model_id, enabled_diagnostics, enabled_tools)
             yield res.reasoning
             result_holder.append(res)
 
@@ -438,7 +516,7 @@ def detect_streaming(
             # Ollama / CUSUM path — no streaming available; yield whole text at once
             if _ollama_available(model, ollama_url):
                 try:
-                    res = _qwen_result(df, model, ollama_url)
+                    res = _qwen_result(df, model, ollama_url, enabled_diagnostics, enabled_tools)
                     yield res.reasoning
                     result_holder.append(res)
                     return
@@ -501,7 +579,12 @@ def _bedrock_env() -> dict[str, str]:
     return env
 
 
-def _bedrock_result(df: pd.DataFrame, model_id: str) -> DetectionResult:
+def _bedrock_result(
+    df: pd.DataFrame,
+    model_id: str,
+    enabled_diagnostics: dict[str, bool] | None = None,
+    enabled_tools: dict[str, bool] | None = None,
+) -> DetectionResult:
     """Call AWS Bedrock via langchain_aws.ChatBedrockConverse (lazy import)."""
     env = _bedrock_env()
     if not env.get("AWS_ACCESS_KEY_ID") or not env.get("AWS_SECRET_ACCESS_KEY"):
@@ -525,7 +608,7 @@ def _bedrock_result(df: pd.DataFrame, model_id: str) -> DetectionResult:
             aws_access_key_id=env["AWS_ACCESS_KEY_ID"],
             aws_secret_access_key=env["AWS_SECRET_ACCESS_KEY"],
         )
-        user_msg = _build_user_prompt(df)
+        user_msg = _build_user_prompt(df, enabled_diagnostics, enabled_tools)
         response = chat.invoke([
             SystemMessage(content=_SYSTEM_PROMPT),
             HumanMessage(content=user_msg),
@@ -591,11 +674,21 @@ def _wrap_with_langsmith(
         return result
 
     try:
+        import ssl as _ssl
         import uuid
 
         from langsmith import Client  # noqa: PLC0415
 
-        client = Client(api_key=api_key)
+        # Pass api_url to skip the /info health-check probe that triggers SSL errors
+        # on the Walmart corporate proxy.  APAC free-tier: https://apac.smith.langchain.com
+        _api_url = os.environ.get("LANGSMITH_API_URL", "").strip() or os.environ.get("LANGSMITH_ENDPOINT", "").strip()
+
+        # Build client kwargs — only add api_url when explicitly configured
+        _client_kwargs: dict = {"api_key": api_key}
+        if _api_url:
+            _client_kwargs["api_url"] = _api_url
+
+        client = Client(**_client_kwargs)
         run_id = str(uuid.uuid4())
         run_name = f"drift-detection-{result.source}"
 
@@ -625,7 +718,7 @@ def _wrap_with_langsmith(
 
     except Exception as exc:
         # SSL failures, network errors, auth errors — all non-fatal
-        result.langsmith_run_url = f"⚠️ LangSmith trace failed: {type(exc).__name__}"
+        result.langsmith_run_url = f"⚠️ LangSmith trace failed: {type(exc).__name__}: {exc}"
 
     return result
 
@@ -639,26 +732,22 @@ def detect(
     model: str = DEFAULT_MODEL,
     ollama_url: str = OLLAMA_BASE_URL,
     langsmith_tracing: bool = False,
+    enabled_diagnostics: dict[str, bool] | None = None,
+    enabled_tools: dict[str, bool] | None = None,
 ) -> DetectionResult:
     """Run changepoint detection on ``df`` (must have ``ds``, ``y`` columns).
 
-    Backend routing:
-      - model starts with "claude-"   → Anthropic Claude API
-      - model starts with "bedrock/"  → AWS Bedrock via langchain_aws
-      - otherwise                     → Ollama (Qwen) / CUSUM fallback
-
-    When ``langsmith_tracing=True`` and LANGSMITH_API_KEY is set, the run is
-    recorded in LangSmith; the trace URL is stored in ``result.langsmith_run_url``.
-
-    Returns a :class:`DetectionResult`.
+    ``enabled_diagnostics`` and ``enabled_tools`` are forwarded into the user
+    prompt so the model knows which dimensions to focus on and which intervention
+    tools are available.
     """
     if model.startswith("claude-"):
-        result = _claude_result(df, model)
+        result = _claude_result(df, model, enabled_diagnostics, enabled_tools)
     elif model.startswith("bedrock/"):
-        result = _bedrock_result(df, model.removeprefix("bedrock/"))
+        result = _bedrock_result(df, model.removeprefix("bedrock/"), enabled_diagnostics, enabled_tools)
     elif _ollama_available(model, ollama_url):
         try:
-            result = _qwen_result(df, model, ollama_url)
+            result = _qwen_result(df, model, ollama_url, enabled_diagnostics, enabled_tools)
         except Exception as exc:
             result = _cusum_result(df)
             result.reasoning = f"Qwen error ({exc}); CUSUM fallback.\n\n" + result.reasoning

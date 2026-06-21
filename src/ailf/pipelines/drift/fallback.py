@@ -78,8 +78,13 @@ def _call_tool(
         window_start_idx = params.get("window_start_index")
         if window_start_idx is None and cp_timestamps:
             latest_cp = max(cp_timestamps)
-            window_start_idx = int((train_df["ds"] >= latest_cp).idxmax())
-        if window_start_idx is None or window_start_idx >= len(train_df) - 10:
+            _mask = pd.to_datetime(train_df["ds"]) >= latest_cp
+            if _mask.any():
+                window_start_idx = int(_mask.idxmax())
+            else:
+                # Changepoint is after train end — use second-to-last quarter as fallback
+                window_start_idx = max(1, len(train_df) // 4 * 3)
+        if window_start_idx is None or window_start_idx <= 0 or window_start_idx >= len(train_df) - 10:
             return None
         train_slice = train_df.iloc[window_start_idx:].copy().reset_index(drop=True)
         m = Prophet(daily_seasonality=False, weekly_seasonality=True, yearly_seasonality=True)
@@ -322,7 +327,10 @@ def run_fallback_pipeline(
         ]
         for cp_ts in cp_timestamps:
             try:
-                cp_idx = int((fit_df["ds"] >= cp_ts).idxmax())
+                _cp_mask = pd.to_datetime(fit_df["ds"]) >= cp_ts
+                if not _cp_mask.any():
+                    continue
+                cp_idx = int(_cp_mask.idxmax())
                 if cp_idx <= 0 or cp_idx >= len(fit_df) - 10:
                     continue
                 window_yhat = _prophet_predict(fit_df.iloc[cp_idx:], future_ds_val)
