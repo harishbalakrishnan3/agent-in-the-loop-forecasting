@@ -1,0 +1,68 @@
+{
+  "n_obs_train": 766,
+  "changepoints_detected": [
+    {
+      "date": "2020-07-19T00:00:00",
+      "index": 200
+    },
+    {
+      "date": "2021-02-24T00:00:00",
+      "index": 420
+    },
+    {
+      "date": "2021-09-22T00:00:00",
+      "index": 630
+    }
+  ],
+  "segments": [
+    {
+      "label": "seg_0",
+      "start": "2020-01-01T00:00:00",
+      "end": "2020-07-18T00:00:00",
+      "n_obs": 200,
+      "mean": 12.079171210916424,
+      "std": 2.4799826380834173,
+      "slope": 0.019127794108437807,
+      "slope_direction": "up"
+    },
+    {
+      "label": "seg_1",
+      "start": "2020-07-19T00:00:00",
+      "end": "2021-02-23T00:00:00",
+      "n_obs": 220,
+      "mean": 31.094087001577922,
+      "std": 2.6872961735525007,
+      "slope": 0.01960671903819941,
+      "slope_direction": "up"
+    },
+    {
+      "label": "seg_2",
+      "start": "2021-02-24T00:00:00",
+      "end": "2021-09-21T00:00:00",
+      "n_obs": 210,
+      "mean": 32.2622943745548,
+      "std": 2.449621419643691,
+      "slope": -0.014626202230736185,
+      "slope_direction": "down"
+    },
+    {
+      "label": "seg_3",
+      "start": "2021-09-22T00:00:00",
+      "end": "2022-02-04T00:00:00",
+      "n_obs": 136,
+      "mean": 30.723142083385362,
+      "std": 2.5861201569322843,
+      "slope": -0.00846853328117759,
+      "slope_direction": "down"
+    }
+  ],
+  "seasonality_period_days": 30,
+  "seasonality_mode_signal": 0.04463493415630128,
+  "noise_level": 2.0286080595827025,
+  "post_last_cp_days": 136,
+  "insufficient_seasonal_history": false,
+  "trend_direction": "up",
+  "level_shift_magnitude": 15.535640783524194,
+  "variance_ratio": 0.26895652813716037,
+  "last_cp_date": "2021-09-22T00:00:00"
+}

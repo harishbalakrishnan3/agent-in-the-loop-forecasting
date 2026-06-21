@@ -10,6 +10,7 @@ structural tool names) so this core module holds zero changepoint symbols (FR-01
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from ailf.core.config.schema import (
@@ -18,6 +19,45 @@ from ailf.core.config.schema import (
     ModelConfig,
     SplitSpec,
 )
+
+# ---------------------------------------------------------------------------
+# Bedrock cross-region inference profile ID → native Anthropic model ID.
+# Used when the Anthropic direct-API provider is selected.
+# ---------------------------------------------------------------------------
+_BEDROCK_TO_ANTHROPIC_MODEL_ID: dict[str, str] = {
+    "us.anthropic.claude-opus-4-8":           "claude-opus-4-8",
+    "us.anthropic.claude-sonnet-4-6":         "claude-sonnet-4-6",
+    "us.anthropic.claude-sonnet-4-5-20251002-v1:0": "claude-sonnet-4-5-20250929",
+    "us.anthropic.claude-opus-4-5":           "claude-opus-4-5-20251101",
+    "us.anthropic.claude-haiku-3-5":          "claude-haiku-3-5-20241022",
+}
+
+
+def _to_anthropic_model_id(bedrock_id: str) -> str:
+    """Convert a Bedrock model id to a native Anthropic API model id.
+
+    Falls back to stripping the ``us.`` prefix for unknown IDs — handles most
+    cross-region inference profiles without explicit enumeration.
+    """
+    if bedrock_id in _BEDROCK_TO_ANTHROPIC_MODEL_ID:
+        return _BEDROCK_TO_ANTHROPIC_MODEL_ID[bedrock_id]
+    # Heuristic: "us.anthropic.X" → "anthropic.X" → strip vendor prefix → "X"
+    stripped = bedrock_id.removeprefix("us.").removeprefix("anthropic.")
+    return stripped
+
+
+def _detect_llm_provider() -> str:
+    """Return 'bedrock' if AWS_ACCESS_KEY_ID is set, else 'anthropic' if ANTHROPIC_API_KEY is set.
+
+    Defaults to 'bedrock' when neither is set so that config resolution always succeeds — the
+    error surfaces at invocation time when Bedrock rejects the missing credentials, preserving the
+    existing "fail at model call, not at config load" behaviour (FR-036).
+    """
+    if os.environ.get("AWS_ACCESS_KEY_ID", "").strip():
+        return "bedrock"
+    if os.environ.get("ANTHROPIC_API_KEY", "").strip():
+        return "anthropic"
+    return "bedrock"  # will fail with clear NoCredentialsError at first model invocation
 
 # The always-on fallback tool: present in agent_tools with enabled:true, MAY NOT be disabled,
 # and is EXCLUDED from the structural-tool lockstep exact-match (FR-016).
@@ -100,7 +140,19 @@ def resolve_config(
         raise ConfigError("models.decision_model_id is required and must be non-empty")
     if not region:
         raise ConfigError("aws_region is required and must be non-empty")
-    models = ModelConfig(visual_model_id=visual_id, decision_model_id=decision_id, aws_region=region)
+
+    # Detect provider from env; translate Bedrock model IDs to native IDs for the Anthropic path.
+    llm_provider = _detect_llm_provider()
+    if llm_provider == "anthropic":
+        visual_id = _to_anthropic_model_id(visual_id)
+        decision_id = _to_anthropic_model_id(decision_id)
+
+    models = ModelConfig(
+        visual_model_id=visual_id,
+        decision_model_id=decision_id,
+        aws_region=region,
+        llm_provider=llm_provider,
+    )
 
     # --- visual switch (scalar) ---
     visual_enabled = (

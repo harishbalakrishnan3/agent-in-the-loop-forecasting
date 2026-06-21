@@ -1,0 +1,11 @@
+{
+  "naive_val_mae": 5.7711,
+  "agent_val_mae": Infinity,
+  "naive_test_mae": 10.7133,
+  "agent_test_mae": 7.2228,
+  "delta_val_mae": -Infinity,
+  "delta_test_mae": 3.4905,
+  "agent_beats_naive_on_val": false,
+  "pct_improvement_val": -Infinity,
+  "pct_improvement_test": 32.58
+}
