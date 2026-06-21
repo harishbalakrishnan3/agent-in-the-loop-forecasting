@@ -18,7 +18,18 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+# override=True ensures .env values take precedence over any stale shell exports,
+# which is critical for LANGSMITH_TRACING — langchain_core reads it at import time
+# and won't see updates made after its modules are loaded.
+load_dotenv(override=True)
+
+# Point SSL libraries at the system CA bundle so LangSmith (and other httpx/requests
+# clients) trust the Walmart proxy certificate. Must be set before any SDK import.
+import os as _os
+_SYSTEM_CA = "/opt/homebrew/etc/openssl@3/cert.pem"
+if _os.path.exists(_SYSTEM_CA):
+    _os.environ.setdefault("REQUESTS_CA_BUNDLE", _SYSTEM_CA)
+    _os.environ.setdefault("SSL_CERT_FILE", _SYSTEM_CA)
 
 import numpy as np
 
@@ -282,6 +293,13 @@ def main() -> None:
     args = parser.parse_args()
     override = ConfigOverride.from_dict(json.loads(args.override)) if args.override else None
     run_scenario(args.scenario, override=override)
+
+    # Flush LangSmith background trace buffer before process exits (tracing is async).
+    try:
+        from langsmith import Client
+        Client().flush()
+    except Exception:  # noqa: BLE001
+        pass
 
 
 if __name__ == "__main__":
