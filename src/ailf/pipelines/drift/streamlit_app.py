@@ -121,7 +121,7 @@ with st.sidebar:
 
     # ── Data source ───────────────────────────────────────────────────────
     st.subheader("Data Source")
-    source_mode = st.radio("Input mode", ["Upload CSV", "Data Scenario"])
+    source_mode = st.radio("Input mode", ["Upload CSV", "Data Scenario", "pocs/data/ CSV"])
 
     uploaded_file = None
     selected_series = None
@@ -131,6 +131,20 @@ with st.sidebar:
             "CSV file (ds, y columns)", type=["csv"],
             help="Must have `ds` (date) and `y` (numeric) columns.",
         )
+    elif source_mode == "pocs/data/ CSV":
+        _poc_csvs = sorted(_DATA_DIR.glob("*_train.csv"))
+        if _poc_csvs:
+            _poc_labels = [f.stem.replace("_train", "") for f in _poc_csvs]
+            _poc_idx = st.selectbox(
+                "pocs/data/ file",
+                range(len(_poc_csvs)),
+                format_func=lambda i: _poc_labels[i],
+            )
+            selected_series = _poc_csvs[_poc_idx]
+            _chosen_scenario_name = _poc_labels[_poc_idx]
+        else:
+            st.warning("No *_train.csv files found in pocs/data/")
+            _chosen_scenario_name = _SCENARIOS[0]
     else:
         # Show only the 5 committed changepoint scenarios (§Forecasting 7)
         _scenario_idx = st.selectbox(
@@ -145,7 +159,7 @@ with st.sidebar:
         selected_series = _csv_candidate if _csv_candidate.exists() else None
 
     # Derive scenario_id from selection (used by pipeline panel below)
-    if source_mode == "Data Scenario":
+    if source_mode in ("Data Scenario", "pocs/data/ CSV"):
         scenario_id: str = _chosen_scenario_name
     else:
         scenario_id = _SCENARIOS[0]  # default for Upload CSV mode
@@ -872,37 +886,50 @@ if run_btn and bedrock_pipeline_enabled:
     _bp_result: dict | None = None
     _bp_error: str = ""
 
-    # Load CSV before spinner so _bp_series_df is always in scope for chart rendering
+    # Load CSV before run so _bp_series_df is in scope for chart rendering
     _bp_series_df = None
     if _bp_csv_path:
-        _bp_series_df = pd.read_csv(_bp_csv_path, parse_dates=["ds"])
+        try:
+            _bp_series_df = pd.read_csv(_bp_csv_path, parse_dates=["ds"])
+        except Exception:
+            pass
 
     with st.spinner(f"⚙️ Running run_scenario for `{scenario_id}` (may take 30–120 s)…"):
         try:
-            import types as _types  # noqa: PLC0415
             from ailf.pipelines.changepoint.pipeline import run_scenario as _run_scenario  # noqa: PLC0415
             from ailf.core.config.schema import ConfigOverride as _ConfigOverride  # noqa: PLC0415
-            from ailf.pipelines.drift.pipeline import _run_with_fallback as _rwf  # noqa: PLC0415
 
             _override_obj = _ConfigOverride.from_dict(_ov_payload)
-            # SimpleNamespace duck-types ChangepointRunRequest for _run_with_fallback
-            _body = _types.SimpleNamespace(
+            _bp_result = _run_scenario(
+                scenario_id,
+                override=_override_obj,
+                series_df=_bp_series_df,
                 split_ratio=split_ratio / 100.0,
-                seasonal_period=365,
-                n_changepoints_to_detect=3,
+                emit_events=True,
             )
-            _bp_result = _rwf(_run_scenario, scenario_id, _override_obj, _bp_series_df, _body)
         except (ImportError, ModuleNotFoundError) as _bp_imp_exc:
             _bp_error = f"Missing dependency: {_bp_imp_exc}"
         except Exception as _bp_exc:
             _bp_error = str(_bp_exc)
 
     if _bp_result is None:
-        st.error(f"❌ Pipeline failed: {_bp_error}")
-        st.stop()
+        # Try FastAPI fallback
+        st.warning(f"⚠️ Direct call failed: {_bp_error} — trying FastAPI…")
+        _bp_api_resp = _api_post("/changepoint/run", {
+            "scenario_id": scenario_id,
+            "override": _ov_payload,
+            "csv_path": _bp_csv_path,
+            "split_ratio": split_ratio / 100.0,
+        })
+        if _bp_api_resp and _bp_api_resp.get("status") == "ok":
+            _bp_result = _bp_api_resp
+            st.success("✅ Completed via FastAPI fallback.")
+        else:
+            _err = (_bp_api_resp or {}).get("error", "API unreachable") if _bp_api_resp else "API unreachable"
+            st.error(f"❌ Both paths failed. Error: {_err}")
+            st.stop()
     else:
-        _bp_backend = _bp_result.get("_backend", "Bedrock/Anthropic")
-        st.success(f"✅ run_scenario complete via {_bp_backend} — run ID: `{_bp_result.get('run_id', '—')}`")
+        st.success(f"✅ run_scenario complete — run ID: `{scenario_id}-{int(seed)}`")
 
     # ── Display results in same layout as Detect & Forecast ──────────────
     _bp_fe = _bp_result.get("final_eval") or {}
@@ -981,6 +1008,67 @@ elif run_btn:
         if test_df is not None else ""
     )
     st.subheader(f"Series: `{series_label}`  ({len(df)} rows{split_note})")
+
+    # ── PNG agent-context image (mirrors run_scenario visual_inspection_node) ──
+    import tempfile as _tf  # noqa: PLC0415
+    import matplotlib as _mpl  # noqa: PLC0415
+    _mpl.use("Agg")
+    import matplotlib.pyplot as _plt  # noqa: PLC0415
+
+    _png_path: Path | None = None
+    try:
+        _fig, _ax = _plt.subplots(figsize=(13, 5))
+        _ax.plot(train_df["ds"], train_df["y"], color="#1f77b4", linewidth=1.2)
+        _ax.axvline(train_df["ds"].max(), color="black", linewidth=1.3,
+                    linestyle="--", label="forecast origin")
+        _ax.set_title(f"{series_label} — training history (agent context)")
+        _ax.set_xlabel("date")
+        _ax.set_ylabel("y")
+        _ax.legend(loc="best")
+        _fig.tight_layout()
+        _tmp = _tf.NamedTemporaryFile(suffix=".png", delete=False)
+        _png_path = Path(_tmp.name)
+        _tmp.close()
+        _fig.savefig(_png_path, dpi=150)
+        _plt.close(_fig)
+        with st.expander("🖼️ Agent context image (training history only — SC-002)", expanded=visual_analysis_enabled):
+            st.image(str(_png_path), caption="Only training rows; no test data, no annotations.",
+                     use_container_width=True)
+    except Exception as _png_exc:
+        st.warning(f"PNG generation failed: {_png_exc}")
+
+    # ── Visual inspection via LLM (mirrors visual_inspection_node in run_scenario) ──
+    _is_vision_capable = actual_model_id.startswith("claude-")
+    if visual_analysis_enabled and _is_vision_capable and _png_path is not None:
+        try:
+            from ailf.core.models.llm import AnthropicStructuredClient as _AVClient, ModelWrapper as _MW  # noqa: PLC0415
+            from ailf.pipelines.changepoint.schemas import VisualInspectionResult as _VIR  # noqa: PLC0415
+            from ailf.core.prompts.loader import load_prompt as _lp  # noqa: PLC0415
+
+            _cp_prompt_dir = Path(__file__).resolve().parent.parent / "changepoint" / "prompts"
+            _visual_prompt = _lp(_cp_prompt_dir, "visual_inspection", 1)
+            _vi_client = _AVClient(actual_model_id, max_tokens=2000)
+            _vi_wrapper = _MW(_vi_client, actual_model_id)
+            with st.spinner("👁️ Visual model inspecting training history PNG…"):
+                _vi_result = _vi_wrapper.invoke_structured_with_image(
+                    prompt=_visual_prompt,
+                    image_path=_png_path,
+                    schema=_VIR,
+                )
+            with st.expander("👁️ Visual inspection (from PNG)", expanded=True):
+                st.markdown(f"**Pattern**: {_vi_result.pattern_summary}")
+                if _vi_result.observations:
+                    st.markdown("**Observations**")
+                    for _obs in _vi_result.observations:
+                        st.markdown(f"- {_obs}")
+                if _vi_result.hypotheses:
+                    st.markdown("**Failure mode hypotheses**")
+                    for _h in _vi_result.hypotheses:
+                        st.markdown(f"- {_h}")
+                if _vi_result.uncertainties:
+                    st.caption("Uncertainties: " + " · ".join(_vi_result.uncertainties))
+        except Exception as _vi_exc:
+            st.warning(f"Visual inspection skipped ({actual_model_id}): {_vi_exc}")
 
     # ── Step 1: Agent detection — with graceful fallback (§15) ──────────
     from ailf.pipelines.drift.llm_reason import DetectionResult as _DetResult  # noqa: PLC0415
