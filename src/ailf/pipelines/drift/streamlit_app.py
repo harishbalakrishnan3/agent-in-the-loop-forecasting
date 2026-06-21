@@ -319,6 +319,9 @@ with st.sidebar:
     else:
         run_btn = st.button("🔍 Detect & Forecast", type="primary", use_container_width=True)
 
+    if run_btn:
+        st.cache_data.clear()
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -869,50 +872,37 @@ if run_btn and bedrock_pipeline_enabled:
     _bp_result: dict | None = None
     _bp_error: str = ""
 
+    # Load CSV before spinner so _bp_series_df is always in scope for chart rendering
+    _bp_series_df = None
+    if _bp_csv_path:
+        _bp_series_df = pd.read_csv(_bp_csv_path, parse_dates=["ds"])
+
     with st.spinner(f"⚙️ Running run_scenario for `{scenario_id}` (may take 30–120 s)…"):
         try:
+            import types as _types  # noqa: PLC0415
             from ailf.pipelines.changepoint.pipeline import run_scenario as _run_scenario  # noqa: PLC0415
             from ailf.core.config.schema import ConfigOverride as _ConfigOverride  # noqa: PLC0415
+            from ailf.pipelines.drift.pipeline import _run_with_fallback as _rwf  # noqa: PLC0415
 
             _override_obj = _ConfigOverride.from_dict(_ov_payload)
-            _bp_series_df = None
-            if _bp_csv_path:
-                _bp_series_df = pd.read_csv(_bp_csv_path, parse_dates=["ds"])
-
-            _bp_result = _run_scenario(
-                scenario_id,
-                override=_override_obj,
-                series_df=_bp_series_df,
+            # SimpleNamespace duck-types ChangepointRunRequest for _run_with_fallback
+            _body = _types.SimpleNamespace(
                 split_ratio=split_ratio / 100.0,
-                emit_events=True,
+                seasonal_period=365,
+                n_changepoints_to_detect=3,
             )
+            _bp_result = _rwf(_run_scenario, scenario_id, _override_obj, _bp_series_df, _body)
         except (ImportError, ModuleNotFoundError) as _bp_imp_exc:
             _bp_error = f"Missing dependency: {_bp_imp_exc}"
         except Exception as _bp_exc:
             _bp_error = str(_bp_exc)
 
-    # If in-process failed, try FastAPI as fallback
     if _bp_result is None:
-        st.warning(f"⚠️ Direct run_scenario failed: {_bp_error}")
-        _bp_api_resp = _api_post("/changepoint/run", {
-            "scenario_id": scenario_id,
-            "override": _ov_payload,
-            "csv_path": _bp_csv_path,
-            "split_ratio": split_ratio / 100.0,
-        })
-        if _bp_api_resp and _bp_api_resp.get("status") == "ok":
-            _bp_result = _bp_api_resp
-            st.info("✅ Completed via FastAPI fallback.")
-        elif _bp_api_resp and _bp_api_resp.get("status") == "unavailable":
-            st.error(f"❌ Bedrock unavailable: {_bp_api_resp.get('error')}")
-            st.info("Configure AWS creds in `.env` and try again.")
-            st.stop()
-        else:
-            err = (_bp_api_resp or {}).get("error", "API unreachable") if _bp_api_resp else "API unreachable"
-            st.error(f"❌ Both in-process and API failed. Last error: {err}")
-            st.stop()
+        st.error(f"❌ Pipeline failed: {_bp_error}")
+        st.stop()
     else:
-        st.success(f"✅ run_scenario complete — run ID: `{_bp_result.get('run_id', '—')}`")
+        _bp_backend = _bp_result.get("_backend", "Bedrock/Anthropic")
+        st.success(f"✅ run_scenario complete via {_bp_backend} — run ID: `{_bp_result.get('run_id', '—')}`")
 
     # ── Display results in same layout as Detect & Forecast ──────────────
     _bp_fe = _bp_result.get("final_eval") or {}
