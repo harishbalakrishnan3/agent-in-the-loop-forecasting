@@ -777,7 +777,7 @@ async def forecast_analyze(
     - ``detection_source``  — "qwen" | "cusum"
     - ``detection_model``   — model name used
     """
-    from ailf.pipelines.drift.qwen_detect import detect as qwen_detect
+    from ailf.pipelines.drift.llm_reason import detect as qwen_detect
 
     # Parse CSV
     df = await _parse_csv_upload(file)
@@ -814,6 +814,233 @@ async def forecast_analyze(
         "detection_source": detection.source,
         "detection_model":  detection.model,
     }
+
+
+# ---------------------------------------------------------------------------
+# Changepoint pipeline endpoints — §12: call src/ailf/core/ from the UI
+#
+# All changepoint imports are LAZY (inside handler bodies) so that a missing
+# langchain_aws or absent AWS creds does NOT break the drift API at load time.
+# ---------------------------------------------------------------------------
+
+_REPORTS_ROOT = pathlib.Path(__file__).parents[4] / "reports"
+
+_VALID_SCENARIOS = frozenset({
+    "level_shift_loses_seasonality",
+    "gradual_drift_loses_seasonality",
+    "temporary_event_not_regime_change",
+    "many_temporary_events_long_history",
+    "prophet_prior_tuning_recurring_event",
+})
+
+
+class ChangepointOverride(BaseModel):
+    """Partial override for a changepoint pipeline run.
+
+    All fields optional; unset fields inherit the config.yaml defaults.
+    Do NOT include AWS credentials or API keys here — use .env.
+    """
+    models: dict[str, str] | None = None          # visual_model_id, decision_model_id, aws_region
+    visual_analysis_enabled: bool | None = None
+    diagnostics: dict[str, bool] | None = None    # per-diagnostic enable/disable
+    agent_tools: dict[str, bool] | None = None    # per-tool enable/disable
+    seed: int | None = None
+
+
+class ChangepointRunRequest(BaseModel):
+    scenario_id: str
+    override: ChangepointOverride = ChangepointOverride()
+
+
+class ChangepointRunResponse(BaseModel):
+    status: str                        # "ok" | "error" | "unavailable"
+    run_id: str | None = None
+    metrics: dict[str, Any] | None = None
+    final_eval: dict[str, Any] | None = None
+    error: str | None = None
+    cli_command: str | None = None     # always returned so UI can fall back
+
+
+def _build_cli_command(scenario_id: str, override: ChangepointOverride) -> str:
+    """Return the equivalent uv run CLI command string."""
+    import json as _json
+    ov: dict[str, Any] = {}
+    if override.models:
+        ov["models"] = override.models
+    if override.visual_analysis_enabled is not None:
+        ov["visual_analysis_enabled"] = override.visual_analysis_enabled
+    if override.diagnostics:
+        ov["diagnostics"] = override.diagnostics
+    if override.agent_tools:
+        ov["agent_tools"] = override.agent_tools
+    if override.seed is not None:
+        ov["seed"] = override.seed
+    override_str = _json.dumps(ov) if ov else "{}"
+    return (
+        f"uv run python -m ailf.pipelines.changepoint.pipeline "
+        f"--scenario {scenario_id} "
+        f"--override '{override_str}'"
+    )
+
+
+@app.post(
+    "/changepoint/run",
+    response_model=ChangepointRunResponse,
+    summary="Run the changepoint agent pipeline for a scenario",
+    tags=["changepoint"],
+)
+def changepoint_run(body: ChangepointRunRequest) -> ChangepointRunResponse:
+    """Invoke the full agent-in-the-loop changepoint pipeline for one scenario.
+
+    Requires AWS Bedrock credentials in ``.env`` (``AWS_ACCESS_KEY_ID``,
+    ``AWS_SECRET_ACCESS_KEY``) and ``langchain_aws`` installed.  When either is
+    absent the endpoint returns ``status="unavailable"`` **and** the equivalent
+    CLI command so the caller can run it manually.
+
+    The completed run writes artifacts under ``reports/<run_id>/``:
+    ``metrics.json``, ``agent_trace.json``, ``forecast_comparison.png``, etc.
+    Retrieve them via **GET /changepoint/artifacts/{scenario_id}**.
+    """
+    if body.scenario_id not in _VALID_SCENARIOS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unknown scenario '{body.scenario_id}'. "
+                   f"Valid values: {sorted(_VALID_SCENARIOS)}",
+        )
+
+    cli = _build_cli_command(body.scenario_id, body.override)
+
+    try:
+        # Lazy import — must NOT be at module scope
+        from ailf.pipelines.changepoint.pipeline import run_scenario  # noqa: PLC0415
+
+        ov_dict: dict[str, Any] = {}
+        if body.override.models:
+            ov_dict["models"] = body.override.models
+        if body.override.visual_analysis_enabled is not None:
+            ov_dict["visual_analysis_enabled"] = body.override.visual_analysis_enabled
+        if body.override.diagnostics:
+            ov_dict["diagnostics"] = body.override.diagnostics
+        if body.override.agent_tools:
+            ov_dict["agent_tools"] = body.override.agent_tools
+        if body.override.seed is not None:
+            ov_dict["seed"] = body.override.seed
+
+        from ailf.core.config.schema import ConfigOverride  # noqa: PLC0415
+        override_obj = ConfigOverride.from_dict(ov_dict) if ov_dict else None
+
+        result = run_scenario(body.scenario_id, override=override_obj, emit_events=True)
+
+        return ChangepointRunResponse(
+            status="ok",
+            run_id=result.get("run_id"),
+            metrics=result.get("metrics"),
+            final_eval=result.get("final_eval"),
+            cli_command=cli,
+        )
+
+    except (ImportError, ModuleNotFoundError) as exc:
+        return ChangepointRunResponse(
+            status="unavailable",
+            error=f"Missing dependency: {exc}. Install langchain_aws or run via CLI.",
+            cli_command=cli,
+        )
+    except Exception as exc:
+        return ChangepointRunResponse(
+            status="error",
+            error=str(exc),
+            cli_command=cli,
+        )
+
+
+class ArtifactSummary(BaseModel):
+    run_id: str
+    scenario_id: str
+    has_metrics: bool
+    has_trace: bool
+    has_forecast_png: bool
+    has_context_png: bool
+    metrics: dict[str, Any] | None = None
+    final_eval: dict[str, Any] | None = None
+    agent_iterations: list[dict[str, Any]] | None = None
+
+
+@app.get(
+    "/changepoint/artifacts/{scenario_id}",
+    response_model=list[ArtifactSummary],
+    summary="List pre-computed changepoint run artifacts for a scenario",
+    tags=["changepoint"],
+)
+def changepoint_artifacts(scenario_id: str) -> list[ArtifactSummary]:
+    """Return a summary of any pre-computed run artifacts under ``reports/``.
+
+    Reads ``metrics.json`` and ``agent_trace.json`` from every matching run
+    directory.  Images are referenced by name only (no binary payload).
+
+    Returns an empty list when no runs exist — run the pipeline first via
+    **POST /changepoint/run** or the CLI command it returns.
+    """
+    import json as _json
+
+    if scenario_id not in _VALID_SCENARIOS and scenario_id != "*":
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unknown scenario '{scenario_id}'. "
+                   f"Valid values: {sorted(_VALID_SCENARIOS)}",
+        )
+
+    results: list[ArtifactSummary] = []
+    if not _REPORTS_ROOT.exists():
+        return results
+
+    pattern = f"{scenario_id}*" if scenario_id != "*" else "*"
+    for run_dir in sorted(_REPORTS_ROOT.glob(pattern)):
+        if not run_dir.is_dir():
+            continue
+        metrics: dict[str, Any] | None = None
+        final_eval: dict[str, Any] | None = None
+        agent_iters: list[dict[str, Any]] | None = None
+
+        mpath = run_dir / "metrics.json"
+        if mpath.exists():
+            try:
+                metrics = _json.loads(mpath.read_text())
+                final_eval = metrics.get("final_eval")
+            except Exception:
+                pass
+
+        tpath = run_dir / "agent_trace.json"
+        if tpath.exists():
+            try:
+                trace = _json.loads(tpath.read_text())
+                agent_iters = trace.get("iterations", [])
+            except Exception:
+                pass
+
+        results.append(ArtifactSummary(
+            run_id=run_dir.name,
+            scenario_id=scenario_id,
+            has_metrics=mpath.exists(),
+            has_trace=tpath.exists(),
+            has_forecast_png=(run_dir / "forecast_comparison.png").exists(),
+            has_context_png=(run_dir / "agent_context.png").exists(),
+            metrics=metrics,
+            final_eval=final_eval,
+            agent_iterations=agent_iters,
+        ))
+
+    return results
+
+
+@app.get(
+    "/changepoint/scenarios",
+    response_model=list[str],
+    summary="List valid changepoint scenario IDs",
+    tags=["changepoint"],
+)
+def changepoint_scenarios() -> list[str]:
+    """Return the list of committed changepoint scenario IDs."""
+    return sorted(_VALID_SCENARIOS)
 
 
 # ---------------------------------------------------------------------------

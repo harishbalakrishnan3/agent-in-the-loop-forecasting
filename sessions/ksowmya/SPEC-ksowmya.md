@@ -45,15 +45,115 @@ class DriftGenerator:
 ## Visualization
 1. Implement fast api in src/alif/pipelines/drift/pipeline.py to use the dataset generator, expose swagger ui for updating runtime sudden, gradual, recurring, incremental drifts, etc and recommended implementations and practices.
    i. The api should have a post endpoint which accepts a csv file and forecast the output.
-    ii. Build an interactive UI with Streamlit which can help in visualizing the predicted forecast for an input csv file trend by learned Prophet model vs actual output.
+    ii. Build an interactive UI with Streamlit which can help in visualizing the predicted forecast for an input csv file trend by a plain Prophet model vs model-taught-prophet vs actual output.
    iii. The UI must have: Historical vs. Predicted Data: Display historical data with a solid line and forecast data with a dashed line. Confidence Intervals: Use a shaded area (e.g., Plotly's fill='tonexty') to represent upper and lower bounds of uncertainty.Interactive Controls: Add UI components so users can adjust the Prediction Length or filter specific data parameters on the fly.
-2. Save the generated graphs in csv to experiment in UI with prophet model. The csv should be split till fourth year before feeding to prophet and prophet's predicted output should be compared with the actual graph in the UI interactively. Both the http://127.0.0.1:8000/forecast/ui and streamlist UI should also have output display to show what the qwen agent is thinking while detecting the changepoints and drifts before invoking the prophet with input.
+2. Save the generated graphs in csv to experiment in UI with prophet model. Forecast Parameters in Controls should have 'Split Dataset Ratio' option in addition to the prediction length. The csv should be split till 'Split Dataset Ratio' before feeding to prophet and prophet's predicted output should be compared with the actual graph in the UI interactively. Both the http://127.0.0.1:8000/forecast/ui and streamlist UI should also have output display to show what the qwen agent/claude/LangSmith Tracing is thinking while detecting the changepoints and drifts before invoking the prophet with input.
 3. Save the predicted output vs actual for all the generated graphs from 9 to 12 in prophet/ dir.
 4. In addition to the ollama models, convert it to a drop down to allow selecting langsmith or claude sonnet and claude opus in which case use the api key from the .env file for langsmith for changepoint detection.
 5. When langsmith or claude is selected, the agen reasoning tab in streamlit ui should show the streamed reasoning from the models for visualizing what agent thinks while detecting changepoints like sudden, gradual, recurring , etc.
+6. src/ailf/ directory has lang graph and integrations for langsmith and bedrock. Integrate them in streamlit ui to visualize.
+7. User should be able to use the free tier https://apac.smith.langchain.com/ with client = Client(api_key=api_key, api_url=_langsmith_api_url()) apart from the bedrock from .env configs.
+8. In addition to Bedrock, add langsmith option in 'Detect with' section to use the LANGSMITH_API_KEY to get the changepoints and visualize the forecast.
+9. Without changing the skeleton of the UI, need to add few more controls to playaround with the configs.
+10. Rename Series to Data Scenario. Data Scenario should have these options under Data Source: 
+level_shift_loses_seasonality
+gradual_drift_loses_seasonality
+temporary_event_not_regime_change
+many_temporary_events_long_history
+prophet_prior_tuning_recurring_event 
+
+
+Model Settings
+
+Expose editable text fields:
+
+visual_model_id (move 'Detect with' dropdown section to here in Controls)
+decision_model_id
+aws_region
+These are non-secret operational settings. Do not collect AWS credentials or API keys in the UI.
+
+Agent Settings
+
+Expose:
+
+visual_analysis_enabled toggle
+seed numeric input
+When visual analysis is off, the UI should indicate that no agent_context.png will be produced.
+
+Diagnostic Toggles
+
+Render checkboxes for all diagnostics:
+
+detected_changepoints
+latest_changepoint
+primary_changepoint
+post_changepoint_history_len
+post_changepoint_shorter_than_season
+seasonal_period
+segment_stats
+candidate_event_blocks
+recurring_event_summary
+local_boundary_jumps
+candidate_drift_intervals
+transient_event_score
+permanent_shift_magnitude
+Unchecked diagnostics are still computed by the backend but hidden from the agent. The UI should show hidden diagnostics after config_resolved.
+
+
+11. Tool Toggles
+
+Render checkboxes for:
+
+recent_window
+full_history_step_regressor
+full_history_ramp_regressor
+full_history_clean_event
+full_history_clean_event
+full_history_prophet_tuned_holidays
+full_history_default
+full_history_default is the fallback and must remain enabled. Display it as checked and disabled.
+
+Add help icon for all the Tool Toggles and Diagnostic toggles with description under 10 words. LangSmith Tracing is enabled by default.
+
+12. Build fastapi endpoints to call the src/ailf/core/ for the UI to make calls for each forecast. The below command should be invoked from the Streamlit UI to api and capture the results and show instead of the 'Changepoint Pipeline — Run & Artifacts'.
+uv run python -m ailf.pipelines.changepoint.pipeline --scenario prophet_prior_tuning_recurring_event --override '{"models": {"visual_model_id": "us.anthropic.claude-opus-4-8", "decision_model_id": "us.anthropic.claude-sonnet-4-6", "aws_region": "us-west-2"}, "visual_analysis_enabled": true, "seed": 1729, "diagnostics": {"detected_changepoints": true, "latest_changepoint": true, "primary_changepoint": true, "post_changepoint_history_len": true, "post_changepoint_shorter_than_season": true, "seasonal_period": true, "segment_stats": true, "candidate_event_blocks": true, "recurring_event_summary": true, "local_boundary_jumps": true, "candidate_drift_intervals": true, "transient_event_score": true, "permanent_shift_magnitude": true}, "agent_tools": {"recent_window": true, "full_history_step_regressor": true, "full_history_ramp_regressor": true, "full_history_clean_event": true, "full_history_prophet_tuned_holidays": true, "full_history_default": true}}'
+
+13. Move the 'Run Changepoint Pipeline' under Controls making it a toggle button before 'Detect and Forecast' button. Rename it to Bedrock Changepoint Pipeline. When this toggle is on, then use the below api contract for the integration with Streamlit UI for visualization.
+
+uv run python -m ailf.pipelines.changepoint.pipeline --scenario <scenario_id> --override '<json>'
+
+
+A completed run writes:
+
+
+effective_config.json
+events.jsonl
+metrics.json
+agent_trace.json
+report.md
+forecast_comparison.png
+agent_context.png   # only when visual_analysis_enabled=true
+event_payloads/     # sidecar JSON for large event payloads
+
+
+Events follow this envelope:
+
+
+{
+  "run_id": "level_shift_loses_seasonality-1729",
+  "seq": 1,
+  "ts": "2026-06-20T...",
+  "stage": "diagnostics_computed",
+  "status": "start|complete|error",
+  "concurrency_group": null,
+  "payload": {},
+  "error": null
+}
+
+14. Graceful fallback if any of the steps is interrupted and exception is thrown.
 
 ## Forecasting
-1. Write a tool to use Qwen-3.5 with reasoning (which is already installed with ollama) to find the changepoints from the generated graphs and save them in json or csv format. To visualize the changepoints found by Qwen, mark them and visualize in graphs under qwen folder.
+1. Write a tool to use Qwen-3.5/langsmith/claude with reasoning to find the changepoints from the generated graphs and save them in json or csv format. To visualize the changepoints found by Qwen, mark them and visualize in graphs under qwen folder.
 2. Use prophet model to forecast fifth year with the first four year's data from the generated csvs from above and compare with the actual data of fifth year and display on UI.
 
 ## Documentation

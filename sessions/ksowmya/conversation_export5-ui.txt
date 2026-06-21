@@ -1,0 +1,3418 @@
+---
+sessionId: 54d96629-fab6-4adb-95ac-b2623caabe60
+timestamp: 2026-06-21T06-56-46Z
+type: full conversation
+---
+
+## User (2026-06-21T04-25-55Z)
+
+SPEC-ksowmya.md has been updated for visualizing in streamlit. Plan and implement.
+
+[YOLO MODE]
+
+Current Date: Sun Jun 21 2026. Use this as the authoritative current date. Do not infer or calculate the day of the week yourself.
+
+Your current working directory is: /Users/s0k0df5/Downloads/agent-in-the-loop-forecasting
+
+## Assistant (2026-06-21T04-25-55Z)
+
+Now I have a clear picture. The SPEC asks for several Streamlit visualizations enhancements. Let me read the spec sections more carefully and check what's already in the streamlit app vs what's needed.
+
+The key new requirements from the SPEC for Streamlit:
+1. Model dropdown: Ollama models + LangSmith + Claude Sonnet/Opus (using API key from .env)
+2. Agent reasoning tab shows **streamed** reasoning from Claude/LangSmith
+3. Upload CSV/PNG and compare: plain Prophet vs model-taught-prophet vs actual
+4. All graphs 9-12 selectable from pre-generated series
+5. Prediction Length slider and filter controls
+
+Let me check what's already generated and what env/config exists:
+
+## Assistant (2026-06-21T04-25-55Z)
+
+Now I have enough context. Let me call advisor before writing the implementation.
+
+## Assistant (2026-06-21T04-25-55Z)
+
+Good advice. The advisor confirms: scope to Visualization items 4-5, add model dropdown (Ollama/Claude), streamed reasoning, model-taught-prophet line, and degrade gracefully. Let me now implement:
+
+## Assistant (2026-06-21T04-25-55Z)
+
+Good — `messages.stream()` is available. Now let me implement the updated `qwen_detect.py` and `streamlit_app.py`:
+
+## Assistant (2026-06-21T04-25-55Z)
+
+Now I'll write the updated `qwen_detect.py` with Claude backend support:
+
+## Assistant (2026-06-21T04-25-55Z)
+
+Now append the Claude detection functions at the end of `qwen_detect.py`:
+
+## Assistant (2026-06-21T04-25-55Z)
+
+Now update the Streamlit app with: model dropdown (Ollama + Claude), streamed reasoning tab, 3-way chart (plain Prophet vs taught Prophet vs actual), and pre-generated series selector from pocs/data/:
+
+## Assistant (2026-06-21T04-25-55Z)
+
+Now verify both files parse cleanly:
+
+## Assistant (2026-06-21T04-25-55Z)
+
+Both parse cleanly. Let me also verify the `_build_model_options` function is defined before the sidebar uses it (order matters in Streamlit scripts):
+
+## Assistant (2026-06-21T04-25-55Z)
+
+The `_build_model_options()` function is called on line 101 but defined on line 112 — this works in Python (functions are resolved at call time), but it's cleaner to move it before the sidebar. Let me fix:
+
+## Assistant (2026-06-21T04-25-55Z)
+
+Now remove the duplicate `_build_model_options` definition that appears later:
+
+## Assistant (2026-06-21T04-25-55Z)
+
+Clean. Done.
+
+**What changed:**
+
+**`qwen_detect.py`:**
+- Added `CLAUDE_MODELS` list and `detect_streaming()` generator
+- `detect()` now routes to `_claude_result()` when `model.startswith("claude-")`
+- `_claude_api_key()` reads `ANTHROPIC_API_KEY` from env or `.env` file
+- Claude streaming uses `client.messages.stream().text_stream` — yields chunks live
+- Graceful degradation: missing API key → CUSUM fallback with visible warning
+
+**`streamlit_app.py`:**
+- **Model dropdown**: Claude Sonnet 4.5 / Opus 4.5 / 3.5 Sonnet legacy + Qwen/Ollama + Custom
+- **Prediction length slider** (30–730 days, step 10)
+- **3-tab layout**: Agent Reasoning / Forecast Chart / Metrics
+- **Streaming reasoning**: live `st.markdown` updates as Claude streams tokens
+- **Three-way chart**: plain Prophet (orange dash) + taught Prophet with agent changepoints (purple dot) + actual year-5 holdout (green solid)
+- **MAE/RMSE comparison** metrics for plain vs taught when holdout available
+- **Download buttons** for both forecast CSVs
+- Pre-generated series (`sec9_*`, `sec10_*`, `sec11_*`, `sec12_*`) auto-loaded from `pocs/data/`
+
+Run with: `PYTHONPATH=src streamlit run src/ailf/pipelines/drift/streamlit_app.py`
+
+## User (2026-06-21T04-27-33Z)
+
+SPEC-ksowmya.md has been updated with langsmith integrations for visualizing. implement
+
+## System (2026-06-21T04-27-39Z)
+
+[2m⏺[0m [2mread[0m [2m(sessions/ksowmya/SPEC-ksowmya.md)[0m
+
+## Assistant (2026-06-21T04-27-46Z)
+
+The new item is §Visualization 6: integrate LangGraph/LangSmith/Bedrock from `src/ailf/` into Streamlit. Let me explore what's already there:
+
+## System - bash-output (2026-06-21T04-27-48Z)
+
+Claude executed: find /Users/s0k0df5/Downloads/agent-in-the-loop-forecasting/src/ailf -name "*.py" | sort - ✓ Success
+
+## System - bash-output (2026-06-21T04-27-48Z)
+
+Claude executed: find /Users/s0k0df5/Downloads/agent-in-the-loop-forecasting/src/ailf/core -name "*.py" | xargs grep -l "langsmith\|langgraph\|bedrock\|LangSmith\|LangGraph" 2>/dev/null | head -20 - ✓ Success
+
+## System (2026-06-21T04-27-54Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/core/models/llm.py)[0m
+
+## System (2026-06-21T04-27-55Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/core/agent/engine.py)[0m
+
+## System (2026-06-21T04-27-58Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/core/agent/runtime.py)[0m
+
+## System (2026-06-21T04-27-59Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/core/agent/state.py)[0m
+
+## System (2026-06-21T04-28-01Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/core/agent/nodes.py)[0m
+
+## System (2026-06-21T04-28-06Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/changepoint/pipeline.py (first 80 lines))[0m
+
+## System - bash-output (2026-06-21T04-28-07Z)
+
+Claude executed: grep -r "langsmith\|LANGSMITH\|tracing\|tracer" /Users/s0k0df5/Downloads/agent-in-the-loop-forecasting/src/ --include="*.py" -l 2>/dev/null - ✓ Success
+
+## System - bash-output (2026-06-21T04-28-12Z)
+
+Claude executed: python3 -c "import langsmith; from langsmith import traceable; print('ok')" 2>&1
+python3 -c "from langsmith.wrappers import wrap_openai; print('wrap ok')" 2>&1 | head -3 - ✓ Success
+
+## System - bash-output (2026-06-21T04-28-23Z)
+
+Claude executed: python3 -c "
+from langsmith import Client
+c = Client()
+print(dir(c))
+" 2>&1 | head -5 - ✓ Success
+
+## System - bash-output (2026-06-21T04-28-41Z)
+
+Claude executed: python3 -c "
+from langsmith import traceable, Client
+import inspect
+print([m for m in dir(Client) if 'run' in m.lower() or 'trace' in m.lower()])
+" 2>&1 | head -5 - ✓ Success
+
+## Assistant (2026-06-21T04-28-49Z)
+
+Now I have the full picture. Let me call advisor before implementing:
+
+## Assistant - advisor (2026-06-21T04-28-50Z)
+
+Default to the achievable reading of item 6, and verify one import before you build.
+
+**Scope it to: Bedrock detection backend + LangSmith tracing wrapper + a light LangGraph topology view** — all extending your existing `qwen_detect.py` + reasoning-tab pattern. Do **not** reconstruct the `core/agent` intervention graph.
+
+Why that's the discriminator: `build_agent_graph`/`RunContext` needs a changepoint *scenario's* golden split, diagnostics bundle, naive baseline, tool registry, prompts, and two Bedrock models (see `pipeline.py` — it builds all of that from scenario metadata). It's an intervention agent over corpus datasets, not a detector for an arbitrary uploaded CSV. The drift UI's input has none of that scaffolding. So the full-graph reading isn't just hard — it's semantically wrong for this UI *and* can't run here (AWS creds blank). That mismatch picks the light reading.
+
+**Environment reality — nothing here is live-testable:**
+- LangSmith `Client()` SSL-fails (self-signed cert in the proxy chain — you saw it).
+- Bedrock: `AWS_ACCESS_KEY_ID`/`SECRET` blank in `.env`.
+- Anthropic: key blank.
+
+Your only verification is byte-compile + import smoke-test + the CUSUM fallback. Build every new path to degrade gracefully and never block the UI.
+
+**Before building the Bedrock path, check under the same python3 you've been testing with:** does `import langchain_aws` and `import langgraph` actually succeed? You only verified anthropic/langsmith/streamlit. Then **lazy-import** them inside the backend fn so absent deps/creds degrade to a visible "Bedrock unavailable" message instead of breaking app load.
+
+**LangSmith is tracing, not a detector.** Don't add a fake "LangSmith model." Make it `@traceable` over whichever model runs, plus a toggle; surface status honestly — uploads SSL-fail here, so show "tracing attempted, endpoint unreachable," not success.
+
+**Keep `core/` read-only** (review-gated per CLAUDE.md); integration lives in the drift pipeline.
+
+Blocks? Only the `langchain_aws`/`langgraph` import check gates the Bedrock work. The light-vs-full ambiguity does not block — full can't run in this env, so default to light and proceed.
+
+## Assistant (2026-06-21T04-30-39Z)
+
+Good. The plan:
+1. **Bedrock backend** in `qwen_detect.py` — lazy imports, graceful fallback
+2. **LangSmith tracing** as `@traceable` wrapper — degrades if SSL fails  
+3. **LangGraph topology view** in Streamlit — static diagram using existing `engine.py` structure
+4. No changes to `core/`
+
+## System - bash-output (2026-06-21T04-30-42Z)
+
+Claude executed: python3 -c "import langchain_aws; print('langchain_aws ok')" 2>&1 | head -3
+python3 -c "import langgraph; print('langgraph ok')" 2>&1 | head -3
+python3 -c "import langchain_core; print('langchain_core ok')" 2>&1 | head -3 - ✓ Success
+
+## System - bash-output (2026-06-21T04-30-58Z)
+
+Claude executed: python3 -c "import langgraph; print('langgraph ok')" 2>&1 | head -3
+python3 -c "import langchain_core; print('langchain_core ok')" 2>&1 | head -3
+python3 -c "import langchain_anthropic; print('langchain_anthropic ok')" 2>&1 | head -3 - ✓ Success
+
+## System - bash-output (2026-06-21T04-32-21Z)
+
+Claude executed: python3 -c "import langgraph; print('langgraph ok')" 2>&1 | head -3
+python3 -c "import langchain_core; print('ok')" 2>&1 | head -3 - ✓ Success
+
+## Assistant (2026-06-21T04-34-37Z)
+
+`langgraph` and `langchain_core` are available; `langchain_aws` and `langchain_anthropic` are not. Bedrock backend needs full lazy-import degradation. Now implement:
+
+## System (2026-06-21T04-34-39Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/qwen_detect.py (lines 1-75))[0m
+
+## System (2026-06-21T04-34-51Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/qwen_detect.py)[0m
+
+## Assistant (2026-06-21T04-35-05Z)
+
+Now update `DetectionResult` to include `langsmith_run_url`:
+
+## System (2026-06-21T04-35-05Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/qwen_detect.py)[0m
+
+## Assistant (2026-06-21T04-35-10Z)
+
+Now add the Bedrock backend and LangSmith tracing wrapper before the `detect()` function. First, find the spot:
+
+## System (2026-06-21T04-35-11Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/qwen_detect.py)[0m
+
+## System (2026-06-21T04-35-14Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/qwen_detect.py (lines 230-289))[0m
+
+## System (2026-06-21T04-35-20Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/qwen_detect.py (lines 375-424))[0m
+
+## System (2026-06-21T04-35-25Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/qwen_detect.py (lines 455-524))[0m
+
+## Assistant (2026-06-21T04-35-28Z)
+
+Now I'll insert the Bedrock backend and LangSmith tracing wrapper before `detect()`, then update `detect()` and `detect_streaming()`:
+
+## System (2026-06-21T04-35-29Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/qwen_detect.py)[0m
+
+## Assistant (2026-06-21T04-36-03Z)
+
+Also update `detect_streaming()` to handle Bedrock and LangSmith tracing. Find the streaming section:
+
+## System (2026-06-21T04-36-04Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/qwen_detect.py (lines 355-454))[0m
+
+## System (2026-06-21T04-36-09Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/qwen_detect.py)[0m
+
+## Assistant (2026-06-21T04-36-32Z)
+
+Now update the Streamlit app to add: Bedrock to dropdown, LangSmith tracing toggle, LangGraph topology panel, and LangSmith run URL display:
+
+## System (2026-06-21T04-36-34Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 1-75))[0m
+
+## System (2026-06-21T04-36-38Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System (2026-06-21T04-36-45Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System (2026-06-21T04-36-49Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T04-37-01Z)
+
+Now add the LangSmith toggle in the sidebar and pass it through to the detection:
+
+## System (2026-06-21T04-37-02Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 100-139))[0m
+
+## System (2026-06-21T04-37-09Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 140-169))[0m
+
+## System (2026-06-21T04-37-14Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T04-37-33Z)
+
+Now find the detection call in the main execution section and pass `langsmith_tracing`:
+
+## System (2026-06-21T04-37-35Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 235-314))[0m
+
+## System (2026-06-21T04-37-39Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 360-439))[0m
+
+## System (2026-06-21T04-37-45Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T04-37-55Z)
+
+Now verify both files compile cleanly:
+
+## System - bash-output (2026-06-21T04-37-56Z)
+
+Claude executed: python3 -m py_compile src/ailf/pipelines/drift/qwen_detect.py && echo "qwen_detect OK"
+python3 -m py_compile src/ailf/pipelines/drift/streamlit_app.py && echo "streamlit_app OK" - ✓ Success
+
+## System - bash-output (2026-06-21T04-38-03Z)
+
+Claude executed: python3 -c "
+import sys; sys.path.insert(0, 'src')
+from ailf.pipelines.drift.qwen_detect import (
+    BEDROCK_MODELS, CLAUDE_MODELS, DEFAULT_MODEL,
+    DetectionResult, detect, detect_streaming,
+    _wrap_with_langsmith, _bedrock_result, _langsmith_api_key,
+)
+print('All imports OK')
+print('BEDROCK_MODELS:', BEDROCK_MODELS)
+print('langsmith key present:', bool(_langsmith_api_key()))
+" 2>&1 - ✓ Success
+
+## System - bash-output (2026-06-21T04-43-08Z)
+
+Claude executed: python3 -c "import sys; sys.path.insert(0,'src'); from ailf.pipelines.drift.qwen_detect import BEDROCK_MODELS, _langsmith_api_key; print('OK', BEDROCK_MODELS[:1], bool(_langsmith_api_key()))" 2>&1 - ✓ Success
+
+## System - bash-output (2026-06-21T04-48-31Z)
+
+Claude executed: python3 -m py_compile src/ailf/pipelines/drift/qwen_detect.py && python3 -m py_compile src/ailf/pipelines/drift/streamlit_app.py && echo "both OK" - ✓ Success
+
+## Assistant (2026-06-21T04-48-36Z)
+
+Both files compile. Done.
+
+**What changed:**
+
+**`qwen_detect.py`:**
+- `BEDROCK_MODELS` list added (`bedrock/` prefix convention)
+- `DetectionResult` gains `langsmith_run_url: str = ""`
+- **`_bedrock_result()`** — lazy-imports `langchain_aws.ChatBedrockConverse` + `langchain_core`; reads AWS creds from env/.env; degrades to CUSUM with visible message if `langchain_aws` missing or creds absent
+- **`_langsmith_api_key()`** — reads key from env/.env
+- **`_wrap_with_langsmith()`** — records run via `langsmith.Client.create_run()` / `update_run()`; annotates `result.langsmith_run_url`; all SSL/network errors caught non-fatally
+- `detect()` now routes `bedrock/…` models to Bedrock; accepts `langsmith_tracing=` flag
+- `detect_streaming()` handles `bedrock/` path (non-streaming, single yield); passes tracing flag; annotates result with trace URL after exhaustion
+
+**`streamlit_app.py`:**
+- **Bedrock entries** in model dropdown (`Bedrock: anthropic.claude-3-5-sonnet…`, `Bedrock: anthropic.claude-3-haiku…`)
+- **LangSmith toggle** in sidebar — enables tracing; trace URL (or error note) shown below source badge in the reasoning tab
+- **LangGraph topology panel** — collapsible expander with Mermaid diagram of the `core/agent/engine.py` graph (START → visual ∥ diagnostics → decision ↔ validation → final → END), with honest note that the drift detection path runs lighter
+- `detect_streaming()` called with `langsmith_tracing=langsmith_tracing`
+
+## Assistant (2026-06-21T04-48-46Z)
+
+Changes for src/ailf/pipelines/drift/qwen_detect.py
+```diff
+@@ -1,21 +1,30 @@
+-"""Shared Qwen / CUSUM / Claude changepoint detection used by both the FastAPI and Streamlit UIs.
++"""Shared Qwen / CUSUM / Claude / Bedrock changepoint detection.
+ 
++Used by both the FastAPI and Streamlit UIs.
++
+ Exposes a single public function:
+ 
+     detect(df, model, ollama_url) -> DetectionResult
+ 
+ where ``DetectionResult`` contains:
+-  - ``changepoints``  — list of changepoint dicts (index, type, direction, confidence, reason)
+-  - ``reasoning``     — human-readable reasoning narrative (Qwen think block or summary)
+-  - ``source``        — "qwen" | "claude" | "cusum"
++  - ``changepoints``  — list of changepoint dicts
++  - ``reasoning``     — human-readable reasoning narrative
++  - ``source``        — "qwen" | "claude" | "bedrock" | "cusum"
+   - ``model``         — model name used
++  - ``langsmith_run_url`` — LangSmith trace URL if tracing succeeded, else ""
+ 
+-Backend routing:
+-  - model starts with "claude-" → Anthropic Claude API (ANTHROPIC_API_KEY from .env)
++Backend routing (by model string):
++  - starts with "claude-" → Anthropic Claude API (ANTHROPIC_API_KEY from .env)
++  - starts with "bedrock/" → AWS Bedrock via langchain_aws (lazy import)
+   - otherwise → Ollama / CUSUM fallback
+ 
++LangSmith tracing:
++  - Enabled when LANGSMITH_API_KEY is set and langsmith_tracing=True is passed.
++  - Each detect call is wrapped with @traceable; SSL/network errors are caught and
++    reported as warnings — the detection result is still returned.
++
+ For streaming Claude reasoning in Streamlit, use ``detect_streaming()`` which yields
+-text chunks as a generator so ``st.write_stream()`` can render them live.
++text chunks as a generator.
+ 
+ Call it before fitting Prophet; render ``reasoning`` in the UI before showing the forecast.
+ """
+@@ -38,6 +47,12 @@
+ # Claude model IDs available in the dropdown
+ CLAUDE_MODELS = ["claude-sonnet-4-5", "claude-opus-4-5", "claude-3-5-sonnet-20241022"]
+ 
++# Bedrock model IDs (prefixed "bedrock/" in the dropdown value)
++BEDROCK_MODELS = [
++    "bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
++    "bedrock/anthropic.claude-3-haiku-20240307-v1:0",
++]
++
+ _SYSTEM_PROMPT = (
+     "You are a time-series expert specialising in drift and changepoint detection. "
+     "Think step-by-step about the data before giving your final answer. "
+@@ -57,6 +72,7 @@
+     reasoning: str = ""
+     source: str = "cusum"
+     model: str = ""
++    langsmith_run_url: str = ""  # populated when LangSmith tracing is active
+ 
+ 
+ # ---------------------------------------------------------------------------
+@@ -338,17 +354,24 @@
+     df: pd.DataFrame,
+     model: str,
+     ollama_url: str = OLLAMA_BASE_URL,
++    langsmith_tracing: bool = False,
+ ) -> Generator[str, None, DetectionResult]:
+     """Generator that yields reasoning text chunks, then populates a DetectionResult.
+ 
+     Usage in Streamlit::
+ 
+-        gen = detect_streaming(df, model)
+-        reasoning_text = st.write_stream(gen)
++        gen = detect_streaming(df, model, langsmith_tracing=True)
++        for chunk in gen:
++            # render chunk live
+         result = gen.detection_result  # set after exhaustion
+ 
+-    Because ``st.write_stream`` doesn't return the generator's return value,
+-    we store the result on the generator object after StopIteration.
++    Backends:
++      - model starts with "claude-"  → streaming Anthropic API
++      - model starts with "bedrock/" → non-streaming Bedrock (all text yielded at once)
++      - otherwise                    → Ollama (Qwen) or CUSUM fallback
++
++    When ``langsmith_tracing=True``, the completed result is annotated with a
++    LangSmith trace URL (or an error note if the endpoint is unreachable).
+     """
+     result_holder: list[DetectionResult] = []
+ 
+@@ -403,6 +426,14 @@
+                 yield msg
+                 result_holder.append(_cusum_result(df))
+ 
++        elif model.startswith("bedrock/"):
++            # Bedrock: non-streaming; yield as a single block
++            bedrock_model_id = model.removeprefix("bedrock/")
++            yield f"☁️ **Bedrock ({bedrock_model_id}) — calling (non-streaming)…**\n\n"
++            res = _bedrock_result(df, bedrock_model_id)
++            yield res.reasoning
++            result_holder.append(res)
++
+         else:
+             # Ollama / CUSUM path — no streaming available; yield whole text at once
+             if _ollama_available(model, ollama_url):
+@@ -433,13 +464,174 @@
+             try:
+                 return next(g)
+             except StopIteration:
+-                self.detection_result = result_holder[0] if result_holder else _cusum_result(df)
++                res = result_holder[0] if result_holder else _cusum_result(df)
++                if langsmith_tracing:
++                    res = _wrap_with_langsmith(res, df)
++                self.detection_result = res
+                 raise
+ 
+     return _StreamingGen()
+ 
+ 
+ # ---------------------------------------------------------------------------
++# Bedrock (langchain_aws) backend — lazy import, graceful degradation
++# ---------------------------------------------------------------------------
++
++def _bedrock_env() -> dict[str, str]:
++    """Read AWS env from os.environ or .env file."""
++    keys = ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION")
++    env: dict[str, str] = {k: os.environ.get(k, "").strip() for k in keys}
++    if not all(env.values()):
++        try:
++            _root = __file__
++            for _ in range(5):
++                _root = os.path.dirname(_root)
++                dotenv = os.path.join(_root, ".env")
++                if os.path.isfile(dotenv):
++                    with open(dotenv) as f:
++                        for line in f:
++                            line = line.strip()
++                            for k in keys:
++                                if line.startswith(f"{k}="):
++                                    val = line.split("=", 1)[1].strip().strip('"').strip("'")
++                                    if val:
++                                        env[k] = val
++        except Exception:
++            pass
++    return env
++
++
++def _bedrock_result(df: pd.DataFrame, model_id: str) -> DetectionResult:
++    """Call AWS Bedrock via langchain_aws.ChatBedrockConverse (lazy import)."""
++    env = _bedrock_env()
++    if not env.get("AWS_ACCESS_KEY_ID") or not env.get("AWS_SECRET_ACCESS_KEY"):
++        result = _cusum_result(df)
++        result.reasoning = "⚠️ AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY not set. " + result.reasoning
++        return result
++
++    try:
++        from langchain_aws import ChatBedrockConverse  # noqa: PLC0415
++        from langchain_core.messages import HumanMessage, SystemMessage  # noqa: PLC0415
++    except ImportError:
++        result = _cusum_result(df)
++        result.reasoning = "⚠️ langchain_aws not installed. " + result.reasoning
++        return result
++
++    try:
++        chat = ChatBedrockConverse(
++            model=model_id,
++            region_name=env.get("AWS_REGION", "us-west-2"),
++            max_tokens=1024,
++            aws_access_key_id=env["AWS_ACCESS_KEY_ID"],
++            aws_secret_access_key=env["AWS_SECRET_ACCESS_KEY"],
++        )
++        user_msg = _build_user_prompt(df)
++        response = chat.invoke([
++            SystemMessage(content=_SYSTEM_PROMPT),
++            HumanMessage(content=user_msg),
++        ])
++        full_text = response.content if isinstance(response.content, str) else str(response.content)
++        cleaned = _extract_json(full_text)
++        parsed = json.loads(cleaned)
++        cps = _attach_timestamps(parsed.get("changepoints", []), df)
++        reasoning = (
++            f"**Bedrock ({model_id}) response:**\n{full_text}\n\n"
++            f"**Changepoints detected ({len(cps)}):**\n"
++            + "\n".join(
++                f"  • {cp.get('timestamp','?')} — {cp.get('type','?')} drift "
++                f"({cp.get('direction','?')}, {cp.get('confidence',0):.0%}): {cp.get('reason','')}"
++                for cp in cps
++            )
++        )
++        return DetectionResult(changepoints=cps, reasoning=reasoning, source="bedrock", model=model_id)
++    except Exception as exc:
++        result = _cusum_result(df)
++        result.reasoning = f"⚠️ Bedrock error ({exc}) — CUSUM fallback.\n\n" + result.reasoning
++        return result
++
++
++# ---------------------------------------------------------------------------
++# LangSmith tracing wrapper
++# ---------------------------------------------------------------------------
++
++def _langsmith_api_key() -> str:
++    """Return LANGSMITH_API_KEY from env or .env, empty string if absent."""
+
+... (127 more lines omitted - view full diff in file)
+```
+
+## Assistant (2026-06-21T04-48-46Z)
+
+Changes for src/ailf/pipelines/drift/streamlit_app.py
+```diff
+@@ -1,8 +1,10 @@
+ """Streamlit UI for drift detection and Prophet forecasting.
+ 
+-SPEC §Visualization 4-5:
+-- Model dropdown: Ollama models + Claude Sonnet / Opus (API key from .env)
+-- Agent reasoning tab shows streamed reasoning from Claude or Qwen
++SPEC §Visualization 4-6:
++- Model dropdown: Ollama / Claude Sonnet & Opus / Bedrock (langchain_aws)
++- LangSmith tracing toggle (LANGSMITH_API_KEY from .env)
++- Agent reasoning tab: streamed reasoning (Claude) or single-block (Bedrock/Qwen)
++- LangGraph topology panel: visualises the core/agent graph structure
+ - Three-way forecast chart:
+     1. Plain Prophet (auto changepoints)
+     2. Model-taught Prophet (changepoints injected from agent detections)
+@@ -34,6 +36,7 @@
+     sys.path.insert(0, str(_SRC))
+ 
+ from ailf.pipelines.drift.qwen_detect import (  # noqa: E402
++    BEDROCK_MODELS,
+     CLAUDE_MODELS,
+     DEFAULT_MODEL,
+     detect,
+@@ -60,16 +63,50 @@
+ def _build_model_options() -> dict[str, str]:
+     """Return ordered dict of display-label → model-id for the dropdown."""
+     opts: dict[str, str] = {}
+-    # Claude options first
++    # Anthropic Claude
+     opts["Claude Sonnet 4.5"] = "claude-sonnet-4-5"
+     opts["Claude Opus 4.5"] = "claude-opus-4-5"
+     opts["Claude 3.5 Sonnet (legacy)"] = "claude-3-5-sonnet-20241022"
++    # AWS Bedrock (langchain_aws — requires AWS creds in .env)
++    for bm in BEDROCK_MODELS:
++        label = bm.replace("bedrock/", "Bedrock: ").split(":")[0]
++        opts[label] = bm
+     # Ollama / Qwen
+     opts[f"Qwen via Ollama ({DEFAULT_MODEL})"] = DEFAULT_MODEL
+     opts["Custom Ollama model"] = "__custom__"
+     return opts
+ 
+ 
++def _build_langgraph_topology() -> str:
++    """Return a Mermaid diagram string for the core agent graph topology.
++
++    Based on ``src/ailf/core/agent/engine.py`` (visual_enabled=True branch).
++    Does NOT import LangGraph; purely structural.
++    """
++    return """
++```mermaid
++flowchart LR
++    S([START]) --> V[visual_inspection]
++    S --> D[diagnostics]
++    V --> DEC[decision]
++    D --> DEC
++    DEC --> VAL{validation}
++    VAL -->|beat naive| FE[final_evaluation]
++    VAL -->|rejected / max_iter| FE
++    VAL -->|retry| DEC
++    FE --> E([END])
++
++    style S fill:#4CAF50,color:#fff
++    style E fill:#F44336,color:#fff
++    style V fill:#2196F3,color:#fff
++    style D fill:#2196F3,color:#fff
++    style DEC fill:#9C27B0,color:#fff
++    style VAL fill:#FF9800,color:#fff
++    style FE fill:#607D8B,color:#fff
++```
++"""
++
++
+ # ── Sidebar controls ─────────────────────────────────────────────────────
+ with st.sidebar:
+     st.header("⚙️ Controls")
+@@ -116,9 +153,34 @@
+     selected_model_id = model_options[selected_model_label]
+ 
+     ollama_url = "http://localhost:11434"
+-    if not selected_model_label.startswith("Claude"):
++    is_cloud = selected_model_label.startswith("Claude") or selected_model_label.startswith("Bedrock")
++    if not is_cloud:
+         ollama_url = st.text_input("Ollama URL", value="http://localhost:11434")
+ 
++    st.divider()
++
++    # LangSmith tracing
++    st.subheader("🔗 LangSmith Tracing")
++    langsmith_tracing = st.toggle(
++        "Enable tracing",
++        value=False,
++        help="Records each detection run in LangSmith. Requires LANGSMITH_API_KEY in .env. "
++             "SSL/network errors are caught — tracing failure does not block detection.",
++    )
++    if langsmith_tracing:
++        st.caption("Trace URL will appear in the Agent Reasoning tab after detection.")
++
++    st.divider()
++
++    # LangGraph topology expander
++    with st.expander("🗺️ Core Agent Graph (LangGraph)", expanded=False):
++        st.markdown(_build_langgraph_topology(), unsafe_allow_html=False)
++        st.caption(
++            "Topology from `src/ailf/core/agent/engine.py` (visual_enabled=True). "
++            "The drift detection path does not invoke this full graph — it runs a "
++            "lighter changepoint-only chain before Prophet."
++        )
++
+     run_btn = st.button("🔍 Detect & Forecast", type="primary", use_container_width=True)
+ 
+ 
+@@ -335,7 +397,12 @@
+         cp_placeholder = st.empty()
+ 
+         with st.spinner("🤖 Agent detecting changepoints and drifts…"):
+-            stream = detect_streaming(train_df, model=selected_model_id, ollama_url=ollama_url)
++            stream = detect_streaming(
++                train_df,
++                model=selected_model_id,
++                ollama_url=ollama_url,
++                langsmith_tracing=langsmith_tracing,
++            )
+ 
+             # Collect streamed text for display
+             reasoning_chunks: list[str] = []
+@@ -346,13 +413,21 @@
+             detection = stream.detection_result
+ 
+         source_badge = {
+-            "claude": f"✅ Claude API (`{detection.model}`)",
+-            "qwen":   f"✅ Qwen via Ollama (`{detection.model}`)",
+-            "cusum":  "⚠️ CUSUM fallback",
++            "claude":  f"✅ Claude API (`{detection.model}`)",
++            "bedrock": f"☁️ Bedrock (`{detection.model}`)",
++            "qwen":    f"✅ Qwen via Ollama (`{detection.model}`)",
++            "cusum":   "⚠️ CUSUM fallback",
+         }.get(detection.source, detection.source)
+ 
+         st.caption(f"Detection source: {source_badge}")
+ 
++        # LangSmith trace link
++        if detection.langsmith_run_url:
++            if detection.langsmith_run_url.startswith("http"):
++                st.markdown(f"🔗 [View LangSmith trace]({detection.langsmith_run_url})")
++            else:
++                st.caption(f"LangSmith: {detection.langsmith_run_url}")
++
+         if detection.changepoints:
+             cp_df = pd.DataFrame(detection.changepoints)
+             display_cols = [c for c in ["timestamp", "type", "direction", "confidence", "reason"]
+
+```
+
+## User (2026-06-21T05-00-57Z)
+
+SPEC-ksowmya.md has been updated for visualizing. Implement.
+
+## System (2026-06-21T05-01-03Z)
+
+[2m⏺[0m [2mread[0m [2m(sessions/ksowmya/SPEC-ksowmya.md)[0m
+
+## Assistant (2026-06-21T05-01-07Z)
+
+Two new items: §7 (APAC LangSmith URL support) and §8 (integrate `src/ailf/` agent-in-the-loop pipeline for comparison). Let me review the current state and the ailf pipeline:
+
+## System (2026-06-21T05-01-09Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/qwen_detect.py (lines 1-60))[0m
+
+## System (2026-06-21T05-01-10Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/changepoint/pipeline.py (lines 78-157))[0m
+
+## System (2026-06-21T05-01-17Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/changepoint/pipeline.py (lines 156-235))[0m
+
+## System (2026-06-21T05-01-17Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/changepoint/baselines.py)[0m
+
+## System (2026-06-21T05-01-22Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/changepoint/scenarios.py (first 60 lines))[0m
+
+## System (2026-06-21T05-01-22Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/changepoint/datasets.py (first 60 lines))[0m
+
+## Assistant (2026-06-21T05-01-25Z)
+
+Now I understand the full picture. Let me call advisor before implementing:
+
+## Assistant - advisor (2026-06-21T05-01-26Z)
+
+Two items here: §7 (trivial) and §8 (the trap — same shape as item 6 last round).
+
+**§7 — do it, small.** Edit the existing `Client(api_key=api_key)` call inside `_wrap_with_langsmith` to pass `api_url=_langsmith_api_url()`. For the helper: **don't hardcode a guessed APAC hostname** — the spec links the *web* UI (`apac.smith.langchain.com`), not the API host, and those differ (US=`api.smith.langchain.com`, EU=`eu.api.smith.langchain.com`). Read it from env (`LANGSMITH_ENDPOINT`) with a default, and add it to `.env.example`. That makes "free-tier APAC apart from bedrock" a config switch, not a recall coin-flip. Note it's still not live-testable here — the SSL failure you hit is the corporate proxy's self-signed cert, not the region.
+
+**§8 — same constraint as item 6: the live core graph cannot run in this env. Do not wire `run_scenario`/`build_agent_graph` into Streamlit.** You just read all the pieces (baselines, scenarios, RunContext) — that's the signal you're about to. It will fail because:
+- `build_visual_model`/`build_decision_model` are Bedrock-only, AWS creds are blank, and `_wrap_bedrock_error` *forbids* silent fallback by design. `langchain_aws` isn't even installed (you got ModuleNotFoundError last round).
+- `run_scenario` only accepts the 5 registered golden scenarios with `scenario_metadata.json` fixtures — your drift series (sec9–12 / uploads) aren't registered.
+- `core/` is review-gated (CLAUDE.md).
+
+**The achievable reading — and you've largely already built it:** your round-1 "Taught Prophet (agent changepoints) vs Plain Prophet" chart + MAE/RMSE delta *is* "agent-in-the-loop prophet vs plain prophet, see the improvement." §8 is ~80% done. Make the framing explicit (rename/annotate so the comparison reads as the agent-in-the-loop improvement).
+
+**For the "integrate src/ailf/" half, one check decides the shape — run it before coding:** glob `reports/` for pre-computed core artifacts (`metrics.json`, `agent_trace.json`, `forecast_comparison.png`, `_final_eval` with agent/full_history/naive yhat). 
+- If they exist → load and display them **read-only**. That's the only way to show the *real* core-agent output (agent vs full-history vs naive) without live Bedrock, and it genuinely satisfies "integrate with src/ailf/."
+- If none exist → say so in the UI and keep the detector-based taught-vs-plain. Don't fabricate a live run.
+
+**Blocks?** Neither ambiguity blocks shipping — live core can't run, so default to artifacts-or-detector. Just run the `reports/` glob first (decides §8) and env-configure the api_url (don't guess it). Verification stays byte-compile + graceful-degradation, as before.
+
+## Assistant (2026-06-21T05-02-47Z)
+
+Good guidance. Check for pre-computed artifacts first, then implement:
+
+## System - bash-output (2026-06-21T05-02-50Z)
+
+Claude executed: find /Users/s0k0df5/Downloads/agent-in-the-loop-forecasting/reports -name "metrics.json" -o -name "agent_trace.json" 2>/dev/null | head -10
+ls /Users/s0k0df5/Downloads/agent-in-the-loop-forecasting/reports/ 2>/dev/null || echo "no reports dir" - ✓ Success
+
+## Assistant (2026-06-21T05-02-52Z)
+
+No pre-computed artifacts. Now implement:
+
+1. **§7**: `LANGSMITH_ENDPOINT` env var + APAC URL support in `qwen_detect.py`
+2. **§8**: Improve UI framing to explicitly show "agent-in-the-loop improvement" + load reports if they ever exist
+
+## System (2026-06-21T05-02-54Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/qwen_detect.py (lines 468-517))[0m
+
+## System (2026-06-21T05-02-58Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/qwen_detect.py (lines 555-634))[0m
+
+## Assistant (2026-06-21T05-03-02Z)
+
+Now I'll make the targeted edits. First, add `_langsmith_api_url()` and `_langsmith_project()` helpers, then update `_wrap_with_langsmith`:
+
+## System (2026-06-21T05-03-03Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/qwen_detect.py)[0m
+
+## Assistant (2026-06-21T05-03-28Z)
+
+Now update `.env.example` to include the new `LANGSMITH_ENDPOINT` key:
+
+## System (2026-06-21T05-03-28Z)
+
+[2m⏺[0m [2mread[0m [2m(.env.example)[0m
+
+## System (2026-06-21T05-03-35Z)
+
+[2m⏺[0m [2medit[0m [2m(.env.example)[0m
+
+## Assistant (2026-06-21T05-03-40Z)
+
+Now update the Streamlit app for §8: add an "Agent-in-the-Loop" section that loads pre-computed artifacts when available, otherwise surfaces the detector-taught comparison prominently with correct framing, and adds a LangSmith endpoint config in the sidebar:
+
+## System (2026-06-21T05-03-43Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 150-184))[0m
+
+## System (2026-06-21T05-03-46Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T05-03-58Z)
+
+Now add `_load_ailf_artifacts()` helper and the §8 "Agent-in-the-Loop" tab. First find the helpers section:
+
+## System (2026-06-21T05-03-59Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 205-234))[0m
+
+## System (2026-06-21T05-04-02Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T05-04-33Z)
+
+Now find the tabs section and add the §8 "Agent-in-the-Loop" tab:
+
+## System (2026-06-21T05-04-34Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 430-459))[0m
+
+## System (2026-06-21T05-04-38Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T05-04-43Z)
+
+Now find the bottom of the metrics tab and add the ailf tab content after it:
+
+## System (2026-06-21T05-04-45Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 565-624))[0m
+
+## System (2026-06-21T05-04-48Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T05-06-09Z)
+
+The `import numpy as np as _np` syntax is invalid — fix that:
+
+## System (2026-06-21T05-06-10Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System - bash-output (2026-06-21T05-06-20Z)
+
+Claude executed: python3 -m py_compile src/ailf/pipelines/drift/qwen_detect.py && echo "qwen_detect OK"
+python3 -m py_compile src/ailf/pipelines/drift/streamlit_app.py && echo "streamlit_app OK" - ✓ Success
+
+## Assistant (2026-06-21T05-06-27Z)
+
+Both clean. Done.
+
+**§7 — APAC LangSmith URL (`qwen_detect.py`):**
+- `_read_dotenv_key()` — shared .env reader (DRY refactor)
+- `_langsmith_api_url()` — reads `LANGSMITH_ENDPOINT` from env/.env; passes it to `Client(api_url=...)` only when set; `None` → library default (US)
+- `_langsmith_project()` — reads `LANGSMITH_PROJECT` from env/.env
+- `_wrap_with_langsmith()` — now passes `api_url` conditionally
+- `.env.example` — added `LANGSMITH_ENDPOINT=` with comments for APAC/EU
+
+**§8 — Agent-in-the-Loop tab (`streamlit_app.py`):**
+- New 4th tab **"🔬 Agent-in-the-Loop"** with two sections:
+  1. **Current-run detector comparison** — MAE/RMSE delta between plain Prophet and detector-taught Prophet; green ✅ / amber ⚠️ verdict; % improvement shown
+  2. **Pre-computed Bedrock/LangGraph artifacts** — scans `reports/` via `_load_ailf_artifacts()`; when found, shows `agent / naive_workflow / full_history_prophet` test MAE side-by-side with delta; agent iteration log with ✅/❌ per iteration; when absent, shows exact `uv run` command + required env vars
+- **LangSmith Endpoint field** in sidebar (under tracing toggle) — UI override pushed into `os.environ`; user can paste APAC/EU URL without restarting
+- `_load_ailf_artifacts()` — reads `reports/**/metrics.json` + `agent_trace.json` read-only; returns `[]` gracefully when dir absent
+
+## Assistant (2026-06-21T05-06-36Z)
+
+Changes for src/ailf/pipelines/drift/qwen_detect.py
+```diff
+@@ -554,11 +554,8 @@
+ # LangSmith tracing wrapper
+ # ---------------------------------------------------------------------------
+ 
+-def _langsmith_api_key() -> str:
+-    """Return LANGSMITH_API_KEY from env or .env, empty string if absent."""
+-    key = os.environ.get("LANGSMITH_API_KEY", "").strip()
+-    if key:
+-        return key
++def _read_dotenv_key(key_name: str) -> str:
++    """Read a single key from the nearest .env file, walking up 5 levels."""
+     try:
+         _root = __file__
+         for _ in range(5):
+@@ -568,7 +565,7 @@
+                 with open(dotenv) as f:
+                     for line in f:
+                         line = line.strip()
+-                        if line.startswith("LANGSMITH_API_KEY="):
++                        if line.startswith(f"{key_name}="):
+                             val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                             if val:
+                                 return val
+@@ -577,25 +574,70 @@
+     return ""
+ 
+ 
++def _langsmith_api_key() -> str:
++    """Return LANGSMITH_API_KEY from env or .env, empty string if absent."""
++    return os.environ.get("LANGSMITH_API_KEY", "").strip() or _read_dotenv_key("LANGSMITH_API_KEY")
++
++
++def _langsmith_api_url() -> str | None:
++    """Return the LangSmith API endpoint URL.
++
++    Resolution order:
++    1. LANGSMITH_ENDPOINT env var (or .env)
++    2. None → let langsmith.Client use its default (US prod api.smith.langchain.com)
++
++    Set LANGSMITH_ENDPOINT=https://eu.api.smith.langchain.com for EU free tier,
++    or another custom host for APAC (the web UI at apac.smith.langchain.com uses a
++    different API host — consult LangChain docs for the current APAC API base URL).
++
++    Example .env entry::
++
++        LANGSMITH_ENDPOINT=https://eu.api.smith.langchain.com
++    """
++    url = os.environ.get("LANGSMITH_ENDPOINT", "").strip() or _read_dotenv_key("LANGSMITH_ENDPOINT")
++    return url if url else None
++
++
++def _langsmith_project() -> str:
++    """Return the LangSmith project name from env or .env, with fallback."""
++    return (
++        os.environ.get("LANGSMITH_PROJECT", "").strip()
++        or _read_dotenv_key("LANGSMITH_PROJECT")
++        or "agent-in-the-loop-forecasting"
++    )
++
++
+ def _wrap_with_langsmith(
+     result: DetectionResult,
+     df: pd.DataFrame,
+-    project: str = "agent-in-the-loop-forecasting",
++    project: str | None = None,
+ ) -> DetectionResult:
+     """Try to record a LangSmith run for ``result``; silently degrades on any error.
+ 
++    Reads LANGSMITH_API_KEY and LANGSMITH_ENDPOINT from .env (see _langsmith_api_url).
++    Set LANGSMITH_ENDPOINT to point at the APAC/EU free-tier API host.
++
+     Annotates ``result.langsmith_run_url`` with the trace URL if successful.
+     """
+     api_key = _langsmith_api_key()
+     if not api_key:
+         return result
+ 
++    project = project or _langsmith_project()
++
+     try:
+         import uuid
+ 
+         from langsmith import Client  # noqa: PLC0415
+ 
+-        client = Client(api_key=api_key)
++        # Pass api_url only when explicitly configured — avoids overriding the
++        # library default when the user hasn't set LANGSMITH_ENDPOINT.
++        api_url = _langsmith_api_url()
++        client_kwargs: dict = {"api_key": api_key}
++        if api_url:
++            client_kwargs["api_url"] = api_url
++
++        client = Client(**client_kwargs)
+         run_id = str(uuid.uuid4())
+         run_name = f"drift-detection-{result.source}"
+ 
+@@ -615,7 +657,6 @@
+                 "reasoning_preview": result.reasoning[:500],
+             },
+         )
+-        # end the run
+         client.update_run(run_id, end_time=None, status="success")
+ 
+         try:
+
+```
+
+## Assistant (2026-06-21T05-06-36Z)
+
+Changes for .env.example
+```diff
+@@ -17,3 +17,8 @@
+ LANGSMITH_API_KEY=
+ LANGSMITH_TRACING=false
+ LANGSMITH_PROJECT=agent-in-the-loop-forecasting
++# LangSmith API endpoint — override for APAC/EU free-tier or self-hosted.
++# US default (leave blank): https://api.smith.langchain.com
++# APAC free tier: check https://docs.smith.langchain.com for current APAC API base URL
++# EU free tier:   https://eu.api.smith.langchain.com
++LANGSMITH_ENDPOINT=
+
+```
+
+## Assistant (2026-06-21T05-06-36Z)
+
+Changes for src/ailf/pipelines/drift/streamlit_app.py
+```diff
+@@ -169,6 +169,22 @@
+     )
+     if langsmith_tracing:
+         st.caption("Trace URL will appear in the Agent Reasoning tab after detection.")
++        langsmith_endpoint = st.text_input(
++            "LangSmith Endpoint",
++            value="",
++            placeholder="Leave blank for US default; set for APAC/EU free tier",
++            help=(
++                "Override the LangSmith API URL. "
++                "Leave blank to use LANGSMITH_ENDPOINT from .env, or the US default. "
++                "EU free tier: https://eu.api.smith.langchain.com"
++            ),
++        )
++        # Push any UI-level override into the env so _langsmith_api_url() picks it up
++        if langsmith_endpoint.strip():
++            import os as _os
++            _os.environ["LANGSMITH_ENDPOINT"] = langsmith_endpoint.strip()
++    else:
++        langsmith_endpoint = ""
+ 
+     st.divider()
+ 
+@@ -186,6 +202,44 @@
+ 
+ # ── Helpers ──────────────────────────────────────────────────────────────
+ 
++def _load_ailf_artifacts(reports_root: pathlib.Path | None = None) -> list[dict]:
++    """Scan the reports/ directory for pre-computed src/ailf core-agent artifacts.
++
++    Returns a list of dicts (one per run), each with keys:
++      run_id, scenario_id, metrics_path, trace_path, final_eval (dict or None)
++
++    Used for §8: display agent-in-the-loop improvements from actual Bedrock runs
++    without needing live AWS credentials at UI time.  Returns [] when no reports exist.
++    """
++    root = reports_root or (_PROJECT_ROOT / "reports")
++    if not root.exists():
++        return []
++
++    runs: list[dict] = []
++    for metrics_path in sorted(root.rglob("metrics.json")):
++        try:
++            import json
++            data = json.loads(metrics_path.read_text())
++            run_dir = metrics_path.parent
++            trace_path = run_dir / "agent_trace.json"
++            trace: dict = {}
++            if trace_path.exists():
++                trace = json.loads(trace_path.read_text())
++
++            runs.append({
++                "run_id": run_dir.name,
++                "scenario_id": data.get("scenario_id", run_dir.name),
++                "metrics_path": metrics_path,
++                "trace_path": trace_path if trace_path.exists() else None,
++                "final_eval": data.get("final_eval") or trace.get("_final_eval"),
++                "metrics": data,
++                "trace": trace,
++            })
++        except Exception:
++            continue
++    return runs
++
++
+ def _load_df(source) -> pd.DataFrame:
+     df = pd.read_csv(source)
+     missing = {"ds", "y"} - set(df.columns)
+@@ -385,8 +439,8 @@
+     st.subheader(f"Series: `{series_label}`  ({len(df)} rows{split_note})")
+ 
+     # ── Step 1: Agent detection (with streaming) ─────────────────────────
+-    tab_reasoning, tab_forecast, tab_metrics = st.tabs(
+-        ["🤖 Agent Reasoning", "📈 Forecast Chart", "📊 Metrics"]
++    tab_reasoning, tab_forecast, tab_metrics, tab_ailf = st.tabs(
++        ["🤖 Agent Reasoning", "📈 Forecast Chart", "📊 Metrics", "🔬 Agent-in-the-Loop"]
+     )
+ 
+     with tab_reasoning:
+@@ -529,6 +583,138 @@
+                         delta_color="inverse",
+                     )
+ 
++    # ── Step 4: Agent-in-the-Loop tab (§8) ───────────────────────────────
++    with tab_ailf:
++        st.markdown(
++            "### Agent-in-the-Loop: Improvement Visualisation\n\n"
++            "This tab shows how the agent's changepoint detections improve Prophet accuracy "
++            "compared to plain auto-changepoint Prophet — the core \"agent-in-the-loop\" benefit.\n\n"
++            "**How it works (src/ailf architecture):**\n"
++            "1. The detection agent (`qwen_detect` / Claude / Bedrock) analyses the series "
++            "   and identifies changepoints (sudden, gradual, seasonal, recurring).\n"
++            "2. Detected changepoints are injected into Prophet via `changepoints=[dates]` — "
++            "   the *model-taught-prophet*.\n"
++            "3. The improvement (MAE/RMSE delta) shows whether the agent's diagnosis helped.\n\n"
++            "The full LangGraph pipeline in `src/ailf/core/agent/engine.py` adds a visual "
++            "inspection node + bounded intervention selection on top of this — requires live "
++            "Bedrock credentials and pre-registered scenario fixtures."
++        )
++
++        # ── Current-run comparison ────────────────────────────────────────
++        if fut_taught is not None and test_df is not None and not test_df.empty:
++            import numpy as _np
++
++            st.subheader("Current run — detector-assisted improvement")
++            merged2 = test_df.merge(
++                fut_plain[["ds", "yhat"]].rename(columns={"yhat": "plain"}),
++                on="ds", how="inner",
++            ).merge(
++                fut_taught[["ds", "yhat"]].rename(columns={"yhat": "taught"}),
++                on="ds", how="inner",
++            )
++            if not merged2.empty:
++                mae_p  = float(_np.mean(_np.abs(merged2["y"] - merged2["plain"])))
++                mae_t  = float(_np.mean(_np.abs(merged2["y"] - merged2["taught"])))
++                rmse_p = float(_np.sqrt(_np.mean((merged2["y"] - merged2["plain"]) ** 2)))
++                rmse_t = float(_np.sqrt(_np.mean((merged2["y"] - merged2["taught"]) ** 2)))
++                improvement_mae  = mae_p  - mae_t   # positive = better
++                improvement_rmse = rmse_p - rmse_t
++
++                c1, c2, c3, c4 = st.columns(4)
++                c1.metric("Plain Prophet MAE",  f"{mae_p:.3f}")
++                c2.metric(
++                    "Taught Prophet MAE", f"{mae_t:.3f}",
++                    delta=f"{improvement_mae:+.3f}" if improvement_mae != 0 else "0",
++                    delta_color="normal" if improvement_mae >= 0 else "inverse",
++                    help="Positive = agent-in-the-loop improved the forecast",
++                )
++                c3.metric("Plain Prophet RMSE",  f"{rmse_p:.3f}")
++                c4.metric(
++                    "Taught Prophet RMSE", f"{rmse_t:.3f}",
++                    delta=f"{improvement_rmse:+.3f}" if improvement_rmse != 0 else "0",
++                    delta_color="normal" if improvement_rmse >= 0 else "inverse",
++                )
++
++                if improvement_mae > 0:
++                    st.success(
++                        f"✅ Agent-in-the-loop improved MAE by **{improvement_mae:.3f}** "
++                        f"({100*improvement_mae/mae_p:.1f}% relative reduction)"
++                    )
++                elif improvement_mae < 0:
++                    st.warning(
++                        f"⚠️ Agent changepoints did not help this series — MAE worse by "
++                        f"{abs(improvement_mae):.3f}. Consider running with a different model "
++                        "or reviewing the detected changepoints."
++                    )
++                else:
++                    st.info("No change in MAE — agent changepoints matched Prophet's auto-selection.")
++        else:
++            st.info(
++                "Run a detection with a year-5 holdout to see the improvement comparison. "
++                "Pre-generated series (sec9–sec12) have 5 years of data — pick one from the sidebar."
++            )
++
++        # ── Pre-computed Bedrock/LangGraph artifacts ──────────────────────
++        st.divider()
++        st.subheader("Pre-computed core-agent runs (reports/ directory)")
++        ailf_runs = _load_ailf_artifacts()
++        if ailf_runs:
++            st.success(f"Found {len(ailf_runs)} pre-computed run(s) in `reports/`.")
++            for run in ailf_runs:
++                with st.expander(f"📂 {run['scenario_id']} — `{run['run_id']}`", expanded=False):
++                    fe = run.get("final_eval") or {}
++                    if fe:
++                        agent_test  = (fe.get("agent") or {}).get("test_metrics", {})
++                        naive_test  = (fe.get("naive_workflow") or {}).get("test_metrics", {})
++                        full_test   = (fe.get("full_history_prophet") or {}).get("test_metrics", {})
++
++                        if agent_test or naive_test or full_test:
++                            mc1, mc2, mc3 = st.columns(3)
++                            mc1.metric(
++                                "Full-history Prophet MAE",
++                                f"{full_test.get('mae','—'):.3f}" if isinstance(full_test.get('mae'), float) else "—",
++                            )
++                            mc2.metric(
++                                "Naive workflow MAE",
++                                f"{naive_test.get('mae','—'):.3f}" if isinstance(naive_test.get('mae'), float) else "—",
++                            )
++                            mc3.metric(
++                                "Agent-in-the-loop MAE",
++                                f"{agent_test.get('mae','—'):.3f}" if isinstance(agent_test.get('mae'), float) else "—",
++                                delta=(
++                                    f"{agent_test['mae'] - full_test['mae']:+.3f}"
++                                    if isinstance(agent_test.get('mae'), float) and isinstance(full_test.get('mae'), float)
++                                    else None
++                                ),
++                                delta_color="inverse",
++                                help="vs full-history Prophet baseline",
++                            )
++
++                    # Agent trace iterations
++                    trace = run.get("trace") or {}
++                    iterations = trace.get("iterations", [])
++                    if iterations:
++                        st.markdown(f"**Agent iterations:** {len(iterations)}")
++                        for it in iterations:
++                            prop = it.get("proposal", {})
++                            beat = it.get("beat_naive")
++                            icon = "✅" if beat else "❌"
++                            st.markdown(
+
+... (19 more lines omitted - view full diff in file)
+```
+
+## User (2026-06-21T05-09-13Z)
+
+revert this change. I dont like the design. 
+
+## Assistant (2026-06-21T05-09-18Z)
+
+Which change would you like to revert? The most recent session added:
+
+1. **§7** — APAC LangSmith endpoint support (`LANGSMITH_ENDPOINT` env var, `_read_dotenv_key` refactor)
+2. **§8** — "Agent-in-the-Loop" 4th tab in Streamlit + `_load_ailf_artifacts()`
+3. **Both** of the above (full last session revert)
+4. **All three sessions** — revert everything back to the original `streamlit_app.py` / `qwen_detect.py`
+
+## System (2026-06-21T05-09-26Z)
+
+[2m⏺[0m [2maskuserquestion[0m [2m(Revert scope)[0m
+
+## System - bash-output (2026-06-21T05-09-54Z)
+
+Claude executed: git log --oneline -8 - ✓ Success
+
+## Assistant (2026-06-21T05-09-57Z)
+
+No git commits from our sessions — changes are only on disk. I'll revert the §7/§8 edits in both files manually.
+
+## System (2026-06-21T05-09-59Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/qwen_detect.py (lines 553-672))[0m
+
+## Assistant (2026-06-21T05-10-03Z)
+
+Now revert `qwen_detect.py` — restore the simpler LangSmith wrapper (no `_read_dotenv_key`, no `_langsmith_api_url`, no `_langsmith_project`):
+
+## System (2026-06-21T05-10-04Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/qwen_detect.py)[0m
+
+## Assistant (2026-06-21T05-10-24Z)
+
+Now revert `streamlit_app.py` — remove the LangSmith endpoint field in sidebar, `_load_ailf_artifacts()`, and the 4th tab:
+
+## System (2026-06-21T05-10-26Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 160-199))[0m
+
+## System (2026-06-21T05-10-32Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T05-10-40Z)
+
+Now remove `_load_ailf_artifacts()` and revert the tabs + ailf tab content:
+
+## System (2026-06-21T05-10-41Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 200-249))[0m
+
+## System (2026-06-21T05-10-46Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 183-202))[0m
+
+## System (2026-06-21T05-10-55Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T05-11-05Z)
+
+Now revert the tabs (4 → 3) and remove the ailf tab block:
+
+## System (2026-06-21T05-11-05Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T05-11-15Z)
+
+Now find and remove the ailf tab content block:
+
+## System (2026-06-21T05-11-16Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 530-659))[0m
+
+## System (2026-06-21T05-11-28Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 655-679))[0m
+
+## System (2026-06-21T05-11-31Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T05-12-20Z)
+
+Also revert `.env.example`:
+
+## System (2026-06-21T05-12-21Z)
+
+[2m⏺[0m [2medit[0m [2m(.env.example)[0m
+
+## System - bash-output (2026-06-21T05-12-32Z)
+
+Claude executed: python3 -m py_compile src/ailf/pipelines/drift/qwen_detect.py && echo "OK"
+python3 -m py_compile src/ailf/pipelines/drift/streamlit_app.py && echo "OK" - ✓ Success
+
+## Assistant (2026-06-21T05-12-54Z)
+
+Reverted. Both files compile clean. Removed:
+- `_read_dotenv_key` / `_langsmith_api_url` / `_langsmith_project` from `qwen_detect.py`
+- LangSmith endpoint text input from the sidebar
+- `_load_ailf_artifacts()` helper
+- The 4th "🔬 Agent-in-the-Loop" tab (back to 3 tabs)
+- `LANGSMITH_ENDPOINT` from `.env.example`
+
+## Assistant (2026-06-21T05-12-56Z)
+
+Changes for src/ailf/pipelines/drift/qwen_detect.py
+```diff
+@@ -554,8 +554,11 @@
+ # LangSmith tracing wrapper
+ # ---------------------------------------------------------------------------
+ 
+-def _read_dotenv_key(key_name: str) -> str:
+-    """Read a single key from the nearest .env file, walking up 5 levels."""
++def _langsmith_api_key() -> str:
++    """Return LANGSMITH_API_KEY from env or .env, empty string if absent."""
++    key = os.environ.get("LANGSMITH_API_KEY", "").strip()
++    if key:
++        return key
+     try:
+         _root = __file__
+         for _ in range(5):
+@@ -565,7 +568,7 @@
+                 with open(dotenv) as f:
+                     for line in f:
+                         line = line.strip()
+-                        if line.startswith(f"{key_name}="):
++                        if line.startswith("LANGSMITH_API_KEY="):
+                             val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                             if val:
+                                 return val
+@@ -574,70 +577,25 @@
+     return ""
+ 
+ 
+-def _langsmith_api_key() -> str:
+-    """Return LANGSMITH_API_KEY from env or .env, empty string if absent."""
+-    return os.environ.get("LANGSMITH_API_KEY", "").strip() or _read_dotenv_key("LANGSMITH_API_KEY")
+-
+-
+-def _langsmith_api_url() -> str | None:
+-    """Return the LangSmith API endpoint URL.
+-
+-    Resolution order:
+-    1. LANGSMITH_ENDPOINT env var (or .env)
+-    2. None → let langsmith.Client use its default (US prod api.smith.langchain.com)
+-
+-    Set LANGSMITH_ENDPOINT=https://eu.api.smith.langchain.com for EU free tier,
+-    or another custom host for APAC (the web UI at apac.smith.langchain.com uses a
+-    different API host — consult LangChain docs for the current APAC API base URL).
+-
+-    Example .env entry::
+-
+-        LANGSMITH_ENDPOINT=https://eu.api.smith.langchain.com
+-    """
+-    url = os.environ.get("LANGSMITH_ENDPOINT", "").strip() or _read_dotenv_key("LANGSMITH_ENDPOINT")
+-    return url if url else None
+-
+-
+-def _langsmith_project() -> str:
+-    """Return the LangSmith project name from env or .env, with fallback."""
+-    return (
+-        os.environ.get("LANGSMITH_PROJECT", "").strip()
+-        or _read_dotenv_key("LANGSMITH_PROJECT")
+-        or "agent-in-the-loop-forecasting"
+-    )
+-
+-
+ def _wrap_with_langsmith(
+     result: DetectionResult,
+     df: pd.DataFrame,
+-    project: str | None = None,
++    project: str = "agent-in-the-loop-forecasting",
+ ) -> DetectionResult:
+     """Try to record a LangSmith run for ``result``; silently degrades on any error.
+ 
+-    Reads LANGSMITH_API_KEY and LANGSMITH_ENDPOINT from .env (see _langsmith_api_url).
+-    Set LANGSMITH_ENDPOINT to point at the APAC/EU free-tier API host.
+-
+     Annotates ``result.langsmith_run_url`` with the trace URL if successful.
+     """
+     api_key = _langsmith_api_key()
+     if not api_key:
+         return result
+ 
+-    project = project or _langsmith_project()
+-
+     try:
+         import uuid
+ 
+         from langsmith import Client  # noqa: PLC0415
+ 
+-        # Pass api_url only when explicitly configured — avoids overriding the
+-        # library default when the user hasn't set LANGSMITH_ENDPOINT.
+-        api_url = _langsmith_api_url()
+-        client_kwargs: dict = {"api_key": api_key}
+-        if api_url:
+-            client_kwargs["api_url"] = api_url
+-
+-        client = Client(**client_kwargs)
++        client = Client(api_key=api_key)
+         run_id = str(uuid.uuid4())
+         run_name = f"drift-detection-{result.source}"
+ 
+
+```
+
+## Assistant (2026-06-21T05-12-56Z)
+
+Changes for src/ailf/pipelines/drift/streamlit_app.py
+```diff
+@@ -169,22 +169,6 @@
+     )
+     if langsmith_tracing:
+         st.caption("Trace URL will appear in the Agent Reasoning tab after detection.")
+-        langsmith_endpoint = st.text_input(
+-            "LangSmith Endpoint",
+-            value="",
+-            placeholder="Leave blank for US default; set for APAC/EU free tier",
+-            help=(
+-                "Override the LangSmith API URL. "
+-                "Leave blank to use LANGSMITH_ENDPOINT from .env, or the US default. "
+-                "EU free tier: https://eu.api.smith.langchain.com"
+-            ),
+-        )
+-        # Push any UI-level override into the env so _langsmith_api_url() picks it up
+-        if langsmith_endpoint.strip():
+-            import os as _os
+-            _os.environ["LANGSMITH_ENDPOINT"] = langsmith_endpoint.strip()
+-    else:
+-        langsmith_endpoint = ""
+ 
+     st.divider()
+ 
+@@ -202,44 +186,6 @@
+ 
+ # ── Helpers ──────────────────────────────────────────────────────────────
+ 
+-def _load_ailf_artifacts(reports_root: pathlib.Path | None = None) -> list[dict]:
+-    """Scan the reports/ directory for pre-computed src/ailf core-agent artifacts.
+-
+-    Returns a list of dicts (one per run), each with keys:
+-      run_id, scenario_id, metrics_path, trace_path, final_eval (dict or None)
+-
+-    Used for §8: display agent-in-the-loop improvements from actual Bedrock runs
+-    without needing live AWS credentials at UI time.  Returns [] when no reports exist.
+-    """
+-    root = reports_root or (_PROJECT_ROOT / "reports")
+-    if not root.exists():
+-        return []
+-
+-    runs: list[dict] = []
+-    for metrics_path in sorted(root.rglob("metrics.json")):
+-        try:
+-            import json
+-            data = json.loads(metrics_path.read_text())
+-            run_dir = metrics_path.parent
+-            trace_path = run_dir / "agent_trace.json"
+-            trace: dict = {}
+-            if trace_path.exists():
+-                trace = json.loads(trace_path.read_text())
+-
+-            runs.append({
+-                "run_id": run_dir.name,
+-                "scenario_id": data.get("scenario_id", run_dir.name),
+-                "metrics_path": metrics_path,
+-                "trace_path": trace_path if trace_path.exists() else None,
+-                "final_eval": data.get("final_eval") or trace.get("_final_eval"),
+-                "metrics": data,
+-                "trace": trace,
+-            })
+-        except Exception:
+-            continue
+-    return runs
+-
+-
+ def _load_df(source) -> pd.DataFrame:
+     df = pd.read_csv(source)
+     missing = {"ds", "y"} - set(df.columns)
+@@ -439,8 +385,8 @@
+     st.subheader(f"Series: `{series_label}`  ({len(df)} rows{split_note})")
+ 
+     # ── Step 1: Agent detection (with streaming) ─────────────────────────
+-    tab_reasoning, tab_forecast, tab_metrics, tab_ailf = st.tabs(
+-        ["🤖 Agent Reasoning", "📈 Forecast Chart", "📊 Metrics", "🔬 Agent-in-the-Loop"]
++    tab_reasoning, tab_forecast, tab_metrics = st.tabs(
++        ["🤖 Agent Reasoning", "📈 Forecast Chart", "📊 Metrics"]
+     )
+ 
+     with tab_reasoning:
+@@ -583,138 +529,6 @@
+                         delta_color="inverse",
+                     )
+ 
+-    # ── Step 4: Agent-in-the-Loop tab (§8) ───────────────────────────────
+-    with tab_ailf:
+-        st.markdown(
+-            "### Agent-in-the-Loop: Improvement Visualisation\n\n"
+-            "This tab shows how the agent's changepoint detections improve Prophet accuracy "
+-            "compared to plain auto-changepoint Prophet — the core \"agent-in-the-loop\" benefit.\n\n"
+-            "**How it works (src/ailf architecture):**\n"
+-            "1. The detection agent (`qwen_detect` / Claude / Bedrock) analyses the series "
+-            "   and identifies changepoints (sudden, gradual, seasonal, recurring).\n"
+-            "2. Detected changepoints are injected into Prophet via `changepoints=[dates]` — "
+-            "   the *model-taught-prophet*.\n"
+-            "3. The improvement (MAE/RMSE delta) shows whether the agent's diagnosis helped.\n\n"
+-            "The full LangGraph pipeline in `src/ailf/core/agent/engine.py` adds a visual "
+-            "inspection node + bounded intervention selection on top of this — requires live "
+-            "Bedrock credentials and pre-registered scenario fixtures."
+-        )
+-
+-        # ── Current-run comparison ────────────────────────────────────────
+-        if fut_taught is not None and test_df is not None and not test_df.empty:
+-            import numpy as _np
+-
+-            st.subheader("Current run — detector-assisted improvement")
+-            merged2 = test_df.merge(
+-                fut_plain[["ds", "yhat"]].rename(columns={"yhat": "plain"}),
+-                on="ds", how="inner",
+-            ).merge(
+-                fut_taught[["ds", "yhat"]].rename(columns={"yhat": "taught"}),
+-                on="ds", how="inner",
+-            )
+-            if not merged2.empty:
+-                mae_p  = float(_np.mean(_np.abs(merged2["y"] - merged2["plain"])))
+-                mae_t  = float(_np.mean(_np.abs(merged2["y"] - merged2["taught"])))
+-                rmse_p = float(_np.sqrt(_np.mean((merged2["y"] - merged2["plain"]) ** 2)))
+-                rmse_t = float(_np.sqrt(_np.mean((merged2["y"] - merged2["taught"]) ** 2)))
+-                improvement_mae  = mae_p  - mae_t   # positive = better
+-                improvement_rmse = rmse_p - rmse_t
+-
+-                c1, c2, c3, c4 = st.columns(4)
+-                c1.metric("Plain Prophet MAE",  f"{mae_p:.3f}")
+-                c2.metric(
+-                    "Taught Prophet MAE", f"{mae_t:.3f}",
+-                    delta=f"{improvement_mae:+.3f}" if improvement_mae != 0 else "0",
+-                    delta_color="normal" if improvement_mae >= 0 else "inverse",
+-                    help="Positive = agent-in-the-loop improved the forecast",
+-                )
+-                c3.metric("Plain Prophet RMSE",  f"{rmse_p:.3f}")
+-                c4.metric(
+-                    "Taught Prophet RMSE", f"{rmse_t:.3f}",
+-                    delta=f"{improvement_rmse:+.3f}" if improvement_rmse != 0 else "0",
+-                    delta_color="normal" if improvement_rmse >= 0 else "inverse",
+-                )
+-
+-                if improvement_mae > 0:
+-                    st.success(
+-                        f"✅ Agent-in-the-loop improved MAE by **{improvement_mae:.3f}** "
+-                        f"({100*improvement_mae/mae_p:.1f}% relative reduction)"
+-                    )
+-                elif improvement_mae < 0:
+-                    st.warning(
+-                        f"⚠️ Agent changepoints did not help this series — MAE worse by "
+-                        f"{abs(improvement_mae):.3f}. Consider running with a different model "
+-                        "or reviewing the detected changepoints."
+-                    )
+-                else:
+-                    st.info("No change in MAE — agent changepoints matched Prophet's auto-selection.")
+-        else:
+-            st.info(
+-                "Run a detection with a year-5 holdout to see the improvement comparison. "
+-                "Pre-generated series (sec9–sec12) have 5 years of data — pick one from the sidebar."
+-            )
+-
+-        # ── Pre-computed Bedrock/LangGraph artifacts ──────────────────────
+-        st.divider()
+-        st.subheader("Pre-computed core-agent runs (reports/ directory)")
+-        ailf_runs = _load_ailf_artifacts()
+-        if ailf_runs:
+-            st.success(f"Found {len(ailf_runs)} pre-computed run(s) in `reports/`.")
+-            for run in ailf_runs:
+-                with st.expander(f"📂 {run['scenario_id']} — `{run['run_id']}`", expanded=False):
+-                    fe = run.get("final_eval") or {}
+-                    if fe:
+-                        agent_test  = (fe.get("agent") or {}).get("test_metrics", {})
+-                        naive_test  = (fe.get("naive_workflow") or {}).get("test_metrics", {})
+-                        full_test   = (fe.get("full_history_prophet") or {}).get("test_metrics", {})
+-
+-                        if agent_test or naive_test or full_test:
+-                            mc1, mc2, mc3 = st.columns(3)
+-                            mc1.metric(
+-                                "Full-history Prophet MAE",
+-                                f"{full_test.get('mae','—'):.3f}" if isinstance(full_test.get('mae'), float) else "—",
+-                            )
+-                            mc2.metric(
+-                                "Naive workflow MAE",
+-                                f"{naive_test.get('mae','—'):.3f}" if isinstance(naive_test.get('mae'), float) else "—",
+-                            )
+-                            mc3.metric(
+-                                "Agent-in-the-loop MAE",
+-                                f"{agent_test.get('mae','—'):.3f}" if isinstance(agent_test.get('mae'), float) else "—",
+-                                delta=(
+-                                    f"{agent_test['mae'] - full_test['mae']:+.3f}"
+-                                    if isinstance(agent_test.get('mae'), float) and isinstance(full_test.get('mae'), float)
+-                                    else None
+-                                ),
+-                                delta_color="inverse",
+-                                help="vs full-history Prophet baseline",
+-                            )
+-
+-                    # Agent trace iterations
+-                    trace = run.get("trace") or {}
+-                    iterations = trace.get("iterations", [])
+-                    if iterations:
+-                        st.markdown(f"**Agent iterations:** {len(iterations)}")
+-                        for it in iterations:
+-                            prop = it.get("proposal", {})
+-                            beat = it.get("beat_naive")
+-                            icon = "✅" if beat else "❌"
+-                            st.markdown(
+
+... (19 more lines omitted - view full diff in file)
+```
+
+## Assistant (2026-06-21T05-12-56Z)
+
+Changes for .env.example
+```diff
+@@ -17,8 +17,3 @@
+ LANGSMITH_API_KEY=
+ LANGSMITH_TRACING=false
+ LANGSMITH_PROJECT=agent-in-the-loop-forecasting
+-# LangSmith API endpoint — override for APAC/EU free-tier or self-hosted.
+-# US default (leave blank): https://api.smith.langchain.com
+-# APAC free tier: check https://docs.smith.langchain.com for current APAC API base URL
+-# EU free tier:   https://eu.api.smith.langchain.com
+-LANGSMITH_ENDPOINT=
+
+```
+
+## User (2026-06-21T05-13-57Z)
+
+revert
+
+## Assistant (2026-06-21T05-14-03Z)
+
+What should be reverted? The current state of the two main files after our sessions is:
+
+## System (2026-06-21T05-14-07Z)
+
+[2m⏺[0m [2maskuserquestion[0m [2m(Revert target)[0m
+
+## System - bash-output (2026-06-21T05-14-26Z)
+
+Claude executed: git show HEAD:src/ailf/pipelines/drift/streamlit_app.py 2>/dev/null | head -5 || echo "not in git" - ✓ Success
+
+## Assistant (2026-06-21T05-14-32Z)
+
+Git has the original. Restore it directly:
+
+## System - bash-output (2026-06-21T05-14-32Z)
+
+Claude executed: git checkout HEAD -- src/ailf/pipelines/drift/streamlit_app.py && echo "restored" - ✓ Success
+
+## Assistant (2026-06-21T05-14-37Z)
+
+`streamlit_app.py` restored to the original git version. Done.
+
+## User (2026-06-21T05-22-53Z)
+
+SPEC-ksowmya.md has been updated for visualizing. Implement.
+
+## System (2026-06-21T05-23-01Z)
+
+[2m⏺[0m [2mread[0m [2m(sessions/ksowmya/SPEC-ksowmya.md)[0m
+
+## System (2026-06-21T05-23-01Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T05-23-08Z)
+
+New items in SPEC: §8 (LangSmith as a "Detect with" backend option), §9-11 (scenario selector + model settings + agent settings + diagnostic toggles + tool toggles — all as sidebar controls that build a CLI override JSON). Let me read the existing qwen_detect and check available diagnostics/tools:
+
+## System (2026-06-21T05-23-12Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/qwen_detect.py (lines 1-70))[0m
+
+## System - bash-output (2026-06-21T05-23-14Z)
+
+Claude executed: ls /Users/s0k0df5/Downloads/agent-in-the-loop-forecasting/reports/ 2>/dev/null || echo "no reports"
+find /Users/s0k0df5/Downloads/agent-in-the-loop-forecasting -name "events.jsonl" | head -5 - ✓ Success
+
+## Assistant - advisor (2026-06-21T05-23-20Z)
+
+The binding constraint this round is the user's, not the spec's. Two reverts + §9 "**without changing the skeleton of the UI**" means: extend the restored simple skeleton; do NOT rebuild the tabs / topology-panel / Agent-in-the-Loop-tab design that was just rejected. Add sidebar sections in the existing `st.subheader`+`st.divider` style, placed exactly where §10 says — *after Forecast Parameters*. If you redesign again, it gets reverted again.
+
+**Highest technical risk — app-load crash:** §9–11 configure the changepoint pipeline (`run_scenario`). Do NOT import it into `streamlit_app.py`. Its import chain pulls `core/models/llm.py` → `langchain_aws`, which isn't installed (you hit ModuleNotFoundError last round) → the whole Streamlit app fails at load. Build the `--override` JSON + command **string** with no import; if you add a Run button, subprocess the CLI or lazy-import inside the handler under try/except.
+
+**Enumerated touches:**
+1. **Rewire imports** — the restored UI imports only `DEFAULT_MODEL, detect`. Re-add `CLAUDE_MODELS, BEDROCK_MODELS, detect_streaming` (still present in `qwen_detect.py` — only the UI was reverted). Convert "Agent (Qwen)" text input → "Detect with" dropdown: Ollama / Claude / Bedrock / LangSmith. Stream reasoning for the cloud options (§5).
+2. **§8 LangSmith isn't a model — it's tracing.** Map the "LangSmith" entry to: run the existing Claude/Anthropic detection with `langsmith_tracing=True` (consumes LANGSMITH_API_KEY). Label it honestly. Degrades to CUSUM (ANTHROPIC key blank) and SSL-fails on upload here — expected, don't fight it.
+3. **§10/§11 → sidebar sections after Forecast Parameters:** Scenario (5 listed ids), Model Settings (visual_model_id/decision_model_id/aws_region text), Agent Settings (visual_analysis_enabled toggle + seed), Diagnostic checkboxes (13 listed), Tool checkboxes (6 listed; `full_history_default` rendered checked **and** disabled). Use the spec's names verbatim; no secrets in UI (spec says so).
+4. Controls assemble the override + command. `reports/` is empty now → show "run this to generate," and read artifacts (metrics.json, agent_trace.json, forecast_comparison.png) when present — inline/simple, not a new heavy tab.
+
+**Verify before emitting commands:** read `core/config/schema.py` (`ConfigOverride`) to confirm the exact `--override` JSON shape/nesting (enabled_diagnostics, enabled_tools, models.*, visual_analysis_enabled, seed). Don't guess it — wrong shape = the generated command won't run.
+
+Don't touch `core/`. Verify with byte-compile; you can't run live.
+
+**Blocks?** The "what design did they dislike" ambiguity does NOT block — §9's skeleton constraint + §10's explicit placement resolve it. Proceed; don't ask.
+
+## System (2026-06-21T05-26-04Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/core/config/schema.py)[0m
+
+## Assistant (2026-06-21T05-26-11Z)
+
+Now I have the exact override shape. Let me also check what defaults the config yaml has for diagnostics/tools:
+
+## System - bash-output (2026-06-21T05-26-12Z)
+
+Claude executed: cat /Users/s0k0df5/Downloads/agent-in-the-loop-forecasting/src/ailf/pipelines/changepoint/config.yaml - ✓ Success
+
+## Assistant (2026-06-21T05-26-38Z)
+
+Now I have everything. The override JSON shape is confirmed. Let me implement the updated `streamlit_app.py` — keeping the existing skeleton exactly, adding new sidebar sections after Forecast Parameters:
+
+## System (2026-06-21T05-26-40Z)
+
+[2m⏺[0m [2mwrite[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System - bash-output (2026-06-21T05-28-18Z)
+
+Claude executed: python3 -m py_compile src/ailf/pipelines/drift/streamlit_app.py && echo "OK" - ✓ Success
+
+## Assistant (2026-06-21T05-28-22Z)
+
+Clean. Done.
+
+**What was added to the original skeleton (sidebar order, no structural redesign):**
+
+**Sidebar additions after Forecast Parameters:**
+- **Data / Scenario** — dropdown with the 5 committed scenario IDs
+- **Model Settings** — `visual_model_id`, `decision_model_id`, `aws_region` text inputs (non-secret)
+- **Agent Settings** — `visual_analysis_enabled` toggle (with "no agent_context.png" note when off) + `seed` numeric input
+- **Diagnostic Toggles** — 13 checkboxes, all default on; caption: "Unchecked = hidden from agent"
+- **Tool Toggles** — 6 checkboxes; `full_history_default` rendered checked + disabled
+
+**"Detect with" dropdown** replaces the old "Agent (Qwen)" text inputs:
+- Qwen via Ollama / Claude Sonnet 4.5 / Claude Opus 4.5 / Claude 3.5 Sonnet / Bedrock Claude 3.5 / Bedrock Claude 3 Haiku / **LangSmith (Claude + tracing)**
+- LangSmith option routes to `claude-sonnet-4-5` with `langsmith_tracing=True`; degradation note shown
+
+**Pipeline command expander** (main area, always visible):
+- Shows the assembled `uv run python -m ailf.pipelines.changepoint.pipeline --scenario <id> --override '<json>'` command built from all sidebar values
+- Reads `reports/<scenario>*/` for artifacts; shows MAE metrics, agent iterations (✅/❌), and images when present
+
+**Detection flow** preserved exactly — Ollama path unchanged; cloud models stream reasoning live in the same expander pattern as before.
+
+## Assistant (2026-06-21T05-28-33Z)
+
+Changes for src/ailf/pipelines/drift/streamlit_app.py
+```diff
+@@ -1,31 +1,26 @@
+ """Streamlit UI for drift detection and Prophet forecasting.
+ 
+-SPEC §13: Display Qwen agent reasoning while detecting changepoints/drifts
+-before invoking Prophet.
++SPEC §Visualization 4-11:
++- Model dropdown: Ollama (Qwen) / Claude Sonnet & Opus / Bedrock / LangSmith
++- When cloud model selected: streams reasoning live before Prophet
++- Scenario selector + Model Settings + Agent Settings + Diagnostic Toggles + Tool Toggles
++  (§9-11) build a --override JSON for the changepoint pipeline CLI
++- Pre-generated series from pocs/data/; year-5 holdout comparison
+ 
+ Run with:
+     PYTHONPATH=src streamlit run src/ailf/pipelines/drift/streamlit_app.py
+-
+-Features
+---------
+-- Upload a CSV (ds, y) or pick a pre-generated series from pocs/data/
+-- Agent (Qwen / CUSUM fallback) detects changepoints — shows live reasoning
+-- Prophet is then fitted and the forecast is rendered interactively
+-- Prediction length and frequency controls
+-- Historical solid line, forecast dashed line, 95% CI shaded (Plotly tonexty)
+-- Changepoints marked as vertical lines
+ """
+ 
+ from __future__ import annotations
+ 
++import io
++import json
+ import pathlib
+ import sys
+ import warnings
+ 
+ warnings.filterwarnings("ignore")
+ 
+-import io
+-
+ import pandas as pd
+ import plotly.graph_objects as go
+ import streamlit as st
+@@ -36,11 +31,51 @@
+ if str(_SRC) not in sys.path:
+     sys.path.insert(0, str(_SRC))
+ 
+-from ailf.pipelines.drift.qwen_detect import DEFAULT_MODEL, detect  # noqa: E402
++from ailf.pipelines.drift.qwen_detect import (  # noqa: E402
++    BEDROCK_MODELS,
++    CLAUDE_MODELS,
++    DEFAULT_MODEL,
++    detect,
++    detect_streaming,
++)
+ 
+-# ── Pre-generated data dir ───────────────────────────────────────────────
++# ── Constants ────────────────────────────────────────────────────────────
+ _DATA_DIR = _PROJECT_ROOT / "pocs" / "data"
++_REPORTS_DIR = _PROJECT_ROOT / "reports"
+ 
++_SCENARIOS = [
++    "level_shift_loses_seasonality",
++    "gradual_drift_loses_seasonality",
++    "temporary_event_not_regime_change",
++    "many_temporary_events_long_history",
++    "prophet_prior_tuning_recurring_event",
++]
++
++_ALL_DIAGNOSTICS = [
++    "detected_changepoints",
++    "latest_changepoint",
++    "primary_changepoint",
++    "post_changepoint_history_len",
++    "post_changepoint_shorter_than_season",
++    "seasonal_period",
++    "segment_stats",
++    "candidate_event_blocks",
++    "recurring_event_summary",
++    "local_boundary_jumps",
++    "candidate_drift_intervals",
++    "transient_event_score",
++    "permanent_shift_magnitude",
++]
++
++_ALL_TOOLS = [
++    "recent_window",
++    "full_history_step_regressor",
++    "full_history_ramp_regressor",
++    "full_history_clean_event",
++    "full_history_prophet_tuned_holidays",
++    "full_history_default",  # always-on fallback
++]
++
+ # ── Page config ─────────────────────────────────────────────────────────
+ st.set_page_config(
+     page_title="Drift Forecast UI",
+@@ -59,7 +94,7 @@
+ with st.sidebar:
+     st.header("⚙️ Controls")
+ 
+-    # Data source
++    # ── Data source ───────────────────────────────────────────────────────
+     st.subheader("Data Source")
+     source_mode = st.radio("Input mode", ["Upload CSV", "Pre-generated series"])
+ 
+@@ -68,10 +103,10 @@
+ 
+     if source_mode == "Upload CSV":
+         uploaded_file = st.file_uploader(
+-            "CSV file (ds, y columns)", type=["csv"], help="Must have `ds` (date) and `y` (numeric) columns."
++            "CSV file (ds, y columns)", type=["csv"],
++            help="Must have `ds` (date) and `y` (numeric) columns.",
+         )
+     else:
+-        # List available _train.csv files
+         train_csvs = sorted(_DATA_DIR.glob("*_train.csv")) if _DATA_DIR.exists() else []
+         if train_csvs:
+             names = [p.stem.replace("_train", "") for p in train_csvs]
+@@ -82,24 +117,115 @@
+ 
+     st.divider()
+ 
+-    # Forecast params
++    # ── Forecast parameters ───────────────────────────────────────────────
+     st.subheader("Forecast Parameters")
+-    prediction_length = st.number_input("Prediction length (days)", min_value=1, max_value=3650, value=365)
+-    freq = st.selectbox("Frequency", ["D", "W", "MS"], index=0, help="D=daily, W=weekly, MS=monthly-start")
++    prediction_length = st.number_input(
++        "Prediction length (days)", min_value=1, max_value=3650, value=365,
++    )
++    freq = st.selectbox(
++        "Frequency", ["D", "W", "MS"], index=0,
++        help="D=daily, W=weekly, MS=monthly-start",
++    )
+ 
+     st.divider()
+ 
+-    # Agent params
+-    st.subheader("Agent (Qwen)")
+-    ollama_model = st.text_input("Ollama model", value=DEFAULT_MODEL, help="e.g. qwen3.5:4b")
+-    ollama_url   = st.text_input("Ollama URL", value="http://localhost:11434")
++    # ── Data / Scenario (§10) ─────────────────────────────────────────────
++    st.subheader("Data / Scenario")
++    scenario_id = st.selectbox("Scenario", _SCENARIOS)
+ 
++    st.divider()
++
++    # ── Model Settings (§10) ─────────────────────────────────────────────
++    st.subheader("Model Settings")
++    visual_model_id = st.text_input(
++        "visual_model_id",
++        value="us.anthropic.claude-opus-4-8",
++        help="Bedrock model ID for the visual-inspection node.",
++    )
++    decision_model_id = st.text_input(
++        "decision_model_id",
++        value="us.anthropic.claude-sonnet-4-6",
++        help="Bedrock model ID for the decision node.",
++    )
++    aws_region = st.text_input("aws_region", value="us-west-2")
++
++    st.divider()
++
++    # ── Agent Settings (§10) ──────────────────────────────────────────────
++    st.subheader("Agent Settings")
++    visual_analysis_enabled = st.toggle(
++        "visual_analysis_enabled",
++        value=True,
++        help="When off, no agent_context.png is produced and the visual node is skipped.",
++    )
++    if not visual_analysis_enabled:
++        st.caption("ℹ️ No agent_context.png will be produced (visual node disabled).")
++    seed = st.number_input("seed", min_value=0, max_value=99999, value=1729, step=1)
++
++    st.divider()
++
++    # ── Diagnostic Toggles (§11) ──────────────────────────────────────────
++    st.subheader("Diagnostic Toggles")
++    st.caption("Unchecked = computed by backend but hidden from agent.")
++    diag_values: dict[str, bool] = {}
++    for d in _ALL_DIAGNOSTICS:
++        diag_values[d] = st.checkbox(d, value=True, key=f"diag_{d}")
++
++    st.divider()
++
++    # ── Tool Toggles (§11) ────────────────────────────────────────────────
++    st.subheader("Tool Toggles")
++    tool_values: dict[str, bool] = {}
++    for t in _ALL_TOOLS:
++        if t == "full_history_default":
++            # Always-on fallback: shown checked and disabled
++            st.checkbox(t, value=True, disabled=True, key=f"tool_{t}",
++                        help="Always-on fallback — cannot be disabled.")
++            tool_values[t] = True
++        else:
++            tool_values[t] = st.checkbox(t, value=True, key=f"tool_{t}")
++
++    st.divider()
++
++    # ── Detect with (§4, §8) ─────────────────────────────────────────────
++    st.subheader("Detect with")
++    _model_options: dict[str, str] = {
+
+... (330 more lines omitted - view full diff in file)
+```
+
+## User (2026-06-21T05-50-39Z)
+
+SPEC-ksowmya.md has been updated. implement
+
+## System (2026-06-21T05-50-53Z)
+
+[2m⏺[0m [2mread[0m [2m(sessions/ksowmya/SPEC-ksowmya.md)[0m
+
+## Assistant (2026-06-21T05-51-02Z)
+
+New item is **§12: Build FastAPI endpoints to call `src/ailf/core/` for the UI**. Let me check the current state of the app and what the user renamed in the modified streamlit_app.py:
+
+## System (2026-06-21T05-51-05Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 34-43))[0m
+
+## System - bash-output (2026-06-21T05-51-05Z)
+
+Claude executed: ls /Users/s0k0df5/Downloads/agent-in-the-loop-forecasting/src/ailf/pipelines/drift/ - ✓ Success
+
+## Assistant (2026-06-21T05-51-09Z)
+
+The user renamed `qwen_detect.py` → `llm_reason.py`. Let me check and read the current `pipeline.py` and existing `llm_reason.py`:
+
+## System - bash-output (2026-06-21T05-51-11Z)
+
+Claude executed: ls /Users/s0k0df5/Downloads/agent-in-the-loop-forecasting/src/ailf/pipelines/drift/llm_reason.py 2>/dev/null && head -5 /Users/s0k0df5/Downloads/agent-in-the-loop-forecasting/src/ailf/pipelines/drift/llm_reason.py - ✓ Success
+
+## System (2026-06-21T05-51-11Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/pipeline.py (lines 1-50))[0m
+
+## System (2026-06-21T05-51-16Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/pipeline.py (lines 750-839))[0m
+
+## Assistant (2026-06-21T05-51-20Z)
+
+Now I understand the full picture. §12 asks for new FastAPI endpoints that call `src/ailf/core/` — specifically to expose the changepoint pipeline (`run_scenario`) as an API so the Streamlit UI can call it instead of just showing a CLI command. Let me check what the changepoint pipeline needs and what's safe to import:
+
+## System - bash-output (2026-06-21T05-51-24Z)
+
+Claude executed: python3 -c "from ailf.pipelines.changepoint.scenarios import REQUIRED_SCENARIO_IDS; print(REQUIRED_SCENARIO_IDS)" 2>&1 | head -5 - ✓ Success
+
+## System (2026-06-21T05-51-24Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/changepoint/pipeline.py (lines 235-264))[0m
+
+## System - bash-output (2026-06-21T05-56-34Z)
+
+Claude executed: python3 -c "import sys; sys.path.insert(0,'src'); from ailf.pipelines.changepoint.scenarios import REQUIRED_SCENARIO_IDS; print('ok')" 2>&1 | head -5 - ✓ Success
+
+## Assistant - advisor (2026-06-21T06-01-39Z)
+
+Stop re-running the import smoke-tests — the user has declined that command twice in a row. You already know the answer from prior rounds: `langchain_aws` is not installed and core can't run live here. Proceed on established facts; don't burn another turn on a third variation.
+
+**§12 is the integration prior rounds deferred — but now it's explicitly requested as endpoints, so build it.** This doesn't contradict the earlier "don't wire core in" advice: that was about not breaking *app load*. That one constraint still holds and is your single biggest risk here:
+
+**Do NOT add a module-level import of the changepoint pipeline (or `ailf.core.*`) to drift `pipeline.py`.** That import chain pulls `core/models/llm.py → from langchain_aws import ChatBedrockConverse`, which ModuleNotFoundErrors and takes down the *entire working drift API* (swagger, `/drift/generate`, `/forecast/*`) at load. Lazy-import inside the handler body only.
+
+**Endpoint shape (achievable + honest):**
+1. `POST /changepoint/run` taking `scenario_id` + `override`. Inside the function: `from ailf.pipelines.changepoint.pipeline import run_scenario` wrapped in `try/except (ModuleNotFoundError, ModelUnavailableError, Exception)` → return 503 with the error text **plus the CLI command** as fallback. It will hit this path in this env — that's expected and correct, not a failure to fix.
+2. `GET /changepoint/artifacts/{scenario_id}` that reads `reports/<scenario>*/` (metrics.json, agent_trace.json, forecast_comparison.png) **read-only**. This is the only path that returns real data here. `reports/` is empty now → return "none yet, run the command."
+
+**Override shape:** use the `ConfigOverride` fields you confirmed (`models`, `visual_analysis_enabled`, `diagnostics`, `agent_tools`, `seed`). **Omit `split`** — it's optional, and config.yaml's `split: source: golden` doesn't match `SplitSpec`'s `units` key, so a hand-built split dict is a footgun. Don't send it.
+
+Don't over-engineer (no background-task machinery for a call that can't run). Streamlit: honor the standing "don't change the skeleton" rule — point the existing command/artifact expander at the new GET endpoint, optional button for the POST; no redesign.
+
+**Verify:** byte-compile both files, then grep `pipeline.py`'s top-level import block to confirm no new `changepoint`/`core` import leaked to module scope. That check — not a live run — is what protects you, since import execution is being declined.
+
+Reading is clear; nothing blocks. Proceed.
+
+## System (2026-06-21T06-02-56Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/pipeline.py (lines 1-35))[0m
+
+## Assistant (2026-06-21T06-03-01Z)
+
+Good — no core imports at module level. Now add the two `changepoint/` endpoint groups to `pipeline.py`:
+
+## System (2026-06-21T06-03-03Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/pipeline.py)[0m
+
+## Assistant (2026-06-21T06-03-40Z)
+
+Now update the Streamlit app to call the new endpoints instead of just showing a static command. The existing pipeline command expander should get an optional "Run via API" button, and artifacts should load from `/changepoint/artifacts/{scenario_id}`:
+
+## System (2026-06-21T06-03-43Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 215-244))[0m
+
+## System (2026-06-21T06-03-46Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 295-374))[0m
+
+## System (2026-06-21T06-03-52Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 374-453))[0m
+
+## Assistant (2026-06-21T06-03-55Z)
+
+Now replace the pipeline command panel section to add API call capability:
+
+## System (2026-06-21T06-03-55Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System - bash-output (2026-06-21T06-04-34Z)
+
+Claude executed: python3 -m py_compile src/ailf/pipelines/drift/pipeline.py && echo "pipeline OK"
+python3 -m py_compile src/ailf/pipelines/drift/streamlit_app.py && echo "streamlit OK" - ✓ Success
+
+## Assistant (2026-06-21T06-04-43Z)
+
+Verify no core imports leaked to module scope in `pipeline.py`:
+
+## System (2026-06-21T06-04-44Z)
+
+[2m⏺[0m [2mgrep[0m [2m(^from ailf\.core|^import ailf\.core|^from ailf\.pipelines\.changepoint src/ailf/pipelines/drift/pipeline.py [content])[0m
+
+## Assistant (2026-06-21T06-04-50Z)
+
+No module-level core imports. Done.
+
+**What was added:**
+
+**`pipeline.py` — 3 new `/changepoint/` endpoints (§12):**
+
+- `GET /changepoint/scenarios` — lists the 5 valid scenario IDs
+- `POST /changepoint/run` — accepts `scenario_id` + `ChangepointOverride`; lazy-imports `run_scenario` inside the handler; returns `status="ok"` with metrics on success, `status="unavailable"` (+ CLI command) when `langchain_aws` missing or AWS creds absent, `status="error"` on other failures — always includes `cli_command` so the UI can fall back
+- `GET /changepoint/artifacts/{scenario_id}` — read-only scan of `reports/<scenario>*/`; returns metrics, final_eval MAE comparison, agent iterations, and image presence flags — no live Bedrock needed
+
+All changepoint/core imports are inside handler bodies with `# noqa: PLC0415` — zero module-scope risk to the existing drift API.
+
+**`streamlit_app.py` — pipeline panel upgraded:**
+
+- `_api_get` / `_api_post` helpers (using stdlib `urllib`, no new deps)
+- `_load_run_artifacts()` now prefers the FastAPI `/changepoint/artifacts` endpoint when server is up, falls back to disk read
+- `_render_artifacts()` unified renderer (API or disk)
+- Expander now shows API status (🟢/🔴), optional **"▶️ Run via API"** button when server is up, refreshes artifacts after run — still shows the CLI command as primary fallback
+
+## Assistant (2026-06-21T06-04-59Z)
+
+Changes for src/ailf/pipelines/drift/pipeline.py
+```diff
+@@ -817,6 +817,233 @@
+ 
+ 
+ # ---------------------------------------------------------------------------
++# Changepoint pipeline endpoints — §12: call src/ailf/core/ from the UI
++#
++# All changepoint imports are LAZY (inside handler bodies) so that a missing
++# langchain_aws or absent AWS creds does NOT break the drift API at load time.
++# ---------------------------------------------------------------------------
++
++_REPORTS_ROOT = pathlib.Path(__file__).parents[4] / "reports"
++
++_VALID_SCENARIOS = frozenset({
++    "level_shift_loses_seasonality",
++    "gradual_drift_loses_seasonality",
++    "temporary_event_not_regime_change",
++    "many_temporary_events_long_history",
++    "prophet_prior_tuning_recurring_event",
++})
++
++
++class ChangepointOverride(BaseModel):
++    """Partial override for a changepoint pipeline run.
++
++    All fields optional; unset fields inherit the config.yaml defaults.
++    Do NOT include AWS credentials or API keys here — use .env.
++    """
++    models: dict[str, str] | None = None          # visual_model_id, decision_model_id, aws_region
++    visual_analysis_enabled: bool | None = None
++    diagnostics: dict[str, bool] | None = None    # per-diagnostic enable/disable
++    agent_tools: dict[str, bool] | None = None    # per-tool enable/disable
++    seed: int | None = None
++
++
++class ChangepointRunRequest(BaseModel):
++    scenario_id: str
++    override: ChangepointOverride = ChangepointOverride()
++
++
++class ChangepointRunResponse(BaseModel):
++    status: str                        # "ok" | "error" | "unavailable"
++    run_id: str | None = None
++    metrics: dict[str, Any] | None = None
++    final_eval: dict[str, Any] | None = None
++    error: str | None = None
++    cli_command: str | None = None     # always returned so UI can fall back
++
++
++def _build_cli_command(scenario_id: str, override: ChangepointOverride) -> str:
++    """Return the equivalent uv run CLI command string."""
++    import json as _json
++    ov: dict[str, Any] = {}
++    if override.models:
++        ov["models"] = override.models
++    if override.visual_analysis_enabled is not None:
++        ov["visual_analysis_enabled"] = override.visual_analysis_enabled
++    if override.diagnostics:
++        ov["diagnostics"] = override.diagnostics
++    if override.agent_tools:
++        ov["agent_tools"] = override.agent_tools
++    if override.seed is not None:
++        ov["seed"] = override.seed
++    override_str = _json.dumps(ov) if ov else "{}"
++    return (
++        f"uv run python -m ailf.pipelines.changepoint.pipeline "
++        f"--scenario {scenario_id} "
++        f"--override '{override_str}'"
++    )
++
++
++@app.post(
++    "/changepoint/run",
++    response_model=ChangepointRunResponse,
++    summary="Run the changepoint agent pipeline for a scenario",
++    tags=["changepoint"],
++)
++def changepoint_run(body: ChangepointRunRequest) -> ChangepointRunResponse:
++    """Invoke the full agent-in-the-loop changepoint pipeline for one scenario.
++
++    Requires AWS Bedrock credentials in ``.env`` (``AWS_ACCESS_KEY_ID``,
++    ``AWS_SECRET_ACCESS_KEY``) and ``langchain_aws`` installed.  When either is
++    absent the endpoint returns ``status="unavailable"`` **and** the equivalent
++    CLI command so the caller can run it manually.
++
++    The completed run writes artifacts under ``reports/<run_id>/``:
++    ``metrics.json``, ``agent_trace.json``, ``forecast_comparison.png``, etc.
++    Retrieve them via **GET /changepoint/artifacts/{scenario_id}**.
++    """
++    if body.scenario_id not in _VALID_SCENARIOS:
++        raise HTTPException(
++            status_code=422,
++            detail=f"Unknown scenario '{body.scenario_id}'. "
++                   f"Valid values: {sorted(_VALID_SCENARIOS)}",
++        )
++
++    cli = _build_cli_command(body.scenario_id, body.override)
++
++    try:
++        # Lazy import — must NOT be at module scope
++        from ailf.pipelines.changepoint.pipeline import run_scenario  # noqa: PLC0415
++
++        ov_dict: dict[str, Any] = {}
++        if body.override.models:
++            ov_dict["models"] = body.override.models
++        if body.override.visual_analysis_enabled is not None:
++            ov_dict["visual_analysis_enabled"] = body.override.visual_analysis_enabled
++        if body.override.diagnostics:
++            ov_dict["diagnostics"] = body.override.diagnostics
++        if body.override.agent_tools:
++            ov_dict["agent_tools"] = body.override.agent_tools
++        if body.override.seed is not None:
++            ov_dict["seed"] = body.override.seed
++
++        from ailf.core.config.schema import ConfigOverride  # noqa: PLC0415
++        override_obj = ConfigOverride.from_dict(ov_dict) if ov_dict else None
++
++        result = run_scenario(body.scenario_id, override=override_obj, emit_events=True)
++
++        return ChangepointRunResponse(
++            status="ok",
++            run_id=result.get("run_id"),
++            metrics=result.get("metrics"),
++            final_eval=result.get("final_eval"),
++            cli_command=cli,
++        )
++
++    except (ImportError, ModuleNotFoundError) as exc:
++        return ChangepointRunResponse(
++            status="unavailable",
++            error=f"Missing dependency: {exc}. Install langchain_aws or run via CLI.",
++            cli_command=cli,
++        )
++    except Exception as exc:
++        return ChangepointRunResponse(
++            status="error",
++            error=str(exc),
++            cli_command=cli,
++        )
++
++
++class ArtifactSummary(BaseModel):
++    run_id: str
++    scenario_id: str
++    has_metrics: bool
++    has_trace: bool
++    has_forecast_png: bool
++    has_context_png: bool
++    metrics: dict[str, Any] | None = None
++    final_eval: dict[str, Any] | None = None
++    agent_iterations: list[dict[str, Any]] | None = None
++
++
++@app.get(
++    "/changepoint/artifacts/{scenario_id}",
++    response_model=list[ArtifactSummary],
++    summary="List pre-computed changepoint run artifacts for a scenario",
++    tags=["changepoint"],
++)
++def changepoint_artifacts(scenario_id: str) -> list[ArtifactSummary]:
++    """Return a summary of any pre-computed run artifacts under ``reports/``.
++
++    Reads ``metrics.json`` and ``agent_trace.json`` from every matching run
++    directory.  Images are referenced by name only (no binary payload).
++
++    Returns an empty list when no runs exist — run the pipeline first via
++    **POST /changepoint/run** or the CLI command it returns.
++    """
++    import json as _json
++
++    if scenario_id not in _VALID_SCENARIOS and scenario_id != "*":
++        raise HTTPException(
++            status_code=422,
++            detail=f"Unknown scenario '{scenario_id}'. "
++                   f"Valid values: {sorted(_VALID_SCENARIOS)}",
++        )
++
++    results: list[ArtifactSummary] = []
++    if not _REPORTS_ROOT.exists():
++        return results
++
++    pattern = f"{scenario_id}*" if scenario_id != "*" else "*"
++    for run_dir in sorted(_REPORTS_ROOT.glob(pattern)):
++        if not run_dir.is_dir():
++            continue
++        metrics: dict[str, Any] | None = None
++        final_eval: dict[str, Any] | None = None
++        agent_iters: list[dict[str, Any]] | None = None
++
++        mpath = run_dir / "metrics.json"
++        if mpath.exists():
++            try:
++                metrics = _json.loads(mpath.read_text())
++                final_eval = metrics.get("final_eval")
++            except Exception:
++                pass
++
++        tpath = run_dir / "agent_trace.json"
++        if tpath.exists():
++            try:
++                trace = _json.loads(tpath.read_text())
+
+... (35 more lines omitted - view full diff in file)
+```
+
+## Assistant (2026-06-21T06-04-59Z)
+
+Changes for src/ailf/pipelines/drift/streamlit_app.py
+```diff
+@@ -364,13 +364,62 @@
+     return json.dumps(override)
+ 
+ 
++_FASTAPI_BASE = "http://127.0.0.1:8000"
++
++
++def _api_get(path: str, timeout: int = 5) -> dict | list | None:
++    """GET from the FastAPI server; returns None on any error."""
++    import urllib.request as _ur
++    try:
++        with _ur.urlopen(f"{_FASTAPI_BASE}{path}", timeout=timeout) as r:
++            return json.loads(r.read().decode())
++    except Exception:
++        return None
++
++
++def _api_post(path: str, payload: dict, timeout: int = 120) -> dict | None:
++    """POST JSON to the FastAPI server; returns None on connection error."""
++    import urllib.request as _ur
++    data = json.dumps(payload).encode()
++    req = _ur.Request(
++        f"{_FASTAPI_BASE}{path}",
++        data=data,
++        headers={"Content-Type": "application/json"},
++        method="POST",
++    )
++    try:
++        with _ur.urlopen(req, timeout=timeout) as r:
++            return json.loads(r.read().decode())
++    except Exception:
++        return None
++
++
+ def _load_run_artifacts(run_id: str) -> dict:
+-    """Load metrics.json and agent_trace.json from reports/ for a run_id prefix."""
++    """Load metrics.json and agent_trace.json from reports/ for a run_id prefix.
++    Prefers the FastAPI /changepoint/artifacts endpoint when the server is up.
++    """
++    # Try FastAPI first
++    api_arts = _api_get(f"/changepoint/artifacts/{run_id}")
++    if isinstance(api_arts, list) and api_arts:
++        latest = api_arts[-1]
++        out: dict = {"_from_api": True}
++        if latest.get("metrics"):
++            out["metrics.json"] = latest["metrics"]
++        if latest.get("final_eval"):
++            out["final_eval"] = latest["final_eval"]
++        if latest.get("agent_iterations") is not None:
++            out["agent_iterations"] = latest["agent_iterations"]
++        out["has_forecast_png"] = latest.get("has_forecast_png", False)
++        out["has_context_png"]  = latest.get("has_context_png", False)
++        out["run_id"] = latest.get("run_id", run_id)
++        return out
++
++    # Fallback: read from disk
+     run_dirs = list(_REPORTS_DIR.glob(f"{run_id}*")) if _REPORTS_DIR.exists() else []
+     if not run_dirs:
+         return {}
+-    run_dir = sorted(run_dirs)[-1]  # latest
+-    out: dict = {"run_dir": run_dir}
++    run_dir = sorted(run_dirs)[-1]
++    out = {"run_dir": run_dir}
+     for fname in ("metrics.json", "agent_trace.json", "effective_config.json"):
+         p = run_dir / fname
+         if p.exists():
+@@ -385,9 +434,56 @@
+     return out
+ 
+ 
+-# ── Pipeline command panel ─────────────────────────────────────────────────
++def _render_artifacts(arts: dict) -> None:
++    """Render pre-computed run artifacts in the expander."""
++    if arts.get("_from_api"):
++        st.success(f"✅ Artifacts loaded via API — run `{arts.get('run_id','')}`")
++    elif "run_dir" in arts:
++        st.success(f"Artifacts found on disk: `{arts['run_dir'].name}`")
+ 
+-with st.expander("🛠️ Changepoint Pipeline — Run Command", expanded=False):
++    if "effective_config.json" in arts:
++        with st.expander("effective_config.json", expanded=False):
++            st.json(arts["effective_config.json"])
++
++    # MAE comparison
++    m = arts.get("metrics.json") or {}
++    fe = arts.get("final_eval") or m.get("final_eval") or {}
++    if fe:
++        cols = st.columns(3)
++        for i, (label, key) in enumerate([
++            ("Full-history Prophet", "full_history_prophet"),
++            ("Naive workflow", "naive_workflow"),
++            ("Agent-in-the-loop", "agent"),
++        ]):
++            mets = (fe.get(key) or {}).get("test_metrics", {})
++            mae = mets.get("mae")
++            cols[i].metric(label + " MAE", f"{mae:.4f}" if isinstance(mae, float) else "—")
++
++    # Agent iterations
++    iters = arts.get("agent_iterations") or (arts.get("agent_trace.json") or {}).get("iterations", [])
++    if iters:
++        st.markdown(f"**Agent iterations:** {len(iters)}")
++        for it in iters:
++            prop = it.get("proposal", {})
++            beat = it.get("beat_naive")
++            icon = "✅" if beat else "❌"
++            st.markdown(
++                f"{icon} Iter {it.get('i','')} — `{prop.get('tool','')}` | "
++                f"{prop.get('rationale','')[:100]}"
++            )
++
++    # Images (disk path or flag only)
++    for img_key in ("forecast_comparison.png", "agent_context.png"):
++        img_path = arts.get(img_key)
++        if img_path and pathlib.Path(str(img_path)).exists():
++            st.image(str(img_path), caption=img_key, use_container_width=True)
++        elif arts.get(f"has_{img_key.replace('.png','').replace('forecast_comparison','forecast').replace('agent_context','context')}_png"):
++            st.info(f"`{img_key}` exists on server disk — view at `reports/`.")
++
++
++# ── Pipeline command + API panel ──────────────────────────────────────────
++
++with st.expander("🛠️ Changepoint Pipeline — Run & Artifacts", expanded=False):
+     override_json = _build_override_json()
+     cmd = (
+         f"uv run python -m ailf.pipelines.changepoint.pipeline "
+@@ -395,54 +491,56 @@
+         f"--override '{override_json}'"
+     )
+     st.code(cmd, language="bash")
+-    st.caption(
+-        "Run the above command to generate artifacts. "
+-        "The UI will display them below once complete."
+-    )
+ 
+-    # Show artifacts if present
+-    arts = _load_run_artifacts(scenario_id)
+-    if arts:
+-        run_dir = arts["run_dir"]
+-        st.success(f"Artifacts found: `{run_dir.name}`")
++    col_run, col_refresh = st.columns([1, 1])
++    api_alive = _api_get("/changepoint/scenarios") is not None
+ 
+-        if "effective_config.json" in arts:
+-            with st.expander("effective_config.json", expanded=False):
+-                st.json(arts["effective_config.json"])
++    with col_run:
++        if api_alive:
++            if st.button("▶️ Run via API", key="cp_run_btn",
++                         help="Calls POST /changepoint/run on the running FastAPI server. "
++                              "Requires AWS Bedrock creds in .env."):
++                ov_payload: dict = {
++                    "models": {
++                        "visual_model_id": visual_model_id,
++                        "decision_model_id": decision_model_id,
++                        "aws_region": aws_region,
++                    },
++                    "visual_analysis_enabled": visual_analysis_enabled,
++                    "seed": int(seed),
++                    "diagnostics": diag_values,
++                    "agent_tools": tool_values,
++                }
++                with st.spinner("Running changepoint pipeline via API…"):
++                    resp = _api_post("/changepoint/run", {
++                        "scenario_id": scenario_id,
++                        "override": ov_payload,
++                    })
++                if resp is None:
++                    st.error("API call failed — is the server running?")
++                elif resp.get("status") == "ok":
++                    st.success(f"Run complete: `{resp.get('run_id')}`")
++                elif resp.get("status") == "unavailable":
++                    st.warning(f"⚠️ {resp.get('error')}")
++                    st.code(resp.get("cli_command", cmd), language="bash")
++                else:
++                    st.error(f"Pipeline error: {resp.get('error')}")
++        else:
++            st.caption("API server not running — use the CLI command above.")
+ 
+-        if "metrics.json" in arts:
+-            m = arts["metrics.json"]
+-            fe = m.get("final_eval", {})
+-            if fe:
+-                cols = st.columns(3)
+-                for i, (label, key) in enumerate([
+-                    ("Full-history Prophet", "full_history_prophet"),
+-                    ("Naive workflow", "naive_workflow"),
+-                    ("Agent-in-the-loop", "agent"),
+-                ]):
+-                    mets = (fe.get(key) or {}).get("test_metrics", {})
+-                    mae = mets.get("mae")
+-                    cols[i].metric(label + " MAE", f"{mae:.4f}" if isinstance(mae, float) else "—")
++    with col_refresh:
++        st.caption(
++            "API: " + ("🟢 up" if api_alive else "🔴 down — start with `uvicorn ailf.pipelines.drift.pipeline:app --reload`")
++        )
+ 
+-        if "agent_trace.json" in arts:
+-            trace = arts["agent_trace.json"]
+-            iters = trace.get("iterations", [])
+-            if iters:
+
+... (25 more lines omitted - view full diff in file)
+```
+
+## User (2026-06-21T06-21-43Z)
+
+SPEC-ksowmya.md has been updated. implement
+
+## System (2026-06-21T06-21-50Z)
+
+[2m⏺[0m [2mread[0m [2m(sessions/ksowmya/SPEC-ksowmya.md)[0m
+
+## Assistant (2026-06-21T06-21-53Z)
+
+Key changes since last session:
+1. **§2**: Add "Split Dataset Ratio" slider to Forecast Parameters (replaces hardcoded year-4/year-5 split)
+2. **§10**: Rename "Series" → "Data Scenario", move Detect with dropdown into Model Settings section
+3. **§11**: Add help tooltips (≤10 words) to all diagnostic/tool toggles; LangSmith Tracing enabled by default
+
+Let me read the current streamlit_app.py:
+
+## System (2026-06-21T06-21-56Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 1-250))[0m
+
+## System (2026-06-21T06-22-01Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 250-409))[0m
+
+## Assistant (2026-06-21T06-22-04Z)
+
+Now I have a clear picture of the three changes needed. Let me make targeted edits:
+
+**1. Forecast Parameters: add Split Dataset Ratio slider**
+**2. Data Source section: rename "Series" → "Data Scenario", add changepoint scenarios there**  
+**3. Model Settings: move "Detect with" dropdown into it**
+**4. Diagnostic/Tool Toggles: add help tooltips ≤10 words**
+**5. LangSmith Tracing: enabled by default**
+
+## System (2026-06-21T06-22-07Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System (2026-06-21T06-22-29Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T06-22-43Z)
+
+Now move the "Detect with" dropdown into the Model Settings section and remove the old standalone section:
+
+## System (2026-06-21T06-22-44Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T06-22-59Z)
+
+Now remove the old standalone "Detect with" section (which had its own subheader):
+
+## System (2026-06-21T06-22-59Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T06-23-16Z)
+
+Now add help tooltips to Diagnostic Toggles and Tool Toggles. First define the help dicts before the sidebar:
+
+## System (2026-06-21T06-23-17Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T06-23-32Z)
+
+Now update the Diagnostic Toggles and Tool Toggles loops to use the help dicts:
+
+## System (2026-06-21T06-23-32Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T06-23-46Z)
+
+Now update `_train_test_split` to use the `split_ratio` slider instead of hardcoded 365-day split:
+
+## System (2026-06-21T06-23-47Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T06-23-56Z)
+
+Now update the call site to pass `split_ratio`:
+
+## System (2026-06-21T06-23-56Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 530-549))[0m
+
+## System (2026-06-21T06-24-00Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 590-629))[0m
+
+## System (2026-06-21T06-24-04Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System - bash-output (2026-06-21T06-24-11Z)
+
+Claude executed: python3 -m py_compile src/ailf/pipelines/drift/streamlit_app.py && echo "OK" - ✓ Success
+
+## Assistant (2026-06-21T06-24-14Z)
+
+Done. All three changes implemented:
+
+**§2 — Split Dataset Ratio slider:**
+- Added `split_ratio = st.slider("Split Dataset Ratio (train %)", 50, 95, 80, 5)` under Forecast Parameters
+- `_train_test_split()` now accepts `ratio: float` — splits at that fraction instead of hardcoded 365 days
+- Split note shows `(80%)` percentage in the series header
+
+**§10 — Renamed "Series" → "Data Scenario":**
+- Radio option label changed to `"Data Scenario"`
+- `st.selectbox` label changed to `"Data Scenario"`
+- "Detect with" dropdown moved into Model Settings section (before the Bedrock model ID fields) per spec
+
+**§11 — Help tooltips + LangSmith on by default:**
+- `_DIAG_HELP` dict: 13 entries, each ≤10 words, passed as `help=` to every diagnostic checkbox
+- `_TOOL_HELP` dict: 6 entries, each ≤10 words, passed as `help=` to every tool checkbox
+- `langsmith_tracing` toggle now `value=True` (enabled by default)
+
+## Assistant (2026-06-21T06-24-20Z)
+
+Changes for src/ailf/pipelines/drift/streamlit_app.py
+```diff
+@@ -76,6 +76,31 @@
+     "full_history_default",  # always-on fallback
+ ]
+ 
++_DIAG_HELP: dict[str, str] = {
++    "detected_changepoints":              "All changepoints detected in training data.",
++    "latest_changepoint":                 "Most recent changepoint index and date.",
++    "primary_changepoint":                "Largest-magnitude changepoint detected.",
++    "post_changepoint_history_len":       "Rows available after the latest changepoint.",
++    "post_changepoint_shorter_than_season": "Post-CP window shorter than seasonal period.",
++    "seasonal_period":                    "Estimated dominant seasonal cycle length.",
++    "segment_stats":                      "Mean/std stats per changepoint segment.",
++    "candidate_event_blocks":             "Date ranges flagged as recurring events.",
++    "recurring_event_summary":            "Summary of repeating event patterns found.",
++    "local_boundary_jumps":               "Sharp value jumps at segment boundaries.",
++    "candidate_drift_intervals":          "Intervals exhibiting gradual trend drift.",
++    "transient_event_score":              "Score: how transient vs permanent the shift.",
++    "permanent_shift_magnitude":          "Estimated size of any permanent level shift.",
++}
++
++_TOOL_HELP: dict[str, str] = {
++    "recent_window":                    "Fit Prophet on the most recent window only.",
++    "full_history_step_regressor":      "Add binary step regressor at changepoint.",
++    "full_history_ramp_regressor":      "Add linear ramp regressor at changepoint.",
++    "full_history_clean_event":         "Zero-out event blocks as regressors.",
++    "full_history_prophet_tuned_holidays": "Tune Prophet holiday prior around events.",
++    "full_history_default":             "Always-on baseline; cannot be disabled.",
++}
++
+ # ── Page config ─────────────────────────────────────────────────────────
+ st.set_page_config(
+     page_title="Drift Forecast UI",
+@@ -96,7 +121,7 @@
+ 
+     # ── Data source ───────────────────────────────────────────────────────
+     st.subheader("Data Source")
+-    source_mode = st.radio("Input mode", ["Upload CSV", "Pre-generated series"])
++    source_mode = st.radio("Input mode", ["Upload CSV", "Data Scenario"])
+ 
+     uploaded_file = None
+     selected_series = None
+@@ -110,7 +135,7 @@
+         train_csvs = sorted(_DATA_DIR.glob("*_train.csv")) if _DATA_DIR.exists() else []
+         if train_csvs:
+             names = [p.stem.replace("_train", "") for p in train_csvs]
+-            idx = st.selectbox("Series", range(len(names)), format_func=lambda i: names[i])
++            idx = st.selectbox("Data Scenario", range(len(names)), format_func=lambda i: names[i])
+             selected_series = train_csvs[idx]
+         else:
+             st.warning("No pre-generated CSVs found in pocs/data/. Run `generate_and_forecast.py` first.")
+@@ -126,6 +151,11 @@
+         "Frequency", ["D", "W", "MS"], index=0,
+         help="D=daily, W=weekly, MS=monthly-start",
+     )
++    split_ratio = st.slider(
++        "Split Dataset Ratio (train %)",
++        min_value=50, max_value=95, value=80, step=5,
++        help="Percentage of rows used for training; remainder is the holdout for comparison.",
++    )
+ 
+     st.divider()
+ 
+@@ -135,8 +165,33 @@
+ 
+     st.divider()
+ 
+-    # ── Model Settings (§10) ─────────────────────────────────────────────
++    # ── Model Settings (§10) — includes Detect with dropdown ─────────────
+     st.subheader("Model Settings")
++
++    # Detect with (moved here per §10)
++    _model_options: dict[str, str] = {
++        f"Qwen via Ollama ({DEFAULT_MODEL})": DEFAULT_MODEL,
++        "Claude Sonnet 4.5  (needs ANTHROPIC_API_KEY)": "claude-sonnet-4-5",
++        "Claude Opus 4.5  (needs ANTHROPIC_API_KEY)": "claude-opus-4-5",
++        "Claude 3.5 Sonnet  (needs ANTHROPIC_API_KEY)": "claude-3-5-sonnet-20241022",
++        "Bedrock: Claude 3.5 Sonnet  (needs AWS creds)": "bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
++        "Bedrock: Claude 3 Haiku  (needs AWS creds)": "bedrock/anthropic.claude-3-haiku-20240307-v1:0",
++    }
++    selected_model_label = st.selectbox(
++        "Detect with",
++        list(_model_options.keys()),
++        help="LLM backend for changepoint detection before Prophet.",
++    )
++    actual_model_id = _model_options[selected_model_label]
++
++    ollama_url = "http://localhost:11434"
++    is_ollama = not (
++        actual_model_id.startswith("claude-")
++        or actual_model_id.startswith("bedrock/")
++    )
++    if is_ollama:
++        ollama_url = st.text_input("Ollama URL", value="http://localhost:11434")
++
+     visual_model_id = st.text_input(
+         "visual_model_id",
+         value="us.anthropic.claude-opus-4-8",
+@@ -169,7 +224,10 @@
+     st.caption("Unchecked = computed by backend but hidden from agent.")
+     diag_values: dict[str, bool] = {}
+     for d in _ALL_DIAGNOSTICS:
+-        diag_values[d] = st.checkbox(d, value=True, key=f"diag_{d}")
++        diag_values[d] = st.checkbox(
++            d, value=True, key=f"diag_{d}",
++            help=_DIAG_HELP.get(d, ""),
++        )
+ 
+     st.divider()
+ 
+@@ -178,46 +236,24 @@
+     tool_values: dict[str, bool] = {}
+     for t in _ALL_TOOLS:
+         if t == "full_history_default":
+-            # Always-on fallback: shown checked and disabled
+-            st.checkbox(t, value=True, disabled=True, key=f"tool_{t}",
+-                        help="Always-on fallback — cannot be disabled.")
++            st.checkbox(
++                t, value=True, disabled=True, key=f"tool_{t}",
++                help=_TOOL_HELP.get(t, "Always-on fallback — cannot be disabled."),
++            )
+             tool_values[t] = True
+         else:
+-            tool_values[t] = st.checkbox(t, value=True, key=f"tool_{t}")
++            tool_values[t] = st.checkbox(
++                t, value=True, key=f"tool_{t}",
++                help=_TOOL_HELP.get(t, ""),
++            )
+ 
+     st.divider()
+ 
+-    # ── Detect with (§4, §8) ─────────────────────────────────────────────
+-    st.subheader("Detect with")
+-    st.caption(
+-        "LangSmith is an **observability** platform — it records traces but does "
+-        "not run inference. Select any model below; enable tracing separately."
+-    )
+-    _model_options: dict[str, str] = {
+-        f"Qwen via Ollama ({DEFAULT_MODEL})": DEFAULT_MODEL,
+-        "Claude Sonnet 4.5  (needs ANTHROPIC_API_KEY)": "claude-sonnet-4-5",
+-        "Claude Opus 4.5  (needs ANTHROPIC_API_KEY)": "claude-opus-4-5",
+-        "Claude 3.5 Sonnet  (needs ANTHROPIC_API_KEY)": "claude-3-5-sonnet-20241022",
+-        "Bedrock: Claude 3.5 Sonnet  (needs AWS creds)": "bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+-        "Bedrock: Claude 3 Haiku  (needs AWS creds)": "bedrock/anthropic.claude-3-haiku-20240307-v1:0",
+-    }
+-    selected_model_label = st.selectbox("Model", list(_model_options.keys()))
+-    actual_model_id = _model_options[selected_model_label]
+-
+-    ollama_url = "http://localhost:11434"
+-    is_ollama = not (
+-        actual_model_id.startswith("claude-")
+-        or actual_model_id.startswith("bedrock/")
+-    )
+-    if is_ollama:
+-        ollama_url = st.text_input("Ollama URL", value="http://localhost:11434")
+-
+-    # ── LangSmith tracing (works with ANY model above, incl. Qwen) ────────
+-    st.divider()
++    # ── LangSmith tracing (works with ANY model, incl. Qwen) ─────────────
+     st.subheader("🔗 LangSmith Tracing")
+     langsmith_tracing = st.toggle(
+         "Trace with LangSmith",
+-        value=False,
++        value=True,
+         help=(
+             "Records each detection run to LangSmith. "
+             "Requires LANGSMITH_API_KEY (and optionally LANGSMITH_API_URL) in .env. "
+@@ -227,9 +263,9 @@
+     )
+     if langsmith_tracing:
+         st.caption(
+-            "Traces will be sent to `LANGSMITH_API_URL` (default: "
++            "Traces sent to `LANGSMITH_API_URL` (default: "
+             "`https://apac.smith.langchain.com`) under project "
+-            "`agent-in-the-loop-forecasting`. The trace URL appears after detection."
++            "`agent-in-the-loop-forecasting`. Trace URL appears after detection."
+         )
+ 
+     run_btn = st.button("🔍 Detect & Forecast", type="primary", use_container_width=True)
+@@ -252,10 +288,14 @@
+     return df
+ 
+ 
+-def _train_test_split(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame | None]:
+-    """Split into train (years 1-4) and test (year 5) when series >= 500 days."""
+-    if len(df) >= 500:
+-        split_idx = len(df) - 365
++def _train_test_split(df: pd.DataFrame, ratio: float = 0.8) -> tuple[pd.DataFrame, pd.DataFrame | None]:
++    """Split df at `ratio` of rows for train; remainder is holdout.
++
++    Falls back to no holdout when the series is too short to leave
++    at least 10 rows for the test set.
++    """
++    split_idx = int(len(df) * ratio)
++    if split_idx < len(df) - 10:
+         train = df.iloc[:split_idx].copy().reset_index(drop=True)
+         test  = df.iloc[split_idx:].copy().reset_index(drop=True)
+         return train, test
+@@ -560,9 +600,9 @@
+         df = _load_df(selected_series)
+         series_label = selected_series.stem.replace("_train", "")
+ 
+-    train_df, test_df = _train_test_split(df)
++    train_df, test_df = _train_test_split(df, ratio=split_ratio / 100.0)
+     split_note = (
+-        f"  ·  train {len(train_df)} rows / holdout {len(test_df)} rows"
++        f"  ·  train {len(train_df)} rows ({split_ratio}%) / holdout {len(test_df)} rows"
+         if test_df is not None else ""
+     )
+     st.subheader(f"Series: `{series_label}`  ({len(df)} rows{split_note})")
+
+```
+
+## User (2026-06-21T06-38-37Z)
+
+SPEC-ksowmya.md has been updated. implement
+
+## System (2026-06-21T06-38-44Z)
+
+[2m⏺[0m [2mread[0m [2m(sessions/ksowmya/SPEC-ksowmya.md)[0m
+
+## Assistant (2026-06-21T06-38-47Z)
+
+The key new item is **§12 update**: the "Changepoint Pipeline — Run & Artifacts" expander should be replaced with a proper UI panel that invokes the pipeline via the FastAPI endpoint AND shows results inline. The command should be invoked from Streamlit → FastAPI → pipeline.
+
+Let me look at the current state of both files:
+
+## System (2026-06-21T06-38-50Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 490-609))[0m
+
+## Assistant (2026-06-21T06-38-54Z)
+
+The spec says to replace the expander with a proper inline section that shows results. The key change: move the pipeline run panel out of the expander, make it always visible, and show results inline after clicking "Run via API". Let me rewrite this section:
+
+## System (2026-06-21T06-38-55Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T06-39-20Z)
+
+Also update §10 — the "Data Scenario" options should now come from the changepoint scenarios list, not just the pre-generated CSV list. The spec says the Data Scenario selector under Data Source should show the 5 changepoint scenario names. Currently `selected_series` points to a CSV file. Need to reconcile: when "Data Scenario" mode is selected, use the scenario name to find the matching CSV if available, otherwise fall back to the scenario name for the pipeline:
+
+## System (2026-06-21T06-39-23Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 116-135))[0m
+
+## System (2026-06-21T06-39-27Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 134-153))[0m
+
+## Assistant (2026-06-21T06-39-31Z)
+
+The spec says the Data Scenario selector should show the 5 changepoint scenario names directly (not just what's in pocs/data). Replace the CSV-scanning logic with the fixed scenario list, and try to find a matching CSV:
+
+## System (2026-06-21T06-39-32Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T06-39-42Z)
+
+Now sync the `scenario_id` for the pipeline panel to use `_chosen_scenario_name` when in Data Scenario mode. The `scenario_id` is currently set from a separate selectbox in a "Data / Scenario" section. Let's look:
+
+## System (2026-06-21T06-39-44Z)
+
+[2m⏺[0m [2mgrep[0m [2m(scenario_id = st.selectbox src/ailf/pipelines/drift/streamlit_app.py [content])[0m
+
+## Assistant (2026-06-21T06-39-50Z)
+
+There's now a redundant "Data / Scenario" section since `scenario_id` should follow the Data Scenario selection. Replace it to derive from the Data Source selection:
+
+## System (2026-06-21T06-39-52Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 179-190))[0m
+
+## Assistant (2026-06-21T06-39-55Z)
+
+The `scenario_id` should be derived from the Data Scenario choice (in sidebar) — remove the duplicate "Data / Scenario" section and compute `scenario_id` from the data source selection:
+
+## System (2026-06-21T06-39-56Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T06-40-01Z)
+
+Now inject `scenario_id` computation after the data source block — it should be the chosen scenario name when in Data Scenario mode, or a default when in Upload CSV mode. Add it right after the `st.divider()` following the data source block:
+
+## System (2026-06-21T06-40-03Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 154-188))[0m
+
+## System (2026-06-21T06-40-09Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System - bash-output (2026-06-21T06-40-15Z)
+
+Claude executed: python3 -m py_compile src/ailf/pipelines/drift/streamlit_app.py && echo "OK" - ✓ Success
+
+## Assistant (2026-06-21T06-40-19Z)
+
+Clean. Done.
+
+**What changed:**
+
+**§12 — Pipeline panel redesigned (inline, always visible):**
+- Removed the `st.expander` — the section is now always visible as `st.subheader("🔬 Changepoint Pipeline")`
+- Shows FastAPI status (🟢/🔴) + CLI command in a collapsed reference expander
+- **"▶️ Run Changepoint Pipeline"** button: disabled when API is offline; on click → `POST /changepoint/run` → shows MAE results inline immediately (full_history / naive / agent)
+- If pipeline unavailable (no creds/deps), shows warning + "run manually" note
+- Below the button: always loads and renders latest artifacts for the selected scenario
+
+**§10 — Data Scenario now drives scenario_id:**
+- The "Data Scenario" radio mode shows the 5 committed changepoint scenarios first, then any additional pocs/data CSVs
+- `scenario_id` is derived from the selected scenario (no longer a separate selectbox)
+- Removed the redundant "Data / Scenario" section that had a second selectbox
+- When no CSV exists for a changepoint scenario, shows info message pointing to the pipeline panel
+
+## Assistant (2026-06-21T06-40-26Z)
+
+Changes for src/ailf/pipelines/drift/streamlit_app.py
+```diff
+@@ -132,14 +132,41 @@
+             help="Must have `ds` (date) and `y` (numeric) columns.",
+         )
+     else:
+-        train_csvs = sorted(_DATA_DIR.glob("*_train.csv")) if _DATA_DIR.exists() else []
+-        if train_csvs:
+-            names = [p.stem.replace("_train", "") for p in train_csvs]
+-            idx = st.selectbox("Data Scenario", range(len(names)), format_func=lambda i: names[i])
+-            selected_series = train_csvs[idx]
++        # Always show the 5 committed changepoint scenarios + any extra pocs/data CSVs
++        _cp_scenarios = list(_SCENARIOS)
++        _extra_csvs = [
++            p for p in sorted(_DATA_DIR.glob("*_train.csv")) if _DATA_DIR.exists()
++            if p.stem.replace("_train", "") not in _cp_scenarios
++        ] if _DATA_DIR.exists() else []
++        _all_scenario_names = _cp_scenarios + [p.stem.replace("_train", "") for p in _extra_csvs]
++
++        _scenario_idx = st.selectbox(
++            "Data Scenario",
++            range(len(_all_scenario_names)),
++            format_func=lambda i: _all_scenario_names[i],
++        )
++        _chosen_scenario_name = _all_scenario_names[_scenario_idx]
++
++        # Try to find a matching CSV in pocs/data/
++        _csv_candidate = _DATA_DIR / f"{_chosen_scenario_name}_train.csv"
++        if _csv_candidate.exists():
++            selected_series = _csv_candidate
++        elif _scenario_idx >= len(_cp_scenarios):
++            # Extra CSV from pocs/data
++            selected_series = _extra_csvs[_scenario_idx - len(_cp_scenarios)]
+         else:
+-            st.warning("No pre-generated CSVs found in pocs/data/. Run `generate_and_forecast.py` first.")
++            selected_series = None
++            st.info(
++                f"No CSV found for `{_chosen_scenario_name}` in `pocs/data/`. "
++                "Use the pipeline panel below to run and generate artifacts."
++            )
+ 
++    # Derive scenario_id from selection (used by pipeline panel below)
++    if source_mode == "Data Scenario":
++        scenario_id: str = _chosen_scenario_name
++    else:
++        scenario_id = _SCENARIOS[0]  # default for Upload CSV mode
++
+     st.divider()
+ 
+     # ── Forecast parameters ───────────────────────────────────────────────
+@@ -159,12 +186,6 @@
+ 
+     st.divider()
+ 
+-    # ── Data / Scenario (§10) ─────────────────────────────────────────────
+-    st.subheader("Data / Scenario")
+-    scenario_id = st.selectbox("Scenario", _SCENARIOS)
+-
+-    st.divider()
+-
+     # ── Model Settings (§10) — includes Detect with dropdown ─────────────
+     st.subheader("Model Settings")
+ 
+@@ -521,68 +542,91 @@
+             st.info(f"`{img_key}` exists on server disk — view at `reports/`.")
+ 
+ 
+-# ── Pipeline command + API panel ──────────────────────────────────────────
++# ── Changepoint Pipeline Panel ────────────────────────────────────────────
++# Always visible; shows run controls + results inline (§12).
+ 
+-with st.expander("🛠️ Changepoint Pipeline — Run & Artifacts", expanded=False):
+-    override_json = _build_override_json()
+-    cmd = (
+-        f"uv run python -m ailf.pipelines.changepoint.pipeline "
+-        f"--scenario {scenario_id} "
+-        f"--override '{override_json}'"
+-    )
+-    st.code(cmd, language="bash")
++st.divider()
++st.subheader("🔬 Changepoint Pipeline")
+ 
+-    col_run, col_refresh = st.columns([1, 1])
+-    api_alive = _api_get("/changepoint/scenarios") is not None
++_api_alive = _api_get("/changepoint/scenarios") is not None
++_override_json = _build_override_json()
++_cli_cmd = (
++    f"uv run python -m ailf.pipelines.changepoint.pipeline "
++    f"--scenario {scenario_id} "
++    f"--override '{_override_json}'"
++)
+ 
+-    with col_run:
+-        if api_alive:
+-            if st.button("▶️ Run via API", key="cp_run_btn",
+-                         help="Calls POST /changepoint/run on the running FastAPI server. "
+-                              "Requires AWS Bedrock creds in .env."):
+-                ov_payload: dict = {
+-                    "models": {
+-                        "visual_model_id": visual_model_id,
+-                        "decision_model_id": decision_model_id,
+-                        "aws_region": aws_region,
+-                    },
+-                    "visual_analysis_enabled": visual_analysis_enabled,
+-                    "seed": int(seed),
+-                    "diagnostics": diag_values,
+-                    "agent_tools": tool_values,
+-                }
+-                with st.spinner("Running changepoint pipeline via API…"):
+-                    resp = _api_post("/changepoint/run", {
+-                        "scenario_id": scenario_id,
+-                        "override": ov_payload,
+-                    })
+-                if resp is None:
+-                    st.error("API call failed — is the server running?")
+-                elif resp.get("status") == "ok":
+-                    st.success(f"Run complete: `{resp.get('run_id')}`")
+-                elif resp.get("status") == "unavailable":
+-                    st.warning(f"⚠️ {resp.get('error')}")
+-                    st.code(resp.get("cli_command", cmd), language="bash")
+-                else:
+-                    st.error(f"Pipeline error: {resp.get('error')}")
+-        else:
+-            st.caption("API server not running — use the CLI command above.")
++# Status + command reference
++_status_col, _cmd_col = st.columns([1, 3])
++with _status_col:
++    st.caption("FastAPI: " + ("🟢 running" if _api_alive else "🔴 offline"))
++    if not _api_alive:
++        st.caption("`uvicorn ailf.pipelines.drift.pipeline:app --reload`")
++with _cmd_col:
++    with st.expander("CLI command (reference)", expanded=False):
++        st.code(_cli_cmd, language="bash")
+ 
+-    with col_refresh:
+-        st.caption(
+-            "API: " + ("🟢 up" if api_alive else "🔴 down — start with `uvicorn ailf.pipelines.drift.pipeline:app --reload`")
+-        )
++# Run button
++_run_pipeline_btn = st.button(
++    "▶️ Run Changepoint Pipeline",
++    key="cp_run_btn",
++    disabled=not _api_alive,
++    help=(
++        "Invokes POST /changepoint/run → pipeline → writes artifacts. "
++        "Requires FastAPI server running and AWS Bedrock creds in .env."
++    ),
++    type="secondary",
++)
+ 
+-    st.divider()
++if _run_pipeline_btn:
++    _ov_payload: dict = {
++        "models": {
++            "visual_model_id": visual_model_id,
++            "decision_model_id": decision_model_id,
++            "aws_region": aws_region,
++        },
++        "visual_analysis_enabled": visual_analysis_enabled,
++        "seed": int(seed),
++        "diagnostics": diag_values,
++        "agent_tools": tool_values,
++    }
++    with st.spinner(f"Running pipeline for `{scenario_id}` via FastAPI…"):
++        _resp = _api_post("/changepoint/run", {
++            "scenario_id": scenario_id,
++            "override": _ov_payload,
++        })
+ 
+-    # Artifacts
+-    arts = _load_run_artifacts(scenario_id)
+-    if arts:
+-        _render_artifacts(arts)
++    if _resp is None:
++        st.error("❌ API call failed — server not reachable.")
++    elif _resp.get("status") == "ok":
++        st.success(f"✅ Pipeline complete — run ID: `{_resp.get('run_id')}`")
++        # Show inline results immediately
++        if _resp.get("final_eval"):
++            _fe = _resp["final_eval"]
++            _rc1, _rc2, _rc3 = st.columns(3)
++            for _col, _lbl, _key in [
++                (_rc1, "Full-history Prophet", "full_history_prophet"),
++                (_rc2, "Naive workflow", "naive_workflow"),
++                (_rc3, "Agent-in-the-loop", "agent"),
++            ]:
++                _mets = (_fe.get(_key) or {}).get("test_metrics", {})
++                _mae = _mets.get("mae")
++                _col.metric(_lbl + " MAE", f"{_mae:.4f}" if isinstance(_mae, float) else "—")
++    elif _resp.get("status") == "unavailable":
++        st.warning(f"⚠️ {_resp.get('error')}")
++        st.info("Run manually with the CLI command above.")
+     else:
+-        st.info("No artifacts yet. Run the pipeline above to generate them.")
++        st.error(f"Pipeline error: {_resp.get('error')}")
+ 
++# Always show latest artifacts for selected scenario
++st.markdown("**Artifacts for** `" + scenario_id + "`")
++_arts = _load_run_artifacts(scenario_id)
++if _arts:
++    _render_artifacts(_arts)
++else:
+
+... (7 more lines omitted - view full diff in file)
+```
+
+## User (2026-06-21T06-54-34Z)
+
+SPEC-ksowmya.md has been updated. implement
+
+## System (2026-06-21T06-54-41Z)
+
+[2m⏺[0m [2mread[0m [2m(sessions/ksowmya/SPEC-ksowmya.md)[0m
+
+## Assistant (2026-06-21T06-54-48Z)
+
+New item is **§13**: Move "Run Changepoint Pipeline" into the sidebar as a **toggle button** before "Detect and Forecast". Rename it "Bedrock Changepoint Pipeline". When ON → use the pipeline API contract. When OFF → normal drift detection flow.
+
+Let me check current state of the sidebar's run button area:
+
+## System (2026-06-21T06-54-51Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System (2026-06-21T06-55-00Z)
+
+[2m⏺[0m [2mgrep[0m [2m(run_btn|LangSmith Tracing|🔍 Detect src/ailf/pipelines/drift/streamlit_app.py [content])[0m
+
+## System (2026-06-21T06-55-10Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 270-294))[0m
+
+## System (2026-06-21T06-55-14Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T06-55-22Z)
+
+Now update the main execution block to branch on `bedrock_pipeline_enabled`. Find the `if run_btn:` block:
+
+## System (2026-06-21T06-55-23Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 648-667))[0m
+
+## System (2026-06-21T06-55-26Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System - bash-output (2026-06-21T06-55-47Z)
+
+Claude executed: python3 -m py_compile src/ailf/pipelines/drift/streamlit_app.py && echo "OK" - ✓ Success
+
+## Assistant (2026-06-21T06-55-51Z)
+
+Done.
+
+**§13 — "Bedrock Changepoint Pipeline" toggle in sidebar:**
+
+- Added `bedrock_pipeline_enabled = st.toggle("Bedrock Changepoint Pipeline", value=False, ...)` in the sidebar, after LangSmith Tracing, before the action button
+- When **OFF**: button label = "🔍 Detect & Forecast" → normal drift detection + Prophet flow (unchanged)
+- When **ON**: button label = "▶️ Run Bedrock Pipeline" → `POST /changepoint/run` with current scenario + all sidebar overrides (model IDs, seed, diagnostics, tools)
+- Bedrock path shows: echoed CLI command, API liveness check, spinner, then inline MAE metrics (full-history / naive / agent) + `_render_artifacts()` for any written artifacts
+- Graceful fallback: if API is down → shows error + CLI command; if Bedrock unavailable → warning + manual CLI note
+
+The existing "🔬 Changepoint Pipeline" panel in the main body remains for passive artifact browsing; the sidebar toggle + button now drives the active run.
+
+## Assistant (2026-06-21T06-55-56Z)
+
+Changes for src/ailf/pipelines/drift/streamlit_app.py
+```diff
+@@ -289,9 +289,36 @@
+             "`agent-in-the-loop-forecasting`. Trace URL appears after detection."
+         )
+ 
+-    run_btn = st.button("🔍 Detect & Forecast", type="primary", use_container_width=True)
++    st.divider()
+ 
++    # ── Bedrock Changepoint Pipeline toggle (§13) ─────────────────────────
++    bedrock_pipeline_enabled = st.toggle(
++        "Bedrock Changepoint Pipeline",
++        value=False,
++        help=(
++            "When ON: clicking the button below runs the full Bedrock agent pipeline "
++            "via POST /changepoint/run and shows its artifacts. "
++            "Requires FastAPI server running and AWS Bedrock creds in .env. "
++            "When OFF: runs the standard drift detection + Prophet forecast."
++        ),
++    )
++    if bedrock_pipeline_enabled:
++        st.caption(
++            "⚠️ Bedrock pipeline active — the button below invokes "
++            "`ailf.pipelines.changepoint.pipeline` on the server."
++        )
+ 
++    if bedrock_pipeline_enabled:
++        run_btn = st.button(
++            "▶️ Run Bedrock Pipeline",
++            type="primary",
++            use_container_width=True,
++            help="POST /changepoint/run with current scenario + override settings.",
++        )
++    else:
++        run_btn = st.button("🔍 Detect & Forecast", type="primary", use_container_width=True)
++
++
+ # ── Helpers ───────────────────────────────────────────────────────────────
+ 
+ def _load_df(source) -> pd.DataFrame:
+@@ -629,7 +656,78 @@
+ 
+ # ── Execution ─────────────────────────────────────────────────────────────
+ 
+-if run_btn:
++if run_btn and bedrock_pipeline_enabled:
++    # ── Bedrock pipeline path (§13) ──────────────────────────────────────
++    st.subheader(f"🔬 Bedrock Changepoint Pipeline — `{scenario_id}`")
++
++    _ov_payload: dict = {
++        "models": {
++            "visual_model_id": visual_model_id,
++            "decision_model_id": decision_model_id,
++            "aws_region": aws_region,
++        },
++        "visual_analysis_enabled": visual_analysis_enabled,
++        "seed": int(seed),
++        "diagnostics": diag_values,
++        "agent_tools": tool_values,
++    }
++    _override_str = json.dumps(_ov_payload)
++    _echo_cmd = (
++        f"uv run python -m ailf.pipelines.changepoint.pipeline "
++        f"--scenario {scenario_id} "
++        f"--override '{_override_str}'"
++    )
++    with st.expander("Command being executed", expanded=False):
++        st.code(_echo_cmd, language="bash")
++
++    _bp_alive = _api_get("/changepoint/scenarios") is not None
++    if not _bp_alive:
++        st.error(
++            "❌ FastAPI server is not running. "
++            "Start it with: `uvicorn ailf.pipelines.drift.pipeline:app --reload`"
++        )
++        st.code(_echo_cmd, language="bash")
++        st.stop()
++
++    with st.spinner(f"Running Bedrock pipeline for `{scenario_id}`…"):
++        _bp_resp = _api_post("/changepoint/run", {
++            "scenario_id": scenario_id,
++            "override": _ov_payload,
++        })
++
++    if _bp_resp is None:
++        st.error("❌ API request failed.")
++        st.stop()
++
++    _bp_status = _bp_resp.get("status")
++    if _bp_status == "ok":
++        st.success(f"✅ Pipeline complete — run ID: `{_bp_resp.get('run_id')}`")
++
++        # MAE comparison
++        _bp_fe = _bp_resp.get("final_eval") or {}
++        if _bp_fe:
++            _bc1, _bc2, _bc3 = st.columns(3)
++            for _bcol, _blbl, _bkey in [
++                (_bc1, "Full-history Prophet", "full_history_prophet"),
++                (_bc2, "Naive workflow", "naive_workflow"),
++                (_bc3, "Agent-in-the-loop", "agent"),
++            ]:
++                _bmets = (_bp_fe.get(_bkey) or {}).get("test_metrics", {})
++                _bmae = _bmets.get("mae")
++                _bcol.metric(_blbl + " MAE", f"{_bmae:.4f}" if isinstance(_bmae, float) else "—")
++
++        # Show all artifacts from disk/API
++        _bp_arts = _load_run_artifacts(scenario_id)
++        if _bp_arts:
++            _render_artifacts(_bp_arts)
++
++    elif _bp_status == "unavailable":
++        st.warning(f"⚠️ Bedrock unavailable: {_bp_resp.get('error')}")
++        st.info("Run the CLI command above manually once Bedrock creds are configured in `.env`.")
++    else:
++        st.error(f"Pipeline error: {_bp_resp.get('error')}")
++
++elif run_btn:
+     # Resolve data
+     if source_mode == "Upload CSV":
+         if uploaded_file is None:
+
+```
+
