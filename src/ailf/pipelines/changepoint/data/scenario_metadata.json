@@ -235,6 +235,47 @@
         ],
         "expected_intervention_family": "full_history_prophet_tuned_holidays"
       }
+    },
+    {
+      "scenario_id": "mixed_magnitudes_with_seasonality",
+      "title": "Four level shifts of mixed magnitudes (+40, +5, -30, +8) with annual seasonality",
+      "csv_path": "pocs/changepoint/data/csv/mixed_magnitudes_with_seasonality.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "date_range": {
+        "start": "2019-01-01",
+        "end": "2021-09-26"
+      },
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 4,
+      "seasonal_period": 365,
+      "split_dates": {
+        "train_start": "2019-01-01",
+        "train_end_inclusive": "2021-05-29",
+        "test_start": "2021-05-30",
+        "test_end_inclusive": "2021-09-26"
+      },
+      "csv_sha256": "cdc6322db47847b511df12beb88920e84181450c57800d404a515b64a8b15e43",
+      "agent_exposure_policy": {
+        "agent_may_see_columns": [
+          "ds",
+          "y"
+        ],
+        "agent_may_see_rows": "0:880",
+        "agent_must_not_see_audit_only": true,
+        "agent_must_not_see_test_targets": true
+      },
+      "audit_only": {
+        "note": "Four changepoints at indices 167, 417, 667, 833 with mixed magnitudes. The large initial upshift (+40) followed by a reversal (-30) later creates a complex regime pattern that challenges naive windowing. The last shift (+8) is close to the forecast origin.",
+        "true_injected_boundaries": [167, 417, 667, 833],
+        "expected_intervention_family": "full_history_step_regressor"
+      }
     }
   ]
 }
