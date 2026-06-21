@@ -279,6 +279,49 @@
         ],
         "expected_intervention_family": "full_history_step_regressor"
       }
+    },
+    {
+      "scenario_id": "trend_reversal_old_history_poisons_forecast",
+      "title": "Complete trend reversal where long declining history poisons full-history Prophet",
+      "csv_path": "src/ailf/pipelines/changepoint/data/csv/trend_reversal_old_history_poisons_forecast.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "date_range": {
+        "start": "2019-01-01",
+        "end": "2021-09-26"
+      },
+      "train_end": 880,
+      "validation_horizon": 120,
+      "test_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 7,
+      "split_dates": {
+        "train_start": "2019-01-01",
+        "train_end_inclusive": "2021-05-29",
+        "test_start": "2021-05-30",
+        "test_end_inclusive": "2021-09-26"
+      },
+      "csv_sha256": "e6342455bdc6449c395e7ffcd54b7607beed70406c7e247fedc453647de4327b",
+      "agent_exposure_policy": {
+        "agent_may_see_columns": [
+          "ds",
+          "y"
+        ],
+        "agent_may_see_rows": "0:880",
+        "agent_must_not_see_audit_only": true,
+        "agent_must_not_see_test_targets": true
+      },
+      "audit_only": {
+        "note": "A persistent 640-day downward trend (200->80) abruptly reverses at row 640 to an upward trend (90->170). The old regime dominates the training history and misleads full-history Prophet into forecasting continued decline. Naive workflow accidentally picks a sub-optimal window. Retraining only from the latest detected changepoint (recent_window) captures the new rising regime and correctly forecasts the test period.",
+        "true_injected_boundaries": [
+          640
+        ],
+        "expected_intervention_family": "recent_window"
+      }
     }
   ]
 }
