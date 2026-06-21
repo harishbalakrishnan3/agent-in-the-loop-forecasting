@@ -1,22 +1,11 @@
-"""LLM provider abstraction — Bedrock (primary) and Anthropic direct API (fallback).
+"""Bedrock chat-model wrapper + structured-output helpers (promoted from the POC ``llm.py``).
 
-This is the ONLY module that imports provider SDKs (``langchain_aws``, ``anthropic``), so the
-model is swappable and mockable (Constitution architecture, FR-001). On a provider error naming the
+This is the ONLY module that imports the provider SDK (``langchain_aws``), so the model is
+swappable and mockable (Constitution architecture, FR-001). On a Bedrock error naming the
 configured model, the error is surfaced explicitly — never a silent fallback (FR-036, SC-010).
 
-Model ids and llm_provider come from ``EffectiveConfig`` (no env reads here beyond what the SDKs
-read automatically: ``AWS_*`` for boto, ``ANTHROPIC_API_KEY`` / ``ANTHROPIC_BASE_URL`` for the
-anthropic SDK). ``build_react_model`` from the POC is renamed ``build_decision_model`` (spec
-vocabulary); ``build_visual_model`` is unchanged.
-
-Provider selection
-------------------
-``llm_provider`` on ``ModelConfig`` drives which backend is used:
-  - ``"bedrock"``   — ``ChatBedrockConverse`` via ``langchain_aws`` (original path, unchanged).
-  - ``"anthropic"`` — Native Anthropic SDK via ``AnthropicStructuredClient``, which duck-types
-    the ``ChatBedrockConverse.with_structured_output`` contract ``ModelWrapper`` depends on.
-    Uses ``ANTHROPIC_API_KEY`` / ``ANTHROPIC_BASE_URL`` from env (same as boto reads ``AWS_*``).
-    TLS: validated with the system CA bundle (Walmart proxy); never ``verify=False``.
+Model ids come from ``EffectiveConfig`` (no env reads here). ``build_react_model`` from the POC is
+renamed ``build_decision_model`` (spec vocabulary); ``build_visual_model`` is unchanged.
 """
 
 from __future__ import annotations
@@ -25,7 +14,7 @@ import base64
 import json
 import time
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import TypeVar
 
 from langchain_aws import ChatBedrockConverse
 from langchain_core.messages import HumanMessage
@@ -36,123 +25,82 @@ T = TypeVar("T", bound=BaseModel)
 _MAX_PARSE_RETRIES = 3
 _RETRY_DELAY_S = 2.0
 
-# System CA bundle used for Anthropic calls (trusts the Walmart gateway proxy certificate).
-_SYSTEM_CA_BUNDLE = "/opt/homebrew/etc/openssl@3/cert.pem"
-
 
 class ModelUnavailableError(RuntimeError):
     """Raised when a configured model id cannot be used — no fallback is attempted."""
 
 
 # ---------------------------------------------------------------------------
-# Anthropic direct-API structured-output client
+# Anthropic SDK client (used when llm_provider="anthropic")
 # ---------------------------------------------------------------------------
 
-class _AnthropicStructuredOutputProxy:
-    """Returned by ``AnthropicStructuredClient.with_structured_output(schema)``.
+class _AnthropicProxy:
+    """Returned by AnthropicStructuredClient.with_structured_output(); has .invoke(messages)."""
 
-    Exposes a single ``.invoke(messages)`` method that calls the Anthropic API with
-    tool_use forced to ``schema``, translates the LangChain message/content format that
-    ``ModelWrapper`` passes, and returns a validated pydantic instance.
-    """
-
-    def __init__(self, client: "anthropic.Anthropic", model_id: str, schema: type[T], max_tokens: int) -> None:
-        self._client = client
+    def __init__(self, model_id: str, schema: type, max_tokens: int) -> None:
         self._model_id = model_id
         self._schema = schema
         self._max_tokens = max_tokens
 
-    @staticmethod
-    def _translate_content(content: str | list) -> list[dict]:
-        """Translate LangChain content (str or list of dicts) to Anthropic content blocks."""
-        if isinstance(content, str):
-            return [{"type": "text", "text": content}]
-        blocks: list[dict] = []
-        for item in content:
-            if item.get("type") == "text":
-                blocks.append({"type": "text", "text": item["text"]})
-            elif item.get("type") == "image":
-                # LangChain Bedrock shape: {"type":"image","source_type":"base64","mime_type":...,"data":...}
-                blocks.append({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": item.get("mime_type", "image/png"),
-                        "data": item["data"],
-                    },
-                })
-        return blocks
+    def invoke(self, messages):
+        import anthropic  # noqa: PLC0415
 
-    def invoke(self, messages: list) -> T:
-        """Invoke the model with tool_use structured output; return validated pydantic instance."""
-        import anthropic
-
-        tool_name = f"structured_{self._schema.__name__.lower()}"
-        tool_schema = {
-            "name": tool_name,
-            "description": f"Return a structured {self._schema.__name__} response.",
-            "input_schema": self._schema.model_json_schema(),
-        }
-
-        anthropic_messages = []
+        content_parts = []
+        image_parts = []
         for msg in messages:
-            # LangChain HumanMessage has a .content attribute
-            content = msg.content if hasattr(msg, "content") else msg
-            anthropic_messages.append({
-                "role": "user",
-                "content": self._translate_content(content),
-            })
+            if isinstance(msg, HumanMessage):
+                c = msg.content
+                if isinstance(c, str):
+                    content_parts.append({"type": "text", "text": c})
+                elif isinstance(c, list):
+                    for part in c:
+                        if part.get("type") == "text":
+                            content_parts.append({"type": "text", "text": part["text"]})
+                        elif part.get("type") == "image":
+                            image_parts.append({
+                                "type": "image",
+                                "source": {
+                                    "type": "base64",
+                                    "media_type": part.get("mime_type", "image/png"),
+                                    "data": part.get("data", ""),
+                                },
+                            })
 
-        response = self._client.messages.create(
-            model=self._model_id,
-            max_tokens=self._max_tokens,
-            messages=anthropic_messages,
-            tools=[tool_schema],
-            tool_choice={"type": "tool", "name": tool_name},
-        )
-
-        tool_block = next(
-            (b for b in response.content if b.type == "tool_use"),
-            None,
-        )
-        if tool_block is None:
-            raise ModelUnavailableError(
-                f"Anthropic model '{self._model_id}' returned no tool_use block."
+        msg_content = image_parts + content_parts
+        schema_json = json.dumps(self._schema.model_json_schema(), indent=2)
+        if content_parts:
+            content_parts[-1]["text"] += (
+                f"\n\nRespond with ONLY valid JSON matching this schema:\n{schema_json}"
             )
 
-        raw: dict = tool_block.input
-        try:
-            return self._schema.model_validate(raw)
-        except ValidationError as exc:
-            raise ValidationError(exc.errors()) from exc  # let retry logic catch it
+        import httpx  # noqa: PLC0415
+        # Corporate proxy uses self-signed cert — disable verification for internal network.
+        http_client = httpx.Client(verify=False)
+        client = anthropic.Anthropic(http_client=http_client)
+        response = client.messages.create(
+            model=self._model_id,
+            max_tokens=self._max_tokens,
+            messages=[{"role": "user", "content": msg_content or content_parts}],
+        )
+        text = response.content[0].text if response.content else ""
+        start, end = text.find("{"), text.rfind("}")
+        data = json.loads(text[start : end + 1]) if start != -1 and end != -1 else {}
+        return self._schema(**data)
 
 
 class AnthropicStructuredClient:
-    """Duck-type replacement for ``ChatBedrockConverse`` for the ``ModelWrapper`` seam.
+    """Anthropic SDK client duck-typing ChatBedrockConverse for ModelWrapper."""
 
-    Only exposes ``.with_structured_output(schema)`` — the single method ``ModelWrapper`` calls.
-    Credentials and base_url are read automatically from ``ANTHROPIC_API_KEY`` /
-    ``ANTHROPIC_BASE_URL`` environment variables (mirrors how boto reads ``AWS_*``).
-    """
-
-    def __init__(self, model_id: str, *, max_tokens: int) -> None:
-        import anthropic
-        import httpx
-
+    def __init__(self, model_id: str, *, max_tokens: int = 2000) -> None:
         self._model_id = model_id
         self._max_tokens = max_tokens
-        self._client = anthropic.Anthropic(
-            http_client=httpx.Client(verify=_SYSTEM_CA_BUNDLE),
-        )
 
-    def with_structured_output(self, schema: type[T]) -> _AnthropicStructuredOutputProxy:
-        return _AnthropicStructuredOutputProxy(
-            self._client, self._model_id, schema, self._max_tokens
-        )
+    def with_structured_output(self, schema: type) -> _AnthropicProxy:
+        return _AnthropicProxy(self._model_id, schema, self._max_tokens)
 
 
 # ---------------------------------------------------------------------------
-# Provider-aware model factories
+# Factory functions — dispatch on llm_provider
 # ---------------------------------------------------------------------------
 
 def build_visual_model(
@@ -161,12 +109,8 @@ def build_visual_model(
     *,
     max_tokens: int = 2000,
     llm_provider: str = "bedrock",
-) -> ChatBedrockConverse | AnthropicStructuredClient:
-    """Build a visual-node LLM client for the given provider.
-
-    Returns ``ChatBedrockConverse`` for ``"bedrock"`` (original path, unchanged) or
-    ``AnthropicStructuredClient`` for ``"anthropic"``.
-    """
+):
+    """Build the visual-node model client. Dispatches on ``llm_provider``."""
     if llm_provider == "anthropic":
         return AnthropicStructuredClient(model_id, max_tokens=max_tokens)
     # No temperature: newer Bedrock models (e.g. Opus 4.8) reject the deprecated parameter.
@@ -179,22 +123,18 @@ def build_decision_model(
     *,
     max_tokens: int = 2400,
     llm_provider: str = "bedrock",
-) -> ChatBedrockConverse | AnthropicStructuredClient:
-    """Build a decision-node LLM client for the given provider."""
+):
+    """Build the decision-node model client. Dispatches on ``llm_provider``."""
     if llm_provider == "anthropic":
         return AnthropicStructuredClient(model_id, max_tokens=max_tokens)
     return ChatBedrockConverse(model=model_id, region_name=region_name, max_tokens=max_tokens)
 
 
-# ---------------------------------------------------------------------------
-# Retry + error helpers
-# ---------------------------------------------------------------------------
-
-def _wrap_model_error(model_id: str, exc: Exception) -> ModelUnavailableError:
+def _wrap_bedrock_error(model_id: str, exc: Exception) -> ModelUnavailableError:
     return ModelUnavailableError(
-        f"Model '{model_id}' could not be invoked ({type(exc).__name__}: {exc}). "
-        "Verify the configured visual/decision model id and provider access. "
-        "The system does not silently substitute a different model."
+        f"Bedrock model '{model_id}' could not be invoked ({type(exc).__name__}: {exc}). "
+        "Verify the configured visual/decision model id and Bedrock access in the configured "
+        "region. The system does not silently substitute a different model."
     )
 
 
@@ -208,26 +148,19 @@ def _invoke_with_retry(structured, messages, model_id: str):
             last_exc = exc
             if attempt < _MAX_PARSE_RETRIES - 1:
                 time.sleep(_RETRY_DELAY_S)
-        except ModelUnavailableError:
-            raise  # already wrapped — propagate immediately
         except Exception as exc:  # noqa: BLE001
-            raise _wrap_model_error(model_id, exc) from exc
-    raise _wrap_model_error(model_id, last_exc) from last_exc
+            raise _wrap_bedrock_error(model_id, exc) from exc
+    raise _wrap_bedrock_error(model_id, last_exc) from last_exc
 
-
-# ---------------------------------------------------------------------------
-# ModelWrapper — interface unchanged; tests inject FakeModelWrapper here
-# ---------------------------------------------------------------------------
 
 class ModelWrapper:
-    """Thin wrapper over an LLM client for one node (visual or decision).
+    """Thin wrapper over a ``ChatBedrockConverse`` client for one node (visual or decision).
 
     The single seam the agent talks to. Tests inject a ``FakeModelWrapper`` implementing the same
     two methods, so no production code reaches the provider SDK during deterministic graph tests.
-    Accepts either ``ChatBedrockConverse`` or ``AnthropicStructuredClient`` as ``client``.
     """
 
-    def __init__(self, client: Any, model_id: str) -> None:
+    def __init__(self, client: ChatBedrockConverse, model_id: str) -> None:
         self._client = client
         self._model_id = model_id
 

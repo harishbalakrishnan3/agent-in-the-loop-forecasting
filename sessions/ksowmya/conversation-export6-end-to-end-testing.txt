@@ -1,0 +1,1592 @@
+---
+sessionId: 54d96629-fab6-4adb-95ac-b2623caabe60
+timestamp: 2026-06-21T13-49-26Z
+type: full conversation
+---
+
+## Assistant (2026-06-21T12-29-50Z)
+
+Let me read what changed.
+
+## Assistant (2026-06-21T12-29-50Z)
+
+The SPEC text is essentially the same as implemented last session — `fallback.py` was already created with exactly this spec. The `system-reminder` shows the user updated `fallback.py` with improvements (stricter tool-choice rules, better prompts). Let me verify what the current `fallback.py` looks like and whether anything in the SPEC is still unimplemented:
+
+## Assistant (2026-06-21T12-29-50Z)
+
+The user improved `fallback.py` with better prompts and an auto-override guard. The SPEC §Forecasting 3 is now fully implemented. Let me check what the spec says that might still be missing — specifically **§Forecasting 1**: "Write a tool to use Qwen-3.5/langsmith/claude with reasoning to find the changepoints from the generated graphs and save them in json or csv format. To visualize the changepoints found by Qwen, mark them and visualize in graphs under qwen folder."
+
+This hasn't been implemented yet. Let me check if there's anything in `pocs/` for this:
+
+## Assistant (2026-06-21T12-29-50Z)
+
+§Forecasting 1 is already fully implemented (`pocs/qwen_changepoints.py`) and has run output in `pocs/qwen/`. Let me now check the current `fallback.py` to see what the user changed and confirm all three SPEC items are covered:
+
+The user's improvements to `fallback.py` from the system-reminder show:
+- Better `_TOOL_MENU` with `CRITICAL RULE` enforcement
+- Stronger prompt instructions ("MUST choose recent_window or step_regressor")
+- Deterministic override guard (auto-selects `recent_window` if LLM chose `full_history_default` with changepoints)
+- Cleaner `_call_tool` with fixed step_regressor regressor column alignment
+
+All three §Forecasting items are now implemented. Let me verify the byte-compile is still clean after the user's edits:
+
+## Assistant (2026-06-21T12-29-50Z)
+
+All four files compile clean. Everything in the SPEC is implemented:
+
+- **§Forecasting 1** ✅ — `pocs/qwen_changepoints.py` + outputs in `pocs/qwen/`
+- **§Forecasting 2** ✅ — split ratio from Controls slider passed to `_train_test_split()` and `run_scenario`
+- **§Forecasting 3** ✅ — `fallback.py` with Claude/Qwen tool-call loop → Prophet; user improved it with deterministic override guard and stricter LLM prompts
+
+No changes needed — the SPEC is fully implemented and all files compile.
+
+## User (2026-06-21T12-29-50Z)
+
+SPEC-ksowmya.md has been updated to use run_scenario from changepoint/pipeline. implement
+
+[YOLO MODE]
+
+## Assistant (2026-06-21T12-29-50Z)
+
+Let me check what's new in the SPEC.
+
+## Assistant (2026-06-21T12-29-50Z)
+
+Two new items:
+
+1. **§15 updated**: Add a new **tab** in UI to display `metrics.json` baseline comparison + `agent_trace.json`
+2. **§Forecasting 3 updated**: `fallback.py` should perform **all the same steps as `run_scenario`** — validation checks, baseline comparison, etc. — not just pick a tool
+
+Let me read the current state of both files and understand what `run_scenario` does that `fallback.py` doesn't:
+
+## Assistant (2026-06-21T12-29-50Z)
+
+Now I have a clear picture. Two tasks:
+
+1. **Expand `fallback.py`** to include validation baseline comparison and produce metrics (same as `run_scenario` does with `full_history_prophet` / `naive_workflow` / agent)
+2. **Add a new metrics/trace tab** in Streamlit
+
+Let me implement both:
+
+## Assistant (2026-06-21T12-29-50Z)
+
+Now update `streamlit_app.py` to:
+1. Handle the new 3-tuple return from `run_fallback_pipeline`
+2. Add the metrics/trace tab (§15)
+
+## Assistant (2026-06-21T12-29-50Z)
+
+The `_run_agent_forecast` function currently expects a 2-tuple `(df, str)` but `run_fallback_pipeline` now returns a 3-tuple. I need to update the Path 2 call to unpack the metrics report, and also update `_run_agent_forecast`'s signature to return the metrics:
+
+## Assistant (2026-06-21T12-29-50Z)
+
+Now update all return sites in `_run_agent_forecast` and the fallback call to return 3-tuples:
+
+## Assistant (2026-06-21T12-29-50Z)
+
+Now update the call site to unpack 3-tuple and add the metrics tab:
+
+## Assistant (2026-06-21T12-29-50Z)
+
+Also initialize `agent_metrics = {}` at the top of the execution block so it's always defined:
+
+## Assistant (2026-06-21T12-29-50Z)
+
+Both clean. Done.
+
+**`fallback.py` — now mirrors `run_scenario` (§Forecasting 3):**
+
+Added validation + baseline comparison pipeline before tool application:
+- `_mae()`, `_rmse()`, `_score_metrics()` — pure metric helpers
+- `_prophet_predict()` — slim Prophet fit+predict on plain DataFrames
+- `_split_val_test()` — splits train_df into fit + validation regions (15% val by default)
+- `run_fallback_pipeline()` now returns `(df, label, metrics_report)` 3-tuple with:
+1. **Baselines**: full-history Prophet MAE + naive windowed Prophet (tries each changepoint as window start, picks best val MAE)
+2. **Validation scoring**: scores agent yhat on val split; `beat_naive` flag
+3. **Test scoring**: all three methods scored on test_df
+4. **`metrics_report`** with same shape as `metrics.json` from `run_scenario`: `winner`, `final_eval.{agent,full_history_prophet,naive_workflow}`, `iterations`
+
+**`streamlit_app.py` — §15 baseline comparison tab:**
+
+- `_run_agent_forecast` signature updated to 3-tuple throughout
+- New **"📊 Baseline Comparison & Agent Trace" expander** (shown when `agent_metrics` is non-empty):
+- MAE/RMSE table for all three methods
+- Green ✅ / amber ⚠️ verdict on whether agent beat naive
+- Agent iteration log with tool, val MAE vs naive MAE, rationale
+- Falls through to `_render_artifacts()` for disk artifacts
+
+## User (2026-06-21T12-29-50Z)
+
+SPEC-ksowmya.md has been updated to use run_scenario from changepoint/pipeline. implement
+
+[YOLO MODE]
+
+## Assistant (2026-06-21T12-29-50Z)
+
+Let me read what changed.
+
+## Assistant (2026-06-21T12-29-50Z)
+
+Two new items:
+
+- **§Forecasting 4**: `run_scenario` currently saves only PNG — make it also save CSV with the forecast numerical values
+- **§Forecasting 5**: End-to-end verification with Claude sonnet 4.6
+
+Let me check what `run_scenario` writes and where the PNG save happens:
+
+## Assistant (2026-06-21T12-29-50Z)
+
+Now I see exactly where to add the CSV save — right after `render_forecast_comparison`. I need the test `ds` values too. Let me check what `split.test_df` gives:
+
+The `split.test_df` is a DataFrame with `ds` and `y`. The yhat arrays from `_final_eval` are aligned to test_df rows. So I can zip `split.test_df["ds"]` with the three yhat arrays.
+
+## Assistant (2026-06-21T12-29-50Z)
+
+Now update the FastAPI `ArtifactSummary` and `_render_artifacts` to expose the CSV, and load/display it in Streamlit:
+
+## User (2026-06-21T12-36-22Z)
+
+SPEC-ksowmya.md has been updated to use run_scenario from changepoint/pipeline. implement
+
+## Assistant (2026-06-21T12-36-40Z)
+
+Let me read the current SPEC and check where we left off.
+
+## System (2026-06-21T12-36-41Z)
+
+[2m⏺[0m [2mread[0m [2m(sessions/ksowmya/SPEC-ksowmya.md (from line 158))[0m
+
+## System - bash-output (2026-06-21T12-36-42Z)
+
+Claude executed: python3 -m py_compile src/ailf/pipelines/changepoint/pipeline.py && python3 -m py_compile src/ailf/pipelines/drift/pipeline.py && python3 -m py_compile src/ailf/pipelines/drift/streamlit_app.py && python3 -m py_compile src/ailf/pipelines/drift/fallback.py && echo "all OK" - ✓ Success
+
+## Assistant (2026-06-21T12-36-47Z)
+
+Good — all files compile. Last session added the CSV write to `run_scenario` but left the `ArtifactSummary.has_forecast_csv` half-finished. New items:
+
+- **§Forecasting 4 updated**: CSV save already added; also use the `forecast_comparison.png` image in UI if CSV isn't available
+- **§Forecasting 5**: End-to-end with Claude Sonnet 4.6 via `run_scenario`
+
+Let me check the current state of the artifact endpoint and Streamlit rendering:
+
+## System (2026-06-21T12-36-51Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/pipeline.py (lines 1155-1179))[0m
+
+## System (2026-06-21T12-36-52Z)
+
+[2m⏺[0m [2mgrep[0m [2m(has_forecast_csv|forecast_comparison.csv src/ailf/pipelines/drift/streamlit_app.py [content])[0m
+
+## Assistant (2026-06-21T12-36-55Z)
+
+Three tasks:
+1. Wire `has_forecast_csv` into the FastAPI artifact endpoint
+2. Update `_render_artifacts` in Streamlit to load CSV for chart / fall back to PNG
+3. Update `_load_run_artifacts` to load CSV data from disk
+
+Let me do all three:
+
+## System (2026-06-21T12-36-57Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/pipeline.py)[0m
+
+## Assistant (2026-06-21T12-37-08Z)
+
+Now update `_load_run_artifacts` in Streamlit to load the CSV, and `_render_artifacts` to display it:
+
+## System (2026-06-21T12-37-09Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 640-719))[0m
+
+## Assistant (2026-06-21T12-37-12Z)
+
+I see `_api_post` now returns a tuple on line 647. That's inconsistent — we switched it back to a single return earlier. Let me check:
+
+## System (2026-06-21T12-37-14Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System (2026-06-21T12-37-19Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 629-658))[0m
+
+## Assistant (2026-06-21T12-37-22Z)
+
+`_api_post` returns a 2-tuple here but the call sites in `_run_agent_forecast` call it as `resp = _api_post(...)` treating it as a dict. Let me fix this inconsistency — make `_api_post` return just the dict (None on error) consistently, and update the callers:
+
+## System (2026-06-21T12-37-24Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T12-37-32Z)
+
+Now update `_load_run_artifacts` to also load the CSV, and `_render_artifacts` to plot it or fall back to PNG:
+
+## System (2026-06-21T12-37-33Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T12-37-49Z)
+
+Now update `_render_artifacts` to display the CSV as an interactive Plotly chart (preferred) or PNG fallback:
+
+## System (2026-06-21T12-37-51Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 720-779))[0m
+
+## System (2026-06-21T12-37-57Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T12-38-16Z)
+
+Now add Claude Sonnet 4.6 to the model dropdown (§Forecasting 5/6):
+
+## System (2026-06-21T12-38-18Z)
+
+[2m⏺[0m [2mgrep[0m [2m(claude-sonnet-4-5|claude-opus-4-5 src/ailf/pipelines/drift/streamlit_app.py [content])[0m
+
+## System (2026-06-21T12-38-23Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T12-38-33Z)
+
+Also add Claude Sonnet 4.6 to the Bedrock model defaults and the `config.yaml` override defaults. Check the config:
+
+## System (2026-06-21T12-38-34Z)
+
+[2m⏺[0m [2mgrep[0m [2m(claude-sonnet-4-6|claude-opus-4-8 src/ailf/pipelines/changepoint/config.yaml [content])[0m
+
+## Assistant (2026-06-21T12-38-38Z)
+
+Good — config.yaml already uses `claude-sonnet-4-6`. Now update the sidebar default text inputs to match:
+
+## System (2026-06-21T12-38-38Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System - bash-output (2026-06-21T12-38-49Z)
+
+Claude executed: python3 -m py_compile src/ailf/pipelines/changepoint/pipeline.py && python3 -m py_compile src/ailf/pipelines/drift/pipeline.py && python3 -m py_compile src/ailf/pipelines/drift/streamlit_app.py && python3 -m py_compile src/ailf/pipelines/drift/fallback.py && echo "all OK" - ✓ Success
+
+## Assistant (2026-06-21T12-38-56Z)
+
+Also verify no module-level core imports leaked into `drift/pipeline.py`:
+
+## System (2026-06-21T12-38-57Z)
+
+[2m⏺[0m [2mgrep[0m [2m(^from ailf\.core|^from ailf\.pipelines\.changepoint src/ailf/pipelines/drift/pipeline.py [content])[0m
+
+## Assistant (2026-06-21T12-39-01Z)
+
+All clean. Done.
+
+**What was completed from the last cutoff:**
+
+**`drift/pipeline.py`** — `ArtifactSummary.has_forecast_csv = False` field wired in; the `changepoint/artifacts/{id}` endpoint now sets it from `(run_dir / "forecast_comparison.csv").exists()`
+
+**`streamlit_app.py`:**
+- `_api_post` signature fixed to `dict | None` (was inconsistently returning 2-tuple in one version)
+- `_load_run_artifacts` loads `forecast_comparison.csv` path alongside PNG files; sets `has_forecast_csv` flag
+- `_render_artifacts` now prefers the **interactive Plotly chart** from the CSV (actual / naive / full-history / agent lines) and falls back to the static PNG when CSV is absent or fails; agent_context.png shown separately
+- `_model_options` dropdown gains **Claude Sonnet 4.6** as first Claude option
+- Sidebar `visual_model_id` default updated to `us.anthropic.claude-sonnet-4-6` (matching `config.yaml`)
+
+## Assistant (2026-06-21T12-39-07Z)
+
+Changes for src/ailf/pipelines/drift/pipeline.py
+```diff
+@@ -1164,6 +1164,7 @@
+             has_trace=tpath.exists(),
+             has_forecast_png=(run_dir / "forecast_comparison.png").exists(),
+             has_context_png=(run_dir / "agent_context.png").exists(),
++            has_forecast_csv=(run_dir / "forecast_comparison.csv").exists(),
+             metrics=metrics,
+             final_eval=final_eval,
+             agent_iterations=agent_iters,
+
+```
+
+## Assistant (2026-06-21T12-39-07Z)
+
+Changes for src/ailf/pipelines/drift/streamlit_app.py
+```diff
+@@ -192,6 +192,7 @@
+     # Detect with (moved here per §10)
+     _model_options: dict[str, str] = {
+         f"Qwen via Ollama ({DEFAULT_MODEL})": DEFAULT_MODEL,
++        "Claude Sonnet 4.6  (needs ANTHROPIC_API_KEY)": "claude-sonnet-4-6",
+         "Claude Sonnet 4.5  (needs ANTHROPIC_API_KEY)": "claude-sonnet-4-5",
+         "Claude Opus 4.5  (needs ANTHROPIC_API_KEY)": "claude-opus-4-5",
+         "Claude 3.5 Sonnet  (needs ANTHROPIC_API_KEY)": "claude-3-5-sonnet-20241022",
+@@ -217,7 +218,7 @@
+     _is_bedrock_model = actual_model_id.startswith("bedrock/")
+     visual_model_id = st.text_input(
+         "visual_model_id",
+-        value="us.anthropic.claude-opus-4-8",
++        value="us.anthropic.claude-sonnet-4-6",
+         help="Bedrock model ID for the visual-inspection node. Active only for Bedrock.",
+         disabled=not _is_bedrock_model,
+     )
+@@ -630,10 +631,8 @@
+         return None
+
+
+-def _api_post(path: str, payload: dict, timeout: int = 300) -> tuple[dict | None, str]:
+-    """POST JSON to the FastAPI server. Returns (response_dict, error_msg).
+-    On success error_msg is "". On any error response_dict is None."""
+-    import urllib.error as _ue
++def _api_post(path: str, payload: dict, timeout: int = 300) -> dict | None:
++    """POST JSON to the FastAPI server; returns parsed response dict or None on error."""
+     import urllib.request as _ur
+     data = json.dumps(payload).encode()
+     req = _ur.Request(
+@@ -644,17 +643,9 @@
+     )
+     try:
+         with _ur.urlopen(req, timeout=timeout) as r:
+-            return json.loads(r.read().decode()), ""
+-    except _ue.HTTPError as exc:
+-        try:
+-            body = exc.read().decode()
+-        except Exception:
+-            body = str(exc)
+-        return None, f"HTTP {exc.code}: {body[:300]}"
+-    except _ue.URLError as exc:
+-        return None, f"Connection error: {exc.reason}"
+-    except Exception as exc:
+-        return None, f"{type(exc).__name__}: {exc}"
++            return json.loads(r.read().decode())
++    except Exception:
++        return None
+
+
+ def _load_run_artifacts(run_id: str) -> dict:
+@@ -665,7 +656,8 @@
+     api_arts = _api_get(f"/changepoint/artifacts/{run_id}")
+     if isinstance(api_arts, list) and api_arts:
+         latest = api_arts[-1]
+-        out: dict = {"_from_api": True}
++        _api_run_id = latest.get("run_id", run_id)
++        out: dict = {"_from_api": True, "run_id": _api_run_id}
+         if latest.get("metrics"):
+             out["metrics.json"] = latest["metrics"]
+         if latest.get("final_eval"):
+@@ -674,14 +666,18 @@
+             out["agent_iterations"] = latest["agent_iterations"]
+         out["has_forecast_png"] = latest.get("has_forecast_png", False)
+         out["has_context_png"]  = latest.get("has_context_png", False)
+-        _api_run_id = latest.get("run_id", run_id)
+-        out["run_id"] = _api_run_id
+-        # Resolve image paths from disk — Streamlit and FastAPI share the same filesystem
+-        for _img, _flag in (("forecast_comparison.png", "has_forecast_png"), ("agent_context.png", "has_context_png")):
++        out["has_forecast_csv"] = latest.get("has_forecast_csv", False)
++        # Resolve local paths — Streamlit and FastAPI share the same filesystem
++        run_local = _REPORTS_DIR / _api_run_id
++        for _fname, _flag in (
++            ("forecast_comparison.png", "has_forecast_png"),
++            ("agent_context.png",       "has_context_png"),
++            ("forecast_comparison.csv", "has_forecast_csv"),
++        ):
+             if latest.get(_flag):
+-                _p = _REPORTS_DIR / _api_run_id / _img
++                _p = run_local / _fname
+                 if _p.exists():
+-                    out[_img] = _p
++                    out[_fname] = _p
+         return out
+
+     # Fallback: read from disk
+@@ -697,10 +693,10 @@
+                 out[fname] = json.loads(p.read_text())
+             except Exception:
+                 pass
+-    for img in ("forecast_comparison.png", "agent_context.png"):
+-        p = run_dir / img
++    for item in ("forecast_comparison.png", "agent_context.png", "forecast_comparison.csv"):
++        p = run_dir / item
+         if p.exists():
+-            out[img] = p
++            out[item] = p
+     return out
+
+
+@@ -742,16 +738,65 @@
+                 f"{prop.get('rationale','')[:100]}"
+             )
+
+-    # Images (disk path or flag only)
+-    for img_key in ("forecast_comparison.png", "agent_context.png"):
+-        img_path = arts.get(img_key)
+-        if img_path and pathlib.Path(str(img_path)).exists():
+-            st.image(str(img_path), caption=img_key, use_container_width=True)
+-        elif arts.get(f"has_{img_key.replace('.png','').replace('forecast_comparison','forecast').replace('agent_context','context')}_png"):
+-            st.info(f"`{img_key}` exists on server disk — view at `reports/`.")
++    # ── Forecast chart: prefer CSV (interactive Plotly), fall back to PNG ──
++    csv_path = arts.get("forecast_comparison.csv")
++    if csv_path and pathlib.Path(str(csv_path)).exists():
++        try:
++            fc_df = pd.read_csv(str(csv_path), parse_dates=["ds"])
++            fig_fc = go.Figure()
++            if "y_actual" in fc_df.columns:
++                fig_fc.add_trace(go.Scatter(
++                    x=fc_df["ds"], y=fc_df["y_actual"],
++                    mode="lines", name="Actual",
++                    line=dict(color="#2ca02c", width=2),
++                ))
++            if "yhat_full_history" in fc_df.columns:
++                fig_fc.add_trace(go.Scatter(
++                    x=fc_df["ds"], y=fc_df["yhat_full_history"],
++                    mode="lines", name="Full-history Prophet",
++                    line=dict(color="#aec7e8", width=1.5, dash="dot"),
++                ))
++            if "yhat_naive" in fc_df.columns:
++                fig_fc.add_trace(go.Scatter(
++                    x=fc_df["ds"], y=fc_df["yhat_naive"],
++                    mode="lines", name="naive forecast",
++                    line=dict(color="#e05c00", width=2, dash="dash"),
++                ))
++            if "yhat_agent" in fc_df.columns:
++                fig_fc.add_trace(go.Scatter(
++                    x=fc_df["ds"], y=fc_df["yhat_agent"],
++                    mode="lines", name="agent-in-the-loop forecast",
++                    line=dict(color="#b57bee", width=2, dash="dot"),
++                ))
++            fig_fc.update_layout(
++                title="Forecast comparison (from run_scenario)",
++                xaxis=dict(title="Date", rangeslider=dict(visible=True)),
++                yaxis=dict(title="y"),
++                legend=dict(orientation="h", y=-0.25),
++                hovermode="x unified", height=420,
++            )
++            st.plotly_chart(fig_fc, use_container_width=True)
++        except Exception as _csv_plot_exc:
++            st.warning(f"CSV chart failed: {_csv_plot_exc} — showing PNG instead.")
++            csv_path = None  # trigger PNG fallback
+
++    if not csv_path:
++        # PNG fallback — show static image
++        png_path = arts.get("forecast_comparison.png")
++        if png_path and pathlib.Path(str(png_path)).exists():
++            st.image(str(png_path), caption="forecast_comparison.png", use_container_width=True)
++        elif arts.get("has_forecast_png"):
++            st.info("`forecast_comparison.png` on server — check `reports/`.")
+
++    # Agent context image (visual node)
++    ctx_path = arts.get("agent_context.png")
++    if ctx_path and pathlib.Path(str(ctx_path)).exists():
++        st.image(str(ctx_path), caption="agent_context.png (training-only)", use_container_width=True)
++    elif arts.get("has_context_png"):
++        st.info("`agent_context.png` on server — check `reports/`.")
+
++
++
+ # ── Execution ─────────────────────────────────────────────────────────────
+
+ if run_btn and bedrock_pipeline_enabled:
+
+```
+
+## User (2026-06-21T12-39-44Z)
+
+SPEC-ksowmya.md has been updated to use run_scenario directly instead of api if feasible. implement
+
+## Assistant (2026-06-21T12-39-52Z)
+
+Let me read the updated SPEC.
+
+## System (2026-06-21T12-39-53Z)
+
+[2m⏺[0m [2mread[0m [2m(sessions/ksowmya/SPEC-ksowmya.md (lines 118-177))[0m
+
+## Assistant (2026-06-21T12-39-59Z)
+
+The key new item: **§14 updated** — "When 'Bedrock Changepoint Pipeline' toggle is ON, use `run_scenario` method directly (not the API) to retrieve forecasted data and agent reasoning."
+
+Also **§Forecasting 4** says the toggle should call `run_scenario` directly if it serves better than going via the API. This means: when the Bedrock toggle is on, try calling `run_scenario` in-process first (lazy import), and only fall back to the API if needed.
+
+Let me check the current Bedrock pipeline path in streamlit_app.py:
+
+## System (2026-06-21T12-40-03Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 795-874))[0m
+
+## Assistant (2026-06-21T12-40-07Z)
+
+I see the issue — `_api_post` is still being called with tuple unpacking (`_bp_resp, _bp_err`). The previous session fixed `_api_post` to return just a dict, but these call sites weren't updated. Now I'll:
+
+1. Fix those stale tuple-unpack call sites
+2. Replace the Bedrock pipeline path to call `run_scenario` directly (in-process, lazy import), display results in the same UI format as Detect & Forecast
+3. Keep FastAPI as a secondary path
+
+## System (2026-06-21T12-40-12Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 873-932))[0m
+
+## Assistant (2026-06-21T12-40-20Z)
+
+Now I'll rewrite the Bedrock pipeline block to call `run_scenario` directly, and render results in the same UI style as the Detect & Forecast flow:
+
+## System (2026-06-21T12-40-21Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System - bash-output (2026-06-21T12-41-02Z)
+
+Claude executed: python3 -m py_compile src/ailf/pipelines/drift/streamlit_app.py && echo "OK" - ✓ Success
+
+## Assistant (2026-06-21T12-41-07Z)
+
+Done.
+
+**What changed:**
+
+**Bedrock pipeline block (`streamlit_app.py`):**
+
+- **Direct `run_scenario` call (primary path)**: lazy-imports `run_scenario` and `ConfigOverride` from `changepoint/pipeline.py` in-process; builds `ConfigOverride` from sidebar values; passes `series_df` if a CSV is selected (pocs/data/ support); passes `split_ratio`
+- **FastAPI fallback (secondary)**: if in-process call fails (missing creds, `langchain_aws` absent, etc.) — falls back to `POST /changepoint/run`; graceful error messages for each failure mode
+- **Results rendered in same layout as Detect & Forecast**:
+  - `_render_artifacts()` loads and displays the CSV as an interactive Plotly chart (actual / naive / full-history / agent lines) with PNG fallback
+  - If no artifacts on disk yet, builds an inline Plotly chart from `final_eval.{agent,naive_workflow,full_history_prophet}.yhat` arrays
+  - 3-column MAE metrics row (Full-history / Naive / Agent)
+  - Winner label shown as caption
+
+## Assistant (2026-06-21T12-41-14Z)
+
+Changes for src/ailf/pipelines/drift/streamlit_app.py
+```diff
+@@ -800,7 +800,10 @@
+ # ── Execution ─────────────────────────────────────────────────────────────
+
+ if run_btn and bedrock_pipeline_enabled:
+-    # ── Bedrock pipeline path (§13) ──────────────────────────────────────
++    # ── Bedrock / run_scenario path (§13 / §Forecasting 4) ───────────────
++    # Calls run_scenario directly in-process (lazy import). Falls back to
++    # FastAPI /changepoint/run if the in-process call fails (e.g. missing creds).
++    # Results are displayed in the same UI layout as Detect & Forecast.
+     st.subheader(f"🔬 Bedrock Changepoint Pipeline — `{scenario_id}`")
+
+     _ov_payload: dict = {
+@@ -820,56 +823,114 @@
+         f"--scenario {scenario_id} "
+         f"--override '{_override_str}'"
+     )
+-    with st.expander("Command being executed", expanded=False):
++    with st.expander("CLI equivalent", expanded=False):
+         st.code(_echo_cmd, language="bash")
+
+-    _bp_alive = _api_get("/changepoint/scenarios") is not None
+-    if not _bp_alive:
+-        st.error(
+-            "❌ FastAPI server is not running. "
+-            "Start it with: `uvicorn ailf.pipelines.drift.pipeline:app --reload`"
+-        )
+-        st.code(_echo_cmd, language="bash")
+-        st.stop()
++    # Determine csv_path for non-registered scenarios
++    _bp_csv_path: str | None = None
++    if selected_series is not None:
++        _bp_csv_path = str(selected_series)
+
+-    with st.spinner(f"Running Bedrock pipeline for `{scenario_id}`…"):
+-        _bp_resp, _bp_err = _api_post("/changepoint/run", {
++    _bp_result: dict | None = None
++    _bp_error: str = ""
++
++    with st.spinner(f"⚙️ Running run_scenario for `{scenario_id}` (may take 30–120 s)…"):
++        try:
++            from ailf.pipelines.changepoint.pipeline import run_scenario as _run_scenario  # noqa: PLC0415
++            from ailf.core.config.schema import ConfigOverride as _ConfigOverride  # noqa: PLC0415
++
++            _override_obj = _ConfigOverride.from_dict(_ov_payload)
++            _bp_series_df = None
++            if _bp_csv_path:
++                _bp_series_df = pd.read_csv(_bp_csv_path, parse_dates=["ds"])
++
++            _bp_result = _run_scenario(
++                scenario_id,
++                override=_override_obj,
++                series_df=_bp_series_df,
++                split_ratio=split_ratio / 100.0,
++                emit_events=True,
++            )
++        except (ImportError, ModuleNotFoundError) as _bp_imp_exc:
++            _bp_error = f"Missing dependency: {_bp_imp_exc}"
++        except Exception as _bp_exc:
++            _bp_error = str(_bp_exc)
++
++    # If in-process failed, try FastAPI as fallback
++    if _bp_result is None:
++        st.warning(f"⚠️ Direct run_scenario failed: {_bp_error}")
++        _bp_api_resp = _api_post("/changepoint/run", {
+             "scenario_id": scenario_id,
+             "override": _ov_payload,
++            "csv_path": _bp_csv_path,
++            "split_ratio": split_ratio / 100.0,
+         })
++        if _bp_api_resp and _bp_api_resp.get("status") == "ok":
++            _bp_result = _bp_api_resp
++            st.info("✅ Completed via FastAPI fallback.")
++        elif _bp_api_resp and _bp_api_resp.get("status") == "unavailable":
++            st.error(f"❌ Bedrock unavailable: {_bp_api_resp.get('error')}")
++            st.info("Configure AWS creds in `.env` and try again.")
++            st.stop()
++        else:
++            err = (_bp_api_resp or {}).get("error", "API unreachable") if _bp_api_resp else "API unreachable"
++            st.error(f"❌ Both in-process and API failed. Last error: {err}")
++            st.stop()
++    else:
++        st.success(f"✅ run_scenario complete — run ID: `{_bp_result.get('run_id', '—')}`")
+
+-    if _bp_resp is None:
+-        st.error(f"❌ API request failed: {_bp_err}")
+-        st.stop()
++    # ── Display results in same layout as Detect & Forecast ──────────────
++    _bp_fe = _bp_result.get("final_eval") or {}
++    _bp_winner = _bp_result.get("winner", "—")
++    st.caption(f"Winner: **{_bp_winner}**")
+
+-    _bp_status = _bp_resp.get("status")
+-    if _bp_status == "ok":
+-        st.success(f"✅ Pipeline complete — run ID: `{_bp_resp.get('run_id')}`")
++    # Forecast chart from CSV (preferred) or stored artifacts
++    _bp_arts = _load_run_artifacts(scenario_id)
++    if _bp_arts:
++        _render_artifacts(_bp_arts)
++    elif _bp_fe:
++        # Build inline chart from yhat arrays in final_eval
++        try:
++            _bp_test_n = len((_bp_fe.get("agent") or {}).get("yhat") or [])
++            if _bp_test_n > 0:
++                _bp_ds = pd.date_range(
++                    end=pd.Timestamp("today"), periods=_bp_test_n, freq="D"
++                )
++                _bp_fig = go.Figure()
++                for _bpname, _bpkey, _bpcolor, _bpdash in [
++                    ("Full-history Prophet", "full_history_prophet", "#aec7e8", "dot"),
++                    ("naive forecast",       "naive_workflow",        "#e05c00", "dash"),
++                    ("agent-in-the-loop",    "agent",                 "#b57bee", "dot"),
++                ]:
++                    _bpy = (_bp_fe.get(_bpkey) or {}).get("yhat", [])
++                    if _bpy:
++                        _bp_fig.add_trace(go.Scatter(
++                            x=_bp_ds, y=_bpy[:_bp_test_n],
++                            mode="lines", name=_bpname,
++                            line=dict(color=_bpcolor, width=2, dash=_bpdash),
++                        ))
++                _bp_fig.update_layout(
++                    title="Forecast comparison (run_scenario)",
++                    xaxis=dict(title="Date"), yaxis=dict(title="y"),
++                    legend=dict(orientation="h", y=-0.25),
++                    hovermode="x unified", height=400,
++                )
++                st.plotly_chart(_bp_fig, use_container_width=True)
++        except Exception:
++            pass
+
+-        # MAE comparison
+-        _bp_fe = _bp_resp.get("final_eval") or {}
+-        if _bp_fe:
+-            _bc1, _bc2, _bc3 = st.columns(3)
+-            for _bcol, _blbl, _bkey in [
+-                (_bc1, "Full-history Prophet", "full_history_prophet"),
+-                (_bc2, "Naive workflow", "naive_workflow"),
+-                (_bc3, "Agent-in-the-loop", "agent"),
+-            ]:
+-                _bmets = (_bp_fe.get(_bkey) or {}).get("test_metrics", {})
+-                _bmae = _bmets.get("mae")
+-                _bcol.metric(_blbl + " MAE", f"{_bmae:.4f}" if isinstance(_bmae, float) else "—")
++    # MAE metrics row
++    if _bp_fe:
++        _bc1, _bc2, _bc3 = st.columns(3)
++        for _bcol, _blbl, _bkey in [
++            (_bc1, "Full-history Prophet", "full_history_prophet"),
++            (_bc2, "Naive workflow",       "naive_workflow"),
++            (_bc3, "Agent-in-the-loop",   "agent"),
++        ]:
++            _bmets = (_bp_fe.get(_bkey) or {}).get("test_metrics", {})
++            _bmae  = _bmets.get("mae")
++            _bcol.metric(_blbl + " MAE", f"{_bmae:.4f}" if isinstance(_bmae, float) else "—")
+
+-        # Show all artifacts from disk/API
+-        _bp_arts = _load_run_artifacts(scenario_id)
+-        if _bp_arts:
+-            _render_artifacts(_bp_arts)
+-
+-    elif _bp_status == "unavailable":
+-        st.warning(f"⚠️ Bedrock unavailable: {_bp_resp.get('error')}")
+-        st.info("Run the CLI command above manually once Bedrock creds are configured in `.env`.")
+-    else:
+-        st.error(f"Pipeline error: {_bp_resp.get('error')}")
+-
+ elif run_btn:
+     # Resolve data
+     if source_mode == "Upload CSV":
+
+```
+
+## User (2026-06-21T13-04-08Z)
+
+SPEC-ksowmya.md has been updated. Saves the plan to readme.md and implement.
+
+## Assistant (2026-06-21T13-04-15Z)
+
+Let me read the updated SPEC and current README state.
+
+## System (2026-06-21T13-04-17Z)
+
+[2m⏺[0m [2mread[0m [2m(sessions/ksowmya/SPEC-ksowmya.md)[0m
+
+## System - bash-output (2026-06-21T13-04-17Z)
+
+Claude executed: ls /Users/s0k0df5/Downloads/agent-in-the-loop-forecasting/sessions/ksowmya/ && head -5 /Users/s0k0df5/Downloads/agent-in-the-loop-forecasting/README.md 2>/dev/null || echo "no root README" - ✓ Success
+
+## Assistant (2026-06-21T13-04-23Z)
+
+New items are §Forecasting 7 and §8:
+- **§7**: Remove pocs/data entries from Data Scenario dropdown; remove "No CSV found" warning
+- **§8**: Bedrock Changepoint Pipeline toggle ON by default; remove warning underneath
+
+Also the task says **"Saves the plan to readme.md"** — write a README in `sessions/ksowmya/` documenting what's been built.
+
+Let me do all three:
+
+## System (2026-06-21T13-04-28Z)
+
+[2m⏺[0m [2mgrep[0m [2m(_extra_csvs|_chosen_scenario_name|No CSV found|pocs/data|_all_scenario_names src/ailf/pipelines/drift/streamlit_app.py [content])[0m
+
+## System (2026-06-21T13-04-29Z)
+
+[2m⏺[0m [2mgrep[0m [2m(bedrock_pipeline_enabled|Bedrock Changepoint Pipeline src/ailf/pipelines/drift/streamlit_app.py [content])[0m
+
+## System (2026-06-21T13-04-36Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 131-170))[0m
+
+## System (2026-06-21T13-04-37Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 315-344))[0m
+
+## Assistant (2026-06-21T13-04-44Z)
+
+Now make the two targeted edits:
+
+**§7**: Replace the Data Scenario block to only show the 5 committed scenarios (no extra pocs/data CSVs, no "No CSV found" warning)
+
+**§8**: Toggle `value=True`, remove the warning caption beneath it
+
+## System (2026-06-21T13-04-46Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System (2026-06-21T13-04-56Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System - bash-output (2026-06-21T13-05-07Z)
+
+Claude executed: python3 -m py_compile src/ailf/pipelines/drift/streamlit_app.py && echo "OK" - ✓ Success
+
+## Assistant (2026-06-21T13-05-14Z)
+
+Now write the README to `sessions/ksowmya/README.md` documenting the full plan and implementation:
+
+## System (2026-06-21T13-05-15Z)
+
+[2m⏺[0m [2mwrite[0m [2m(sessions/ksowmya/README.md)[0m
+
+## System (2026-06-21T13-06-13Z)
+
+[2m⏺[0m [2mread[0m [2m(sessions/ksowmya/README.md)[0m
+
+## System (2026-06-21T13-06-20Z)
+
+[2m⏺[0m [2medit[0m [2m(sessions/ksowmya/README.md)[0m
+
+## System - bash-output (2026-06-21T13-06-59Z)
+
+Claude executed: python3 -m py_compile src/ailf/pipelines/drift/streamlit_app.py && echo "OK" - ✓ Success
+
+## Assistant (2026-06-21T13-07-05Z)
+
+Done.
+
+**§Forecasting 7** — Data Scenario dropdown now shows only the 5 registered changepoint scenarios; pocs/data extra CSVs removed; "No CSV found" warning removed (silently sets `selected_series = None`).
+
+**§Forecasting 8** — Bedrock Changepoint Pipeline toggle is `value=True` (on by default); warning caption underneath removed.
+
+**`sessions/ksowmya/README.md`** — prepended a full implementation plan section covering:
+- Full stack run instructions + `.env` keys
+- Architecture diagram (text) showing Bedrock vs non-Bedrock paths, forecast chart line legend
+- Key files table
+- FastAPI endpoints table
+- Original Phase-1 dataset generator docs preserved below
+
+## Assistant (2026-06-21T13-07-09Z)
+
+Changes for src/ailf/pipelines/drift/streamlit_app.py
+```diff
+@@ -132,34 +132,17 @@
+             help="Must have `ds` (date) and `y` (numeric) columns.",
+         )
+     else:
+-        # Always show the 5 committed changepoint scenarios + any extra pocs/data CSVs
+-        _cp_scenarios = list(_SCENARIOS)
+-        _extra_csvs = [
+-            p for p in sorted(_DATA_DIR.glob("*_train.csv")) if _DATA_DIR.exists()
+-            if p.stem.replace("_train", "") not in _cp_scenarios
+-        ] if _DATA_DIR.exists() else []
+-        _all_scenario_names = _cp_scenarios + [p.stem.replace("_train", "") for p in _extra_csvs]
+-
++        # Show only the 5 committed changepoint scenarios (§Forecasting 7)
+         _scenario_idx = st.selectbox(
+             "Data Scenario",
+-            range(len(_all_scenario_names)),
+-            format_func=lambda i: _all_scenario_names[i],
++            range(len(_SCENARIOS)),
++            format_func=lambda i: _SCENARIOS[i],
+         )
+-        _chosen_scenario_name = _all_scenario_names[_scenario_idx]
++        _chosen_scenario_name = _SCENARIOS[_scenario_idx]
+
+-        # Try to find a matching CSV in pocs/data/
++        # Try to find a matching CSV in pocs/data/ (silently — no warning shown)
+         _csv_candidate = _DATA_DIR / f"{_chosen_scenario_name}_train.csv"
+-        if _csv_candidate.exists():
+-            selected_series = _csv_candidate
+-        elif _scenario_idx >= len(_cp_scenarios):
+-            # Extra CSV from pocs/data
+-            selected_series = _extra_csvs[_scenario_idx - len(_cp_scenarios)]
+-        else:
+-            selected_series = None
+-            st.info(
+-                f"No CSV found for `{_chosen_scenario_name}` in `pocs/data/`. "
+-                "Use the pipeline panel below to run and generate artifacts."
+-            )
++        selected_series = _csv_candidate if _csv_candidate.exists() else None
+
+     # Derive scenario_id from selection (used by pipeline panel below)
+     if source_mode == "Data Scenario":
+@@ -315,22 +298,16 @@
+
+     st.divider()
+
+-    # ── Bedrock Changepoint Pipeline toggle (§13) ─────────────────────────
++    # ── Bedrock Changepoint Pipeline toggle (§13, ON by default per §8) ────
+     bedrock_pipeline_enabled = st.toggle(
+         "Bedrock Changepoint Pipeline",
+-        value=False,
++        value=True,
+         help=(
+-            "When ON: clicking the button below runs the full Bedrock agent pipeline "
+-            "via POST /changepoint/run and shows its artifacts. "
+-            "Requires FastAPI server running and AWS Bedrock creds in .env. "
+-            "When OFF: runs the standard drift detection + Prophet forecast."
++            "When ON: runs run_scenario directly (or via FastAPI fallback) using "
++            "Bedrock / Claude creds from .env. "
++            "When OFF: runs standard drift detection + Prophet forecast."
+         ),
+     )
+-    if bedrock_pipeline_enabled:
+-        st.caption(
+-            "⚠️ Bedrock pipeline active — the button below invokes "
+-            "`ailf.pipelines.changepoint.pipeline` on the server."
+-        )
+
+     if bedrock_pipeline_enabled:
+         run_btn = st.button(
+
+```
+
+## Assistant (2026-06-21T13-07-09Z)
+
+Changes for sessions/ksowmya/README.md
+```diff
+@@ -1,3 +1,94 @@
++# Agent-in-the-Loop Forecasting — ksowmya Implementation Plan
++
++**Session:** `ksowmya` · **Phase:** 1–3 — Dataset → Visualization → Forecasting
++
++> This document was auto-generated to capture the full implementation plan and architecture
++> for the drift pipeline UI, LLM detection backends, and agent-in-the-loop forecasting.
++> The original Phase-1 dataset generator docs follow below.
++
++---
++
++## Implementation Plan (Phases 1–3)
++
++### Running the Full Stack
++
++```bash
++# Terminal 1 — FastAPI server (drift generation + changepoint endpoints)
++PYTHONPATH=src uvicorn ailf.pipelines.drift.pipeline:app --reload --port 8000
++
++# Terminal 2 — Streamlit UI
++PYTHONPATH=src streamlit run src/ailf/pipelines/drift/streamlit_app.py
++
++# (Optional) Pre-generate Qwen changepoint analysis for pocs/data/ series
++python3 pocs/qwen_changepoints.py
++```
++
++Required `.env` keys:
++```
++ANTHROPIC_API_KEY=          # Claude Sonnet/Opus detection
++AWS_ACCESS_KEY_ID=          # Bedrock pipeline
++AWS_SECRET_ACCESS_KEY=
++AWS_REGION=us-west-2
++VISUAL_MODEL_ID=us.anthropic.claude-sonnet-4-6
++REACT_MODEL_ID=us.anthropic.claude-sonnet-4-6
++LANGSMITH_API_KEY=          # LangSmith tracing (optional)
++```
++
++### Architecture
++
++```
++Streamlit UI
++ ├─ Data Scenario (5 registered scenarios)
++ ├─ Model Settings (visual/decision model IDs, aws_region)
++ ├─ Diagnostic Toggles (13) + Tool Toggles (6)
++ ├─ [Bedrock toggle ON] ──▶ run_scenario() in-process
++ │                            ├─ LangGraph ReAct loop (Bedrock/Claude)
++ │                            ├─ writes: metrics.json, agent_trace.json,
++ │                            │          forecast_comparison.csv, forecast_comparison.png
++ │                            └─ returns final_eval {agent, naive, full_history}
++ └─ [Bedrock toggle OFF] ──▶ detect_streaming() → Claude/Qwen/Ollama
++                              └─ fallback.py run_fallback_pipeline()
++                                  ├─ baselines (full-history + naive windowed)
++                                  ├─ LLM tool selection (recent_window/step_regressor)
++                                  ├─ validation scoring
++                                  └─ returns (forecast_df, label, metrics_report)
++
++Forecast Chart (Plotly):
++ 🔵 Historical (train)       — solid dark blue
++ 🟠 naive forecast           — orange dashed  (plain Prophet)
++ 🟣 agent-in-the-loop        — purple dotted  (LLM-guided Prophet)
++ 🟢 Actual (holdout)         — solid green
++```
++
++### Key Files
++
++| File | Purpose |
++|------|---------|
++| `src/ailf/pipelines/drift/streamlit_app.py` | Streamlit UI |
++| `src/ailf/pipelines/drift/pipeline.py` | FastAPI + `/changepoint/*` endpoints |
++| `src/ailf/pipelines/drift/llm_reason.py` | Claude / Bedrock / Qwen detection |
++| `src/ailf/pipelines/drift/fallback.py` | Non-Bedrock run_scenario mirror |
++| `src/ailf/pipelines/changepoint/pipeline.py` | `run_scenario()` (Bedrock + LangGraph) |
++| `src/ailf/pipelines/drift/dataset_generator.py` | `DriftGenerator` (7 drift types) |
++| `pocs/qwen_changepoints.py` | Changepoint detection + visualization |
++| `pocs/data/` | Pre-generated 5-year series (sec9–sec12) |
++| `pocs/qwen/` | Qwen-annotated changepoint plots + JSON/CSV |
++
++### FastAPI Endpoints
++
++| Method | Path | Description |
++|--------|------|-------------|
++| GET | `/docs` | Swagger UI |
++| PATCH | `/drift/config/trend` | Update trend at runtime |
++| POST | `/drift/generate/{type}` | Generate a drift dataset |
++| POST | `/drift/generate/combined` | Stack multiple drifts |
++| POST | `/forecast/analyze` | Detect + Prophet forecast |
++| POST | `/changepoint/run` | Run `run_scenario` (Bedrock) |
++| GET  | `/changepoint/artifacts/{id}` | Load pre-computed artifacts |
++| GET  | `/changepoint/scenarios` | List registered scenario IDs |
++
++---
++
+ # Drift Synthetic Dataset Generator
+
+ **Session:** `ksowmya` · **Phase:** 1 — Dataset Generation
+
+```
+
+## User (2026-06-21T13-08-06Z)
+
+SPEC-ksowmya.md has been updated. Saves the plan to readme.md and implement.
+
+## Assistant (2026-06-21T13-08-14Z)
+
+Let me read what changed.
+
+## System (2026-06-21T13-08-15Z)
+
+[2m⏺[0m [2mread[0m [2m(sessions/ksowmya/SPEC-ksowmya.md (from line 155))[0m
+
+## Assistant (2026-06-21T13-08-22Z)
+
+Two new items:
+- **§16**: Rename 'Run Bedrock Pipeline' button → 'Run Forecast'
+- **§Forecasting 5 updated**: The forecast CSV should include both train and forecasted data for zoom-in/out pan visualization
+
+Let me check current state and implement:
+
+## System (2026-06-21T13-08-25Z)
+
+[2m⏺[0m [2mgrep[0m [2m(Run Bedrock Pipeline|Run Forecast src/ailf/pipelines/drift/streamlit_app.py [content])[0m
+
+## System (2026-06-21T13-08-26Z)
+
+[2m⏺[0m [2mgrep[0m [2m(forecast_comparison.csv|csv_data|csv_df src/ailf/pipelines/changepoint/pipeline.py [content])[0m
+
+## Assistant (2026-06-21T13-08-32Z)
+
+**§16** is a one-line rename. **§Forecasting 5 update** — add training data to the CSV so the Streamlit chart can show a continuous series (train + forecast) with zoom/pan.
+
+## System (2026-06-21T13-08-33Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/changepoint/pipeline.py (lines 318-347))[0m
+
+## Assistant (2026-06-21T13-08-39Z)
+
+Now apply both changes:
+
+## System (2026-06-21T13-08-39Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/changepoint/pipeline.py)[0m
+
+## Assistant (2026-06-21T13-08-58Z)
+
+Now update the Streamlit chart renderer to handle the new `region` column and show training history too:
+
+## System (2026-06-21T13-09-00Z)
+
+[2m⏺[0m [2mgrep[0m [2m(fc_df = pd.read_csv|yhat_full_history|yhat_naive|yhat_agent src/ailf/pipelines/drift/streamlit_app.py [content])[0m
+
+## System (2026-06-21T13-09-08Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 723-777))[0m
+
+## Assistant (2026-06-21T13-09-14Z)
+
+The chart already handles the CSV well. The key update needed: since the new CSV has a `region` column and includes training data, the chart should use the `region` column to separate train from forecast rows, and plot the training actual from the CSV itself (no longer relying on passing `train_df` from outside). Let me update the chart builder:
+
+## System (2026-06-21T13-09-16Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## Assistant (2026-06-21T13-09-39Z)
+
+Now the §16 rename:
+
+## System (2026-06-21T13-09-39Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System - bash-output (2026-06-21T13-09-50Z)
+
+Claude executed: python3 -m py_compile src/ailf/pipelines/changepoint/pipeline.py && python3 -m py_compile src/ailf/pipelines/drift/streamlit_app.py && echo "all OK" - ✓ Success
+
+## Assistant (2026-06-21T13-09-58Z)
+
+Now update the README to reflect these changes:
+
+## System (2026-06-21T13-09-59Z)
+
+[2m⏺[0m [2mread[0m [2m(sessions/ksowmya/README.md (lines 1-30))[0m
+
+## System (2026-06-21T13-10-06Z)
+
+[2m⏺[0m [2medit[0m [2m(sessions/ksowmya/README.md)[0m
+
+## Assistant (2026-06-21T13-10-19Z)
+
+Done.
+
+**§16** — Button renamed: `"▶️ Run Bedrock Pipeline"` → `"▶️ Run Forecast"`.
+
+**§Forecasting 5** — `forecast_comparison.csv` now has two sections per run:
+
+| Column | Train rows | Forecast rows |
+|--------|-----------|---------------|
+| `ds` | training dates | test dates |
+| `y_actual` | actual training values | actual holdout values |
+| `region` | `"train"` | `"forecast"` |
+| `yhat_full_history` | NaN | float |
+| `yhat_naive` | NaN | float |
+| `yhat_agent` | NaN | float |
+
+Streamlit `_render_artifacts` chart:
+- Splits `fc_df` by `region` column
+- Plots training actual from `_train_rows` (solid dark blue) with a train│test boundary vline
+- Plots test actual + three forecast lines from `_fc_rows`
+- Rangeslider enabled → zoom/pan across full train + forecast window
+- Backward-compatible: falls back gracefully when `region` column absent (old CSV format)
+
+**README updated** with "Recent Changes" section at the top.
+
+## Assistant (2026-06-21T13-10-24Z)
+
+Changes for src/ailf/pipelines/changepoint/pipeline.py
+```diff
+@@ -320,19 +320,45 @@
+         out_path=run_dir / "forecast_comparison.png",
+     )
+
+-    # §Forecasting 4: save forecast CSV with numerical values for Streamlit visualisation.
+-    # Rows aligned to the test split; includes actual values and all three yhat columns.
++    # §Forecasting 4/5: save forecast CSV — training region + forecast region in one file
++    # so Streamlit can render a continuous zoom-in/out/pan chart.
++    # Columns: ds, y_actual (NaN in forecast region), region ("train"|"forecast"),
++    #          yhat_full_history, yhat_naive, yhat_agent (NaN in training region).
+     try:
+-        test_df = split.test_df.copy()
+-        n_test = len(test_df)
+-        csv_data = {
+-            "ds":                  test_df["ds"].dt.strftime("%Y-%m-%d").tolist(),
+-            "y_actual":            test_df["y"].round(6).tolist(),
+-            "yhat_full_history":   [round(float(v), 6) for v in fe["full_history_prophet"]["yhat"][:n_test]],
+-            "yhat_naive":          [round(float(v), 6) for v in fe["naive_workflow"]["yhat"][:n_test]],
+-            "yhat_agent":          [round(float(v), 6) for v in fe["agent"]["yhat"][:n_test]],
+-        }
+-        csv_df = pd.DataFrame(csv_data)
++        train_hist = split.train_df.copy()
++        test_hist  = split.test_df.copy()
++        n_test     = len(test_hist)
++
++        # Training region: actual values, NaN for forecast yhats
++        _nan = float("nan")
++        train_rows: list[dict] = []
++        for _, row in train_hist.iterrows():
++            train_rows.append({
++                "ds":               row["ds"].strftime("%Y-%m-%d"),
++                "y_actual":         round(float(row["y"]), 6),
++                "region":           "train",
++                "yhat_full_history": _nan,
++                "yhat_naive":        _nan,
++                "yhat_agent":        _nan,
++            })
++
++        # Forecast region: NaN for y_actual, actual yhat values
++        fh_yhat = [round(float(v), 6) for v in fe["full_history_prophet"]["yhat"][:n_test]]
++        nw_yhat = [round(float(v), 6) for v in fe["naive_workflow"]["yhat"][:n_test]]
++        ag_yhat = [round(float(v), 6) for v in fe["agent"]["yhat"][:n_test]]
++
++        fc_rows: list[dict] = []
++        for i, (_, row) in enumerate(test_hist.iterrows()):
++            fc_rows.append({
++                "ds":               row["ds"].strftime("%Y-%m-%d"),
++                "y_actual":         round(float(row["y"]), 6),  # keep actuals for comparison
++                "region":           "forecast",
++                "yhat_full_history": fh_yhat[i] if i < len(fh_yhat) else _nan,
++                "yhat_naive":        nw_yhat[i] if i < len(nw_yhat) else _nan,
++                "yhat_agent":        ag_yhat[i] if i < len(ag_yhat) else _nan,
++            })
++
++        csv_df = pd.DataFrame(train_rows + fc_rows)
+         csv_path = run_dir / "forecast_comparison.csv"
+         csv_df.to_csv(csv_path, index=False)
+     except Exception as _csv_exc:
+
+```
+
+## Assistant (2026-06-21T13-10-24Z)
+
+Changes for src/ailf/pipelines/drift/streamlit_app.py
+```diff
+@@ -311,7 +311,7 @@
+
+     if bedrock_pipeline_enabled:
+         run_btn = st.button(
+-            "▶️ Run Bedrock Pipeline",
++            "▶️ Run Forecast",
+             type="primary",
+             use_container_width=True,
+             help="POST /changepoint/run with current scenario + override settings.",
+@@ -726,48 +726,60 @@
+             fc_df = pd.read_csv(str(csv_path), parse_dates=["ds"])
+             fig_fc = go.Figure()
+
+-            # ── Historical training data (prepended when available) ──────────
+-            if train_df is not None and not train_df.empty:
++            # Split into train/forecast regions (new CSV has 'region' column)
++            has_region = "region" in fc_df.columns
++            _train_rows = fc_df[fc_df["region"] == "train"] if has_region else pd.DataFrame()
++            _fc_rows    = fc_df[fc_df["region"] == "forecast"] if has_region else fc_df
++
++            # ── Historical training data from CSV ───────────────────────────
++            if not _train_rows.empty and "y_actual" in _train_rows.columns:
+                 fig_fc.add_trace(go.Scatter(
+-                    x=train_df["ds"], y=train_df["y"],
++                    x=_train_rows["ds"], y=_train_rows["y_actual"],
+                     mode="lines", name="Historical (train)",
+                     line=dict(color="#1a3a5c", width=2),
+                 ))
+-                # Vertical split marker at train/test boundary
+-                split_date = train_df["ds"].max()
++                # Train/test boundary marker
++                _split_ts = _train_rows["ds"].max()
+                 fig_fc.add_vline(
+-                    x=split_date.value // 10**6,
+-                    line_width=1.5, line_dash="dash", line_color="rgba(100,100,100,0.5)",
++                    x=_split_ts.value // 10**6,
++                    line_width=1.5, line_dash="dash", line_color="rgba(100,100,100,0.45)",
+                     annotation_text="train│test",
+                     annotation_position="top right",
+                     annotation_font_size=9,
+                 )
++            elif train_df is not None and not train_df.empty:
++                # Fallback: use passed train_df
++                fig_fc.add_trace(go.Scatter(
++                    x=train_df["ds"], y=train_df["y"],
++                    mode="lines", name="Historical (train)",
++                    line=dict(color="#1a3a5c", width=2),
++                ))
+
+             # ── Test-period actual values ────────────────────────────────────
+-            if "y_actual" in fc_df.columns:
++            if "y_actual" in _fc_rows.columns:
+                 fig_fc.add_trace(go.Scatter(
+-                    x=fc_df["ds"], y=fc_df["y_actual"],
++                    x=_fc_rows["ds"], y=_fc_rows["y_actual"],
+                     mode="lines", name="Actual (holdout)",
+                     line=dict(color="#2ca02c", width=2),
+                 ))
+
+             # ── Three forecast lines ─────────────────────────────────────────
+-            if "yhat_full_history" in fc_df.columns:
++            if "yhat_full_history" in _fc_rows.columns:
+                 fig_fc.add_trace(go.Scatter(
+-                    x=fc_df["ds"], y=fc_df["yhat_full_history"],
++                    x=_fc_rows["ds"], y=_fc_rows["yhat_full_history"],
+                     mode="lines", name="Full-history Prophet",
+                     line=dict(color="#aec7e8", width=1.5, dash="dot"),
+                 ))
+-            if "yhat_naive" in fc_df.columns:
++            if "yhat_naive" in _fc_rows.columns:
+                 fig_fc.add_trace(go.Scatter(
+-                    x=fc_df["ds"], y=fc_df["yhat_naive"],
+-                    mode="lines", name="Naive forecast",
++                    x=_fc_rows["ds"], y=_fc_rows["yhat_naive"],
++                    mode="lines", name="naive forecast",
+                     line=dict(color="#e05c00", width=2, dash="dash"),
+                 ))
+-            if "yhat_agent" in fc_df.columns:
++            if "yhat_agent" in _fc_rows.columns:
+                 fig_fc.add_trace(go.Scatter(
+-                    x=fc_df["ds"], y=fc_df["yhat_agent"],
+-                    mode="lines", name="Agent-in-the-loop forecast",
++                    x=_fc_rows["ds"], y=_fc_rows["yhat_agent"],
++                    mode="lines", name="agent-in-the-loop forecast",
+                     line=dict(color="#b57bee", width=2, dash="dot"),
+                 ))
+
+
+```
+
+## Assistant (2026-06-21T13-10-24Z)
+
+Changes for sessions/ksowmya/README.md
+```diff
+@@ -1,11 +1,19 @@
+ # Agent-in-the-Loop Forecasting — ksowmya Implementation Plan
+
+-**Session:** `ksowmya` · **Phase:** 1–3 — Dataset → Visualization → Forecasting
++**Session:** `ksowmya` · **Phase:** 1–3 — Dataset → Visualization → Forecasting
++**Last updated:** 2026-06-21
+
+-> This document was auto-generated to capture the full implementation plan and architecture
+-> for the drift pipeline UI, LLM detection backends, and agent-in-the-loop forecasting.
+-> The original Phase-1 dataset generator docs follow below.
++> This document captures the full implementation plan and architecture for the drift pipeline
++> UI, LLM detection backends, and agent-in-the-loop forecasting. Original Phase-1 docs follow.
+
++### Recent Changes (latest session)
++
++- **§16**: "Run Bedrock Pipeline" button renamed to **"Run Forecast"**
++- **§Forecasting 5**: `forecast_comparison.csv` now includes both training and forecast regions
++  (`region` column = `"train"` | `"forecast"`) for continuous zoom-in/out/pan in the Streamlit chart
++- Streamlit `_render_artifacts` chart updated to plot train history from CSV (solid dark blue)
++  plus the three forecast lines (full-history, naive, agent-in-the-loop) in the forecast region
++
+ ---
+
+ ## Implementation Plan (Phases 1–3)
+
+```
+
+## User (2026-06-21T13-41-53Z)
+
+SPEC-ksowmya.md has been updated. Saves the plan to readme.md and implement.
+
+## Assistant (2026-06-21T13-42-09Z)
+
+Let me check what changed.
+
+## System - bash-output (2026-06-21T13-42-11Z)
+
+Claude executed: diff <(git show HEAD:sessions/ksowmya/SPEC-ksowmya.md 2>/dev/null) sessions/ksowmya/SPEC-ksowmya.md | head -60 - ✓ Success
+
+## Assistant (2026-06-21T13-42-16Z)
+
+New item: **§Forecasting 9** — Stream each stage of `run_scenario` live to the Streamlit UI (similar to how Detect & Forecast streams Claude's reasoning).
+
+The challenge: `run_scenario` is a synchronous blocking function (no generator/streaming). The stages emit events via `EventEmitter` → `FileEventSink` → `events.jsonl`. The way to stream to Streamlit is to:
+1. Run `run_scenario` in a background thread
+2. Tail the `events.jsonl` file as it's written, displaying each stage as it completes
+3. Or: use `st.status()` / placeholder updates with a polling loop
+
+Let me look at what events are emitted and their stages:
+
+## System (2026-06-21T13-42-20Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/core/events/stages.py)[0m
+
+## System (2026-06-21T13-42-21Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/core/events/event.py)[0m
+
+## Assistant (2026-06-21T13-42-27Z)
+
+Good. Events are written to `events.jsonl` line-by-line as each stage completes. The approach: run `run_scenario` in a Python `threading.Thread`, tail `events.jsonl` from the main Streamlit thread, display each stage as it arrives.
+
+Let me find where the Bedrock pipeline block is in streamlit_app.py:
+
+## System (2026-06-21T13-42-29Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 848-922))[0m
+
+## System (2026-06-21T13-42-38Z)
+
+[2m⏺[0m [2mread[0m [2m(src/ailf/pipelines/drift/streamlit_app.py (lines 920-979))[0m
+
+## Assistant (2026-06-21T13-42-46Z)
+
+Now I'll replace the blocking `st.spinner` call with a threaded streaming approach that tails `events.jsonl` live:
+
+## System (2026-06-21T13-42-47Z)
+
+[2m⏺[0m [2medit[0m [2m(src/ailf/pipelines/drift/streamlit_app.py)[0m
+
+## System - bash-output (2026-06-21T13-43-35Z)
+
+Claude executed: python3 -m py_compile src/ailf/pipelines/drift/streamlit_app.py && echo "OK" - ✓ Success
+
+## Assistant (2026-06-21T13-43-44Z)
+
+Now update the README:
+
+## System (2026-06-21T13-43-44Z)
+
+[2m⏺[0m [2medit[0m [2m(sessions/ksowmya/README.md)[0m
+
+## Assistant (2026-06-21T13-44-02Z)
+
+Done.
+
+**§Forecasting 9** — Live stage streaming for `run_scenario`:
+
+- `run_scenario` now runs in a `threading.Thread` instead of blocking the Streamlit main thread
+- A `Pipeline Progress` section appears with one placeholder per stage (11 total)
+- Main thread polls `events.jsonl` every 0.5 s, parses new lines, updates stage placeholders as `✅ Stage label — <brief info>`
+- Stage-specific brief info:
+  - `decision_iteration`: shows chosen tool name
+  - `validation_outcome`: shows "beat naive ✅" or "did not beat naive"
+  - `final_evaluation`: shows winner label
+  - `visual_inspection`: shows "skipped" when visual analysis is off
+- On thread completion, result is consumed; FastAPI fallback runs if in-process fails
+
+## Assistant (2026-06-21T13-44-06Z)
+
+Changes for src/ailf/pipelines/drift/streamlit_app.py
+```diff
+@@ -886,37 +886,156 @@
+     _bp_result: dict | None = None
+     _bp_error: str = ""
+
+-    # Load CSV before spinner so _bp_series_df is always in scope for chart rendering
++    # Load CSV before run so _bp_series_df is in scope for chart rendering
+     _bp_series_df = None
+     if _bp_csv_path:
+-        _bp_series_df = pd.read_csv(_bp_csv_path, parse_dates=["ds"])
++        try:
++            _bp_series_df = pd.read_csv(_bp_csv_path, parse_dates=["ds"])
++        except Exception:
++            pass
+
+-    with st.spinner(f"⚙️ Running run_scenario for `{scenario_id}` (may take 30–120 s)…"):
++    # ── §Forecasting 9: live-stream each run_scenario stage to the UI ─────
++    # Run in a background thread; tail events.jsonl line-by-line as stages complete.
++
++    _STAGE_LABELS: dict[str, str] = {
++        "config_resolved":               "⚙️  Config resolved",
++        "split_built":                   "✂️  Split built",
++        "changepoint_detection":         "🔍 Changepoint detection",
++        "baseline_full_history_prophet": "📈 Baseline: full-history Prophet",
++        "baseline_naive_workflow":       "📊 Baseline: naive workflow",
++        "diagnostics_computed":          "🩺 Diagnostics computed",
++        "visual_inspection":             "🖼️  Visual inspection (agent)",
++        "decision_iteration":            "🤖 Decision iteration",
++        "validation_outcome":            "✅ Validation outcome",
++        "final_evaluation":              "🏆 Final evaluation",
++        "run_complete":                  "🎉 Run complete",
++    }
++
++    import threading as _threading  # noqa: PLC0415
++
++    _result_holder: list = []
++    _error_holder:  list = []
++
++    def _run_thread() -> None:
+         try:
+             import types as _types  # noqa: PLC0415
+             from ailf.pipelines.changepoint.pipeline import run_scenario as _run_scenario  # noqa: PLC0415
+             from ailf.core.config.schema import ConfigOverride as _ConfigOverride  # noqa: PLC0415
+-            from ailf.pipelines.drift.pipeline import _run_with_fallback as _rwf  # noqa: PLC0415
+
+             _override_obj = _ConfigOverride.from_dict(_ov_payload)
+-            # SimpleNamespace duck-types ChangepointRunRequest for _run_with_fallback
+-            _body = _types.SimpleNamespace(
+-                split_ratio=split_ratio / 100.0,
+-                seasonal_period=365,
+-                n_changepoints_to_detect=3,
++            _result_holder.append(
++                _run_scenario(
++                    scenario_id,
++                    override=_override_obj,
++                    series_df=_bp_series_df,
++                    split_ratio=split_ratio / 100.0,
++                    emit_events=True,
++                )
+             )
+-            _bp_result = _rwf(_run_scenario, scenario_id, _override_obj, _bp_series_df, _body)
+-        except (ImportError, ModuleNotFoundError) as _bp_imp_exc:
+-            _bp_error = f"Missing dependency: {_bp_imp_exc}"
+-        except Exception as _bp_exc:
+-            _bp_error = str(_bp_exc)
++        except Exception as _exc:
++            _error_holder.append(str(_exc))
+
++    # Determine the events.jsonl path (written into reports/<run_id>/)
++    # run_id = f"{scenario_id}-{seed}" — derived from pipeline.py
++    _run_id_prefix = f"{scenario_id}-{int(seed)}"
++    _events_path = _REPORTS_DIR / _run_id_prefix / "events.jsonl"
++
++    st.subheader("🔄 Pipeline Progress")
++    _stage_container = st.container()
++    _status_placeholder = st.empty()
++
++    with _stage_container:
++        _stage_placeholders: dict[str, "st.empty"] = {}
++        for _skey, _slabel in _STAGE_LABELS.items():
++            _stage_placeholders[_skey] = st.empty()
++
++    _t = _threading.Thread(target=_run_thread, daemon=True)
++    _t.start()
++
++    _seen_seqs: set[int] = set()
++    _completed_stages: set[str] = set()
++    _POLL_INTERVAL = 0.5  # seconds between file reads
++    import time as _time  # noqa: PLC0415
++
++    while _t.is_alive() or _result_holder or _error_holder:
++        # Read new events from the JSONL file
++        if _events_path.exists():
++            try:
++                with open(_events_path) as _ef:
++                    for _line in _ef:
++                        _line = _line.strip()
++                        if not _line:
++                            continue
++                        try:
++                            _ev = json.loads(_line)
++                            _seq = _ev.get("seq", -1)
++                            if _seq in _seen_seqs:
++                                continue
++                            _seen_seqs.add(_seq)
++                            _stage = _ev.get("stage", "")
++                            _status = _ev.get("status", "")
++                            if _status == "complete" and _stage in _stage_placeholders:
++                                _completed_stages.add(_stage)
++                                _label = _STAGE_LABELS.get(_stage, _stage)
++                                _ph = _stage_placeholders[_stage]
++                                # Extract brief payload info
++                                _payload = _ev.get("payload") or {}
++                                _brief = ""
++                                if _stage == "decision_iteration":
++                                    _prop = _payload.get("proposal") or {}
++                                    _brief = f" — tool: `{_prop.get('tool','?')}`"
++                                elif _stage == "validation_outcome":
++                                    _beat = _payload.get("beat_naive")
++                                    _brief = f" — {'beat naive ✅' if _beat else 'did not beat naive'}"
++                                elif _stage == "final_evaluation":
++                                    _winner = _payload.get("winner") or (_payload.get("final_candidate") or {}).get("label", "")
++                                    _brief = f" — winner: `{_winner}`"
++                                _ph.markdown(f"✅ {_label}{_brief}")
++                        except Exception:
++                            continue
++            except Exception:
++                pass
++
++        if not _t.is_alive():
++            break
++        _time.sleep(_POLL_INTERVAL)
++
++    _t.join(timeout=5)
++
++    # Mark any un-seen stages as skipped
++    for _skey, _ph in _stage_placeholders.items():
++        if _skey not in _completed_stages:
++            _slabel = _STAGE_LABELS[_skey]
++            if _skey == "visual_inspection" and not visual_analysis_enabled:
++                _ph.markdown(f"⏭️ {_slabel} (skipped — visual analysis off)")
++            else:
++                _ph.empty()  # hide stages that didn't run
++
++    if _error_holder:
++        _bp_error = _error_holder[0]
++    elif _result_holder:
++        _bp_result = _result_holder[0]
++    else:
++        _bp_error = "run_scenario returned no result"
++
+     if _bp_result is None:
+-        st.error(f"❌ Pipeline failed: {_bp_error}")
+-        st.stop()
++        # Try FastAPI fallback
++        _status_placeholder.warning(f"⚠️ Direct call failed: {_bp_error} — trying FastAPI…")
++        _bp_api_resp = _api_post("/changepoint/run", {
++            "scenario_id": scenario_id,
++            "override": _ov_payload,
++            "csv_path": _bp_csv_path,
++            "split_ratio": split_ratio / 100.0,
++        })
++        if _bp_api_resp and _bp_api_resp.get("status") == "ok":
++            _bp_result = _bp_api_resp
++            _status_placeholder.success("✅ Completed via FastAPI fallback.")
++        else:
++            _err = (_bp_api_resp or {}).get("error", "API unreachable") if _bp_api_resp else "API unreachable"
++            _status_placeholder.error(f"❌ Both paths failed. Error: {_err}")
++            st.stop()
+     else:
+-        _bp_backend = _bp_result.get("_backend", "Bedrock/Anthropic")
+-        st.success(f"✅ run_scenario complete via {_bp_backend} — run ID: `{_bp_result.get('run_id', '—')}`")
++        _status_placeholder.success(f"✅ run_scenario complete — run ID: `{_run_id_prefix}`")
+
+     # ── Display results in same layout as Detect & Forecast ──────────────
+     _bp_fe = _bp_result.get("final_eval") or {}
+
+```
+
+## Assistant (2026-06-21T13-44-06Z)
+
+Changes for sessions/ksowmya/README.md
+```diff
+@@ -13,6 +13,14 @@
+   (`region` column = `"train"` | `"forecast"`) for continuous zoom-in/out/pan in the Streamlit chart
+ - Streamlit `_render_artifacts` chart updated to plot train history from CSV (solid dark blue)
+   plus the three forecast lines (full-history, naive, agent-in-the-loop) in the forecast region
++- **§Forecasting 9**: Live-streamed stage progress for `run_scenario` in the Streamlit UI
++  - `run_scenario` runs in a background `threading.Thread`
++  - Streamlit tails `events.jsonl` line-by-line (0.5 s poll) as each stage completes
++  - Each of the 11 pipeline stages shows ✅ with a brief payload summary when complete:
++    `config_resolved` → `split_built` → `changepoint_detection` → `baseline_*` →
++    `diagnostics_computed` → `visual_inspection` → `decision_iteration` × N →
++    `validation_outcome` → `final_evaluation` → `run_complete`
++  - Falls back to FastAPI `/changepoint/run` if in-process thread fails
+
+ ---
+
+
+```
+

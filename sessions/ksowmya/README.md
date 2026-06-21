@@ -1,3 +1,110 @@
+# Agent-in-the-Loop Forecasting — ksowmya Implementation Plan
+
+**Session:** `ksowmya` · **Phase:** 1–3 — Dataset → Visualization → Forecasting  
+**Last updated:** 2026-06-21
+
+> This document captures the full implementation plan and architecture for the drift pipeline
+> UI, LLM detection backends, and agent-in-the-loop forecasting. Original Phase-1 docs follow.
+
+### Recent Changes (latest session)
+
+- **§16**: "Run Bedrock Pipeline" button renamed to **"Run Forecast"**
+- **§Forecasting 5**: `forecast_comparison.csv` now includes both training and forecast regions
+  (`region` column = `"train"` | `"forecast"`) for continuous zoom-in/out/pan in the Streamlit chart
+- Streamlit `_render_artifacts` chart updated to plot train history from CSV (solid dark blue)
+  plus the three forecast lines (full-history, naive, agent-in-the-loop) in the forecast region
+- **§Forecasting 9**: Live-streamed stage progress for `run_scenario` in the Streamlit UI
+  - `run_scenario` runs in a background `threading.Thread`
+  - Streamlit tails `events.jsonl` line-by-line (0.5 s poll) as each stage completes
+  - Each of the 11 pipeline stages shows ✅ with a brief payload summary when complete:
+    `config_resolved` → `split_built` → `changepoint_detection` → `baseline_*` →
+    `diagnostics_computed` → `visual_inspection` → `decision_iteration` × N →
+    `validation_outcome` → `final_evaluation` → `run_complete`
+  - Falls back to FastAPI `/changepoint/run` if in-process thread fails
+
+---
+
+## Implementation Plan (Phases 1–3)
+
+### Running the Full Stack
+
+```bash
+# Terminal 1 — FastAPI server (drift generation + changepoint endpoints)
+PYTHONPATH=src uvicorn ailf.pipelines.drift.pipeline:app --reload --port 8000
+
+# Terminal 2 — Streamlit UI
+PYTHONPATH=src streamlit run src/ailf/pipelines/drift/streamlit_app.py
+
+# (Optional) Pre-generate Qwen changepoint analysis for pocs/data/ series
+python3 pocs/qwen_changepoints.py
+```
+
+Required `.env` keys:
+```
+ANTHROPIC_API_KEY=          # Claude Sonnet/Opus detection
+AWS_ACCESS_KEY_ID=          # Bedrock pipeline
+AWS_SECRET_ACCESS_KEY=
+AWS_REGION=us-west-2
+VISUAL_MODEL_ID=us.anthropic.claude-sonnet-4-6
+REACT_MODEL_ID=us.anthropic.claude-sonnet-4-6
+LANGSMITH_API_KEY=          # LangSmith tracing (optional)
+```
+
+### Architecture
+
+```
+Streamlit UI
+ ├─ Data Scenario (5 registered scenarios)
+ ├─ Model Settings (visual/decision model IDs, aws_region)
+ ├─ Diagnostic Toggles (13) + Tool Toggles (6)
+ ├─ [Bedrock toggle ON] ──▶ run_scenario() in-process
+ │                            ├─ LangGraph ReAct loop (Bedrock/Claude)
+ │                            ├─ writes: metrics.json, agent_trace.json,
+ │                            │          forecast_comparison.csv, forecast_comparison.png
+ │                            └─ returns final_eval {agent, naive, full_history}
+ └─ [Bedrock toggle OFF] ──▶ detect_streaming() → Claude/Qwen/Ollama
+                              └─ fallback.py run_fallback_pipeline()
+                                  ├─ baselines (full-history + naive windowed)
+                                  ├─ LLM tool selection (recent_window/step_regressor)
+                                  ├─ validation scoring
+                                  └─ returns (forecast_df, label, metrics_report)
+
+Forecast Chart (Plotly):
+ 🔵 Historical (train)       — solid dark blue
+ 🟠 naive forecast           — orange dashed  (plain Prophet)
+ 🟣 agent-in-the-loop        — purple dotted  (LLM-guided Prophet)
+ 🟢 Actual (holdout)         — solid green
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/ailf/pipelines/drift/streamlit_app.py` | Streamlit UI |
+| `src/ailf/pipelines/drift/pipeline.py` | FastAPI + `/changepoint/*` endpoints |
+| `src/ailf/pipelines/drift/llm_reason.py` | Claude / Bedrock / Qwen detection |
+| `src/ailf/pipelines/drift/fallback.py` | Non-Bedrock run_scenario mirror |
+| `src/ailf/pipelines/changepoint/pipeline.py` | `run_scenario()` (Bedrock + LangGraph) |
+| `src/ailf/pipelines/drift/dataset_generator.py` | `DriftGenerator` (7 drift types) |
+| `pocs/qwen_changepoints.py` | Changepoint detection + visualization |
+| `pocs/data/` | Pre-generated 5-year series (sec9–sec12) |
+| `pocs/qwen/` | Qwen-annotated changepoint plots + JSON/CSV |
+
+### FastAPI Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/docs` | Swagger UI |
+| PATCH | `/drift/config/trend` | Update trend at runtime |
+| POST | `/drift/generate/{type}` | Generate a drift dataset |
+| POST | `/drift/generate/combined` | Stack multiple drifts |
+| POST | `/forecast/analyze` | Detect + Prophet forecast |
+| POST | `/changepoint/run` | Run `run_scenario` (Bedrock) |
+| GET  | `/changepoint/artifacts/{id}` | Load pre-computed artifacts |
+| GET  | `/changepoint/scenarios` | List registered scenario IDs |
+
+---
+
 # Drift Synthetic Dataset Generator
 
 **Session:** `ksowmya` · **Phase:** 1 — Dataset Generation

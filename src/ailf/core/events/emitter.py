@@ -29,8 +29,8 @@ class NullEmitter:
         pass
 
     @contextmanager
-    def stage(self, *args: Any, **kwargs: Any) -> Iterator[None]:
-        yield
+    def stage(self, *args: Any, **kwargs: Any) -> Iterator[dict]:
+        yield {}
 
 
 class EventEmitter:

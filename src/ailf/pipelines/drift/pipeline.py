@@ -28,6 +28,66 @@ from pydantic import BaseModel, field_validator
 from ailf.pipelines.drift.dataset_generator import DriftGenerator, _VALID_TRENDS
 
 # ---------------------------------------------------------------------------
+# Inline Ollama client (duck-types ChatBedrockConverse for ModelWrapper)
+# Kept here so llm.py stays at main-branch without provider-specific extras.
+# ---------------------------------------------------------------------------
+
+class _OllamaStructuredProxy:
+    """Returned by _OllamaClient.with_structured_output(); has .invoke(messages)."""
+
+    def __init__(self, model_id: str, schema, max_tokens: int, ollama_url: str) -> None:
+        self._model_id = model_id
+        self._schema = schema
+        self._max_tokens = max_tokens
+        self._ollama_url = ollama_url
+
+    def invoke(self, messages):
+        import json, urllib.request  # noqa: PLC0415, E401
+        from langchain_core.messages import HumanMessage  # noqa: PLC0415
+
+        parts = []
+        for msg in messages:
+            if isinstance(msg, HumanMessage):
+                c = msg.content
+                if isinstance(c, str):
+                    parts.append(c)
+                elif isinstance(c, list):
+                    parts.extend(p["text"] for p in c if p.get("type") == "text")
+
+        payload = json.dumps({
+            "model": self._model_id,
+            "messages": [{"role": "user", "content": "\n".join(parts)}],
+            "stream": False,
+            "format": "json",
+            "options": {"temperature": 0.1, "num_predict": self._max_tokens},
+        }).encode()
+        req = urllib.request.Request(
+            f"{self._ollama_url}/api/chat",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=120) as r:
+            obj = json.loads(r.read().decode())
+        text = obj.get("message", {}).get("content", "")
+        start, end = text.find("{"), text.rfind("}")
+        data = json.loads(text[start:end + 1]) if start != -1 and end != -1 else {}
+        return self._schema(**data)
+
+
+class _OllamaClient:
+    """Minimal Ollama chat client duck-typing ChatBedrockConverse for ModelWrapper."""
+
+    def __init__(self, model_id: str, *, max_tokens: int = 2400, ollama_url: str = "http://localhost:11434") -> None:
+        self._model_id = model_id
+        self._max_tokens = max_tokens
+        self._ollama_url = ollama_url
+
+    def with_structured_output(self, schema):
+        return _OllamaStructuredProxy(self._model_id, schema, self._max_tokens, self._ollama_url)
+
+
+# ---------------------------------------------------------------------------
 # Bootstrap
 # ---------------------------------------------------------------------------
 
@@ -777,7 +837,7 @@ async def forecast_analyze(
     - ``detection_source``  — "qwen" | "cusum"
     - ``detection_model``   — model name used
     """
-    from ailf.pipelines.drift.qwen_detect import detect as qwen_detect
+    from ailf.pipelines.drift.llm_reason import detect as qwen_detect
 
     # Parse CSV
     df = await _parse_csv_upload(file)
@@ -814,6 +874,314 @@ async def forecast_analyze(
         "detection_source": detection.source,
         "detection_model":  detection.model,
     }
+
+
+# ---------------------------------------------------------------------------
+# Changepoint pipeline endpoints — §12: call src/ailf/core/ from the UI
+#
+# All changepoint imports are LAZY (inside handler bodies) so that a missing
+# langchain_aws or absent AWS creds does NOT break the drift API at load time.
+# ---------------------------------------------------------------------------
+
+_REPORTS_ROOT = pathlib.Path(__file__).parents[4] / "reports" / "changepoint"
+
+_VALID_SCENARIOS = frozenset({
+    "level_shift_loses_seasonality",
+    "gradual_drift_loses_seasonality",
+    "temporary_event_not_regime_change",
+    "many_temporary_events_long_history",
+    "prophet_prior_tuning_recurring_event",
+})
+
+
+class ChangepointOverride(BaseModel):
+    """Partial override for a changepoint pipeline run.
+
+    All fields optional; unset fields inherit the config.yaml defaults.
+    Do NOT include AWS credentials or API keys here — use .env.
+    """
+    models: dict[str, str] | None = None          # visual_model_id, decision_model_id, aws_region
+    visual_analysis_enabled: bool | None = None
+    diagnostics: dict[str, bool] | None = None    # per-diagnostic enable/disable
+    agent_tools: dict[str, bool] | None = None    # per-tool enable/disable
+    seed: int | None = None
+
+
+class ChangepointRunRequest(BaseModel):
+    scenario_id: str
+    override: ChangepointOverride = ChangepointOverride()
+    # §14i: optional CSV path from pocs/data/ for non-registered scenarios
+    csv_path: str | None = None
+    split_ratio: float = 0.8           # §14ii: from Split Dataset Ratio control
+    seasonal_period: int = 365         # default for 5-year daily series
+    n_changepoints_to_detect: int = 3  # default changepoint count
+
+
+class ChangepointRunResponse(BaseModel):
+    status: str                        # "ok" | "error" | "unavailable"
+    run_id: str | None = None
+    metrics: dict[str, Any] | None = None
+    final_eval: dict[str, Any] | None = None
+    error: str | None = None
+    cli_command: str | None = None     # always returned so UI can fall back
+
+
+def _build_cli_command(scenario_id: str, override: ChangepointOverride) -> str:
+    """Return the equivalent uv run CLI command string."""
+    import json as _json
+    ov: dict[str, Any] = {}
+    if override.models:
+        ov["models"] = override.models
+    if override.visual_analysis_enabled is not None:
+        ov["visual_analysis_enabled"] = override.visual_analysis_enabled
+    if override.diagnostics:
+        ov["diagnostics"] = override.diagnostics
+    if override.agent_tools:
+        ov["agent_tools"] = override.agent_tools
+    if override.seed is not None:
+        ov["seed"] = override.seed
+    override_str = _json.dumps(ov) if ov else "{}"
+    return (
+        f"uv run python -m ailf.pipelines.changepoint.pipeline "
+        f"--scenario {scenario_id} "
+        f"--override '{override_str}'"
+    )
+
+
+@app.post(
+    "/changepoint/run",
+    response_model=ChangepointRunResponse,
+    summary="Run the changepoint agent pipeline for a scenario",
+    tags=["changepoint"],
+)
+def changepoint_run(body: ChangepointRunRequest) -> ChangepointRunResponse:
+    """Invoke the full agent-in-the-loop changepoint pipeline for one scenario.
+
+    Requires AWS Bedrock credentials in ``.env`` (``AWS_ACCESS_KEY_ID``,
+    ``AWS_SECRET_ACCESS_KEY``) and ``langchain_aws`` installed.  When either is
+    absent the endpoint returns ``status="unavailable"`` **and** the equivalent
+    CLI command so the caller can run it manually.
+
+    The completed run writes artifacts under ``reports/<run_id>/``:
+    ``metrics.json``, ``agent_trace.json``, ``forecast_comparison.png``, etc.
+    Retrieve them via **GET /changepoint/artifacts/{scenario_id}**.
+    """
+    # Widen gate: registered scenarios use metadata; pocs/data CSVs use csv_path (§14i)
+    if body.scenario_id not in _VALID_SCENARIOS and not body.csv_path:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Unknown scenario '{body.scenario_id}' and no csv_path provided. "
+                f"Registered scenarios: {sorted(_VALID_SCENARIOS)}. "
+                "Or set csv_path to a pocs/data/*_train.csv path."
+            ),
+        )
+
+    cli = _build_cli_command(body.scenario_id, body.override)
+
+    try:
+        # Lazy import — must NOT be at module scope
+        from ailf.pipelines.changepoint.pipeline import run_scenario  # noqa: PLC0415
+
+        ov_dict: dict[str, Any] = {}
+        if body.override.models:
+            ov_dict["models"] = body.override.models
+        if body.override.visual_analysis_enabled is not None:
+            ov_dict["visual_analysis_enabled"] = body.override.visual_analysis_enabled
+        if body.override.diagnostics:
+            ov_dict["diagnostics"] = body.override.diagnostics
+        if body.override.agent_tools:
+            ov_dict["agent_tools"] = body.override.agent_tools
+        if body.override.seed is not None:
+            ov_dict["seed"] = body.override.seed
+
+        from ailf.core.config.schema import ConfigOverride  # noqa: PLC0415
+        override_obj = ConfigOverride.from_dict(ov_dict) if ov_dict else None
+
+        # §14i: load DataFrame from csv_path for non-registered scenarios
+        series_df = None
+        if body.csv_path:
+            import pandas as _pd  # noqa: PLC0415
+            csv_file = pathlib.Path(body.csv_path)
+            if not csv_file.exists():
+                return ChangepointRunResponse(
+                    status="error",
+                    error=f"csv_path not found: {body.csv_path}",
+                    cli_command=cli,
+                )
+            series_df = _pd.read_csv(csv_file, parse_dates=["ds"])
+
+        result = _run_with_fallback(
+            run_scenario, body.scenario_id, override_obj, series_df, body
+        )
+
+        return ChangepointRunResponse(
+            status="ok",
+            run_id=result.get("run_id"),
+            metrics=result.get("metrics"),
+            final_eval=result.get("final_eval"),
+            cli_command=cli,
+        )
+
+    except Exception as exc:
+        return ChangepointRunResponse(
+            status="error",
+            error=str(exc),
+            cli_command=cli,
+        )
+
+
+def _run_with_fallback(run_scenario, scenario_id: str, override_obj, series_df, body) -> dict:
+    """Try run_scenario with Bedrock; if unavailable, auto-retry with Qwen via Ollama.
+
+    Bedrock is tried first. On ImportError (no langchain_aws) or any credential /
+    model-unavailable error, the pipeline is re-run with ``OllamaStructuredClient``
+    so the button produces real output even without AWS creds.
+    """
+    from ailf.core.config.schema import ConfigOverride  # noqa: PLC0415
+
+    bedrock_exc: Exception | None = None
+    try:
+        return run_scenario(
+            scenario_id,
+            override=override_obj,
+            emit_events=True,
+            series_df=series_df,
+            split_ratio=body.split_ratio,
+            seasonal_period=body.seasonal_period,
+            n_changepoints_to_detect=body.n_changepoints_to_detect,
+        )
+    except Exception as exc:
+        bedrock_exc = exc
+
+    # ── Bedrock failed — try Qwen (Ollama) fallback ──────────────────────
+    try:
+        from ailf.core.models.llm import ModelWrapper  # noqa: PLC0415
+
+        _ollama_model = "qwen3.5:4b"
+        _ollama_url = "http://localhost:11434"
+        _client = _OllamaClient(_ollama_model, max_tokens=2400, ollama_url=_ollama_url)
+        visual_model = ModelWrapper(_client, _ollama_model)
+        decision_model = ModelWrapper(_client, _ollama_model)
+
+        # Build a Qwen-compatible override: disable visual (text-only) but forward toggles
+        ov_base = override_obj.to_dict() if override_obj else {}
+        qwen_override = ConfigOverride.from_dict({
+            **ov_base,
+            "visual_analysis_enabled": False,
+        })
+
+        result = run_scenario(
+            scenario_id,
+            override=qwen_override,
+            model_wrappers=(visual_model, decision_model),
+            emit_events=True,
+            series_df=series_df,
+            split_ratio=body.split_ratio,
+            seasonal_period=body.seasonal_period,
+            n_changepoints_to_detect=body.n_changepoints_to_detect,
+        )
+        # Tag the result so the UI knows which backend ran
+        result = {**result, "_backend": f"ollama:{_ollama_model} (Bedrock unavailable: {bedrock_exc})"}
+        return result
+    except Exception as qwen_exc:
+        raise RuntimeError(
+            f"Bedrock failed: {bedrock_exc}. "
+            f"Qwen fallback also failed: {qwen_exc}. "
+            "Check Ollama is running (ollama serve) and qwen3.5:4b is available."
+        ) from qwen_exc
+
+
+class ArtifactSummary(BaseModel):
+    run_id: str
+    scenario_id: str
+    has_metrics: bool
+    has_trace: bool
+    has_forecast_png: bool
+    has_context_png: bool
+    has_forecast_csv: bool = False   # §Forecasting 4
+    metrics: dict[str, Any] | None = None
+    final_eval: dict[str, Any] | None = None
+    agent_iterations: list[dict[str, Any]] | None = None
+
+
+@app.get(
+    "/changepoint/artifacts/{scenario_id}",
+    response_model=list[ArtifactSummary],
+    summary="List pre-computed changepoint run artifacts for a scenario",
+    tags=["changepoint"],
+)
+def changepoint_artifacts(scenario_id: str) -> list[ArtifactSummary]:
+    """Return a summary of any pre-computed run artifacts under ``reports/``.
+
+    Reads ``metrics.json`` and ``agent_trace.json`` from every matching run
+    directory.  Images are referenced by name only (no binary payload).
+
+    Returns an empty list when no runs exist — run the pipeline first via
+    **POST /changepoint/run** or the CLI command it returns.
+    """
+    import json as _json
+
+    if scenario_id not in _VALID_SCENARIOS and scenario_id != "*":
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unknown scenario '{scenario_id}'. "
+                   f"Valid values: {sorted(_VALID_SCENARIOS)}",
+        )
+
+    results: list[ArtifactSummary] = []
+    if not _REPORTS_ROOT.exists():
+        return results
+
+    pattern = f"{scenario_id}*" if scenario_id != "*" else "*"
+    for run_dir in sorted(_REPORTS_ROOT.glob(pattern)):
+        if not run_dir.is_dir():
+            continue
+        metrics: dict[str, Any] | None = None
+        final_eval: dict[str, Any] | None = None
+        agent_iters: list[dict[str, Any]] | None = None
+
+        mpath = run_dir / "metrics.json"
+        if mpath.exists():
+            try:
+                metrics = _json.loads(mpath.read_text())
+                final_eval = metrics.get("final_eval")
+            except Exception:
+                pass
+
+        tpath = run_dir / "agent_trace.json"
+        if tpath.exists():
+            try:
+                trace = _json.loads(tpath.read_text())
+                agent_iters = trace.get("iterations", [])
+            except Exception:
+                pass
+
+        results.append(ArtifactSummary(
+            run_id=run_dir.name,
+            scenario_id=scenario_id,
+            has_metrics=mpath.exists(),
+            has_trace=tpath.exists(),
+            has_forecast_png=(run_dir / "forecast_comparison.png").exists(),
+            has_context_png=(run_dir / "agent_context.png").exists(),
+            has_forecast_csv=(run_dir / "forecast_comparison.csv").exists(),
+            metrics=metrics,
+            final_eval=final_eval,
+            agent_iterations=agent_iters,
+        ))
+
+    return results
+
+
+@app.get(
+    "/changepoint/scenarios",
+    response_model=list[str],
+    summary="List valid changepoint scenario IDs",
+    tags=["changepoint"],
+)
+def changepoint_scenarios() -> list[str]:
+    """Return the list of committed changepoint scenario IDs."""
+    return sorted(_VALID_SCENARIOS)
 
 
 # ---------------------------------------------------------------------------
