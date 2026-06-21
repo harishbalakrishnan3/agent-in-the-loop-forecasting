@@ -166,6 +166,7 @@ Events follow this envelope:
 6. Perform end to end using run_Scenario with Claude sonnet 4.6 to verify if the flow works end to end rendering the forecasted output in UI, reasoning and comparison from run_scenario to the UI.
 7. Remove the entries under Data Scenario where datasets under pocs/data were displayed. Remove the warning "No CSV found for...".
 8. Make the toggle for 'Bedrock Changepoint Pipeline' to be on by default and remove the warning underneath.
+9. Read the existing UI of Detect & Forecast and make similar agent's reasoning live streamed to the UI from each stage of the run_Scenario pipeline.
 
 ## Documentation
 Create a mermaid diagram in sessions/ksowmya/architecture-phase1.md to visualize the architecture of the system and the flow of data. The diagram should include the time series generator, the API endpoint, and how they interact with each other. Use appropriate shapes and labels to make the diagram clear and easy to understand.

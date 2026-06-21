@@ -13,6 +13,14 @@
   (`region` column = `"train"` | `"forecast"`) for continuous zoom-in/out/pan in the Streamlit chart
 - Streamlit `_render_artifacts` chart updated to plot train history from CSV (solid dark blue)
   plus the three forecast lines (full-history, naive, agent-in-the-loop) in the forecast region
+- **§Forecasting 9**: Live-streamed stage progress for `run_scenario` in the Streamlit UI
+  - `run_scenario` runs in a background `threading.Thread`
+  - Streamlit tails `events.jsonl` line-by-line (0.5 s poll) as each stage completes
+  - Each of the 11 pipeline stages shows ✅ with a brief payload summary when complete:
+    `config_resolved` → `split_built` → `changepoint_detection` → `baseline_*` →
+    `diagnostics_computed` → `visual_inspection` → `decision_iteration` × N →
+    `validation_outcome` → `final_evaluation` → `run_complete`
+  - Falls back to FastAPI `/changepoint/run` if in-process thread fails
 
 ---
 
