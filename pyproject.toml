@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "darts",
-    "prophet",
+    "prophet==1.3.0",
     "langgraph",
     "langchain",
     "anthropic",
@@ -42,8 +42,21 @@ packages = ["src/ailf"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+# "." makes the repo-root `pocs/` importable so the changepoint parity tests can compare the
+# promoted core path against the un-promoted POC oracle (SC-001).
+pythonpath = ["src", "."]
+# Avoid module-name collisions between same-named test files across pipelines
+# (e.g. tests/pipelines/{anomaly,drift}/test_datasets.py).
+addopts = ["--import-mode=importlib"]
+markers = [
+    "golden: opt-in agent-quality eval requiring live Bedrock credentials (never gates the deterministic suite)",
+]
 
 [tool.ruff]
 src = ["src", "tests"]
 line-length = 100
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
