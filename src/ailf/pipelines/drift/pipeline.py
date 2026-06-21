@@ -823,7 +823,7 @@ async def forecast_analyze(
 # langchain_aws or absent AWS creds does NOT break the drift API at load time.
 # ---------------------------------------------------------------------------
 
-_REPORTS_ROOT = pathlib.Path(__file__).parents[4] / "reports"
+_REPORTS_ROOT = pathlib.Path(__file__).parents[4] / "reports" / "changepoint"
 
 _VALID_SCENARIOS = frozenset({
     "level_shift_loses_seasonality",
@@ -831,6 +831,9 @@ _VALID_SCENARIOS = frozenset({
     "temporary_event_not_regime_change",
     "many_temporary_events_long_history",
     "prophet_prior_tuning_recurring_event",
+    "mixed_magnitudes_with_seasonality",
+    "volatile_holiday_contamination",
+    "dual_spike_fit_window",
 })
 
 
