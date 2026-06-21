@@ -1,0 +1,21 @@
+{
+  "seed": 42,
+  "dataset_config_hash": "7810f186",
+  "naive_val_mae": 5.7711,
+  "agent_val_mae": Infinity,
+  "naive_test_mae": 10.7133,
+  "agent_test_mae": 7.2228,
+  "pct_improvement_val": -Infinity,
+  "pct_improvement_test": 32.58,
+  "agent_beats_naive_on_val": false,
+  "accepted_config": {
+    "changepoint_prior_scale": 0.05,
+    "seasonality_prior_scale": 10.0,
+    "seasonality_mode": "multiplicative",
+    "changepoint_range": 0.8,
+    "n_changepoints": 25
+  },
+  "n_iterations": 1,
+  "n_accepted": 0,
+  "final_case": "best_proposal_no_beat"
+}
