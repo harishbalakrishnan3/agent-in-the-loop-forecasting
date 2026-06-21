@@ -235,6 +235,50 @@
         ],
         "expected_intervention_family": "full_history_prophet_tuned_holidays"
       }
+    },
+    {
+      "scenario_id": "abrupt_level_shift_with_multiplicative_seasonality",
+      "title": "Abrupt level shifts with concurrent transition to multiplicative seasonality",
+      "csv_path": "src/ailf/pipelines/changepoint/data/csv/abrupt_level_shift_with_multiplicative_seasonality.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "date_range": {
+        "start": "2019-01-01",
+        "end": "2021-09-26"
+      },
+      "train_end": 880,
+      "validation_horizon": 120,
+      "test_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "split_dates": {
+        "train_start": "2019-01-01",
+        "train_end_inclusive": "2021-05-29",
+        "test_start": "2021-05-30",
+        "test_end_inclusive": "2021-09-26"
+      },
+      "csv_sha256": "8f59113907ab70137af52f7afbe17c1b46ba0a16ed34c45bb5b612ae50311694",
+      "agent_exposure_policy": {
+        "agent_may_see_columns": [
+          "ds",
+          "y"
+        ],
+        "agent_may_see_rows": "0:880",
+        "agent_must_not_see_audit_only": true,
+        "agent_must_not_see_test_targets": true
+      },
+      "audit_only": {
+        "note": "Two structural level shifts at rows 600 and 750. The first shift (+80 units) coincides with a transition from additive to multiplicative seasonality \u2014 the seasonal amplitude scales with the new level. Naive windowing to the latest changepoint discards the long annual seasonal history needed for accurate forecasting. The step regressor preserves full history while correctly encoding both regime changes.",
+        "true_injected_boundaries": [
+          600,
+          750
+        ],
+        "expected_intervention_family": "full_history_step_regressor"
+      }
     }
   ]
 }

@@ -127,6 +127,10 @@ def _invoke_ramp(ctx: ToolContext, params: dict) -> ToolResult:
         intervals = [(d["start"], d["end"])]
     else:
         intervals = [(d["start"], d["end"]) for d in drifts]
+    # Clamp interval bounds to valid train indices (diagnostics are computed on full training
+    # frame but the tool receives fit_df which excludes the val window — end may exceed it).
+    max_idx = len(train) - 1
+    intervals = [(max(0, min(s, max_idx)), max(0, min(e, max_idx))) for s, e in intervals]
     regressors: dict[str, tuple[np.ndarray, np.ndarray]] = {}
     for i, (s, e) in enumerate(intervals):
         s_ds, e_ds = _ds_at(train, s), _ds_at(train, e)
