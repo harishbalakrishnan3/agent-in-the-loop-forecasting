@@ -71,7 +71,7 @@ visual_model_id (move 'Detect with' dropdown section to here in Controls)
 decision_model_id
 aws_region
 These are non-secret operational settings. Do not collect AWS credentials or API keys in the UI.
-
+Note: if it isn't Bedrock option: then visual_model_id, decision_model_id and aws_region should be greyed out
 Agent Settings
 
 Expose:
@@ -118,13 +118,11 @@ Add help icon for all the Tool Toggles and Diagnostic toggles with description u
 12. Build fastapi endpoints to call the src/ailf/core/ for the UI to make calls for each forecast. The below command should be invoked from the Streamlit UI to api and capture the results and show instead of the 'Changepoint Pipeline — Run & Artifacts'.
 uv run python -m ailf.pipelines.changepoint.pipeline --scenario prophet_prior_tuning_recurring_event --override '{"models": {"visual_model_id": "us.anthropic.claude-opus-4-8", "decision_model_id": "us.anthropic.claude-sonnet-4-6", "aws_region": "us-west-2"}, "visual_analysis_enabled": true, "seed": 1729, "diagnostics": {"detected_changepoints": true, "latest_changepoint": true, "primary_changepoint": true, "post_changepoint_history_len": true, "post_changepoint_shorter_than_season": true, "seasonal_period": true, "segment_stats": true, "candidate_event_blocks": true, "recurring_event_summary": true, "local_boundary_jumps": true, "candidate_drift_intervals": true, "transient_event_score": true, "permanent_shift_magnitude": true}, "agent_tools": {"recent_window": true, "full_history_step_regressor": true, "full_history_ramp_regressor": true, "full_history_clean_event": true, "full_history_prophet_tuned_holidays": true, "full_history_default": true}}'
 
-13. Move the 'Run Changepoint Pipeline' under Controls making it a toggle button before 'Detect and Forecast' button. Rename it to Bedrock Changepoint Pipeline. When this toggle is on, then use the below api contract for the integration with Streamlit UI for visualization.
-
-uv run python -m ailf.pipelines.changepoint.pipeline --scenario <scenario_id> --override '<json>'
-
+13. Move the 'Run Changepoint Pipeline' under Controls making it a toggle button before 'Detect and Forecast' button. Rename it to Bedrock Changepoint Pipeline. 
+14. Add yet another forecast output in the Forecast section from calling 'run_scenario' in src/core/pipelines/changepoint/pipeline in purple and name it as 'agent-in-the-loop forecast' and the old orange dotted line as 'naive forecast'.
+'run_scenario' should have a fallback: if Model Settings in Controls isn't Bedrock, then build fallback methods to use claude anthropic api client or qwen local client to get the required input before calling prophet. 
 
 A completed run writes:
-
 
 effective_config.json
 events.jsonl
@@ -134,6 +132,14 @@ report.md
 forecast_comparison.png
 agent_context.png   # only when visual_analysis_enabled=true
 event_payloads/     # sidecar JSON for large event payloads
+
+Model IDs starting with us. or anthropic. → Bedrock (ChatBedrockConverse, needs AWS creds)
+Everything else (e.g. claude-opus-4-5, claude-sonnet-4-5) → Direct Anthropic SDK (needs ANTHROPIC_API_KEY)
+build_visual_model / build_decision_model detect the prefix and return the right wrapper
+ModelWrapper interface is unchanged — same two methods.
+When 'Bedrock Changepoint Pipeline' toggle is on, then use the below api contract for the visualization with Streamlit UI for visualization.
+
+uv run python -m ailf.pipelines.changepoint.pipeline --scenario <scenario_id> --override '<json>'
 
 
 Events follow this envelope:
@@ -150,7 +156,7 @@ Events follow this envelope:
   "error": null
 }
 
-14. Graceful fallback if any of the steps is interrupted and exception is thrown.
+15. Graceful fallback if any of the steps is interrupted and exception is thrown.
 
 ## Forecasting
 1. Write a tool to use Qwen-3.5/langsmith/claude with reasoning to find the changepoints from the generated graphs and save them in json or csv format. To visualize the changepoints found by Qwen, mark them and visualize in graphs under qwen folder.
