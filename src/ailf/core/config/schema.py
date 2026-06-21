@@ -17,6 +17,10 @@ class ModelConfig:
     visual_model_id: str
     decision_model_id: str
     aws_region: str
+    # Provider is resolved at runtime from env; intentionally NOT serialized (never written to
+    # effective_config.json — it would expose the provider selection as a config surface, and more
+    # importantly `from_dict` round-trips must not require it).
+    llm_provider: str = "bedrock"  # "bedrock" | "anthropic"
 
     def to_dict(self) -> dict[str, Any]:
         return {

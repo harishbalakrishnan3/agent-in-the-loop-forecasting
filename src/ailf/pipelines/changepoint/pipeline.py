@@ -161,10 +161,12 @@ def run_scenario(
         visual_model, decision_model = model_wrappers
     else:
         visual_model = ModelWrapper(
-            build_visual_model(cfg.models.visual_model_id, cfg.models.aws_region), cfg.models.visual_model_id
+            build_visual_model(cfg.models.visual_model_id, cfg.models.aws_region, llm_provider=cfg.models.llm_provider),
+            cfg.models.visual_model_id,
         )
         decision_model = ModelWrapper(
-            build_decision_model(cfg.models.decision_model_id, cfg.models.aws_region), cfg.models.decision_model_id
+            build_decision_model(cfg.models.decision_model_id, cfg.models.aws_region, llm_provider=cfg.models.llm_provider),
+            cfg.models.decision_model_id,
         )
 
     ctx = RunContext(
