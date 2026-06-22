@@ -47,17 +47,21 @@ def _to_anthropic_model_id(bedrock_id: str) -> str:
 
 
 def _detect_llm_provider() -> str:
-    """Return 'bedrock' if AWS_ACCESS_KEY_ID is set, else 'anthropic' if ANTHROPIC_API_KEY is set.
+    """Return 'anthropic' if ANTHROPIC_API_KEY is set, else 'bedrock' if AWS_ACCESS_KEY_ID is set.
 
-    Defaults to 'bedrock' when neither is set so that config resolution always succeeds — the
-    error surfaces at invocation time when Bedrock rejects the missing credentials, preserving the
-    existing "fail at model call, not at config load" behaviour (FR-036).
+    The Anthropic API is PREFERRED when both are configured (feature 006, FR-027). When NEITHER is
+    configured, fail fast with a clear ConfigError at resolution time — before any compute — rather
+    than deferring to a cryptic failure at the first model call (FR-029). Whitespace-only values are
+    treated as unset.
     """
-    if os.environ.get("AWS_ACCESS_KEY_ID", "").strip():
-        return "bedrock"
     if os.environ.get("ANTHROPIC_API_KEY", "").strip():
         return "anthropic"
-    return "bedrock"  # will fail with clear NoCredentialsError at first model invocation
+    if os.environ.get("AWS_ACCESS_KEY_ID", "").strip():
+        return "bedrock"
+    raise ConfigError(
+        "No LLM provider configured: set ANTHROPIC_API_KEY (preferred) or AWS_ACCESS_KEY_ID "
+        "(for AWS Bedrock) in your .env or environment before running."
+    )
 
 # The always-on fallback tool: present in agent_tools with enabled:true, MAY NOT be disabled,
 # and is EXCLUDED from the structural-tool lockstep exact-match (FR-016).
