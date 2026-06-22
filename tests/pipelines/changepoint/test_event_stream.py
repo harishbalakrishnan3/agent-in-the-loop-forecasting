@@ -95,3 +95,85 @@ def test_test_metrics_first_appear_at_final_evaluation(tmp_path):
         if e["stage"] in ("final_evaluation", "run_complete"):
             continue
         assert "test_metrics" not in blob, f"{e['stage']} leaked test_metrics"
+
+
+# --- T005: live in-loop emission via .stream() (FR-018/030/031) ---------------------------------
+
+
+class _RecordingSink:
+    """In-memory EventSink capturing serialized events (the UI's QueueEventSink analogue)."""
+
+    def __init__(self):
+        self.events: list[dict] = []
+
+    def write(self, event) -> None:
+        self.events.append(event.to_dict())
+
+
+class _CountingDecisionFake:
+    """Decision model that, at each call, records how many decision_iteration COMPLETE events the
+    sink has already observed. If emission is live, the i-th call (1-indexed) sees i-1 prior
+    decisions; if emission is batched post-invoke, every call sees 0.
+    """
+
+    def __init__(self, sink: _RecordingSink, response):
+        self._sink = sink
+        self._response = response
+        self.seen_decisions_at_call: list[int] = []
+        self.model_id = "fake"
+
+    def _count_decisions(self) -> int:
+        return sum(
+            1 for e in self._sink.events
+            if e["stage"] == "decision_iteration" and e["status"] == "complete"
+        )
+
+    def invoke_structured_text(self, *, prompt, schema):
+        self.seen_decisions_at_call.append(self._count_decisions())
+        return self._response
+
+
+def test_decision_iterations_emit_live_during_the_loop(tmp_path):
+    """Each decision_iteration must be observable by a sink BEFORE the next decision is requested."""
+    sink = _RecordingSink()
+    visual = _Fake([VisualInspectionResult(observations=["o"], pattern_summary="p",
+                                           hypotheses=["h"], uncertainties=["u"])])
+    decision = _CountingDecisionFake(
+        sink,
+        InterventionChoice(tool="full_history_default", params={}, rationale="r", expected_effect="e"),
+    )
+    run_scenario(_SID, model_wrappers=(visual, decision), reports_root=tmp_path, extra_sinks=[sink])
+
+    # The decision node is called at least twice (full_history_default never beats naive → loop).
+    assert len(decision.seen_decisions_at_call) >= 2, decision.seen_decisions_at_call
+    # Live emission: the i-th call (1-indexed) sees exactly i-1 prior decision_iteration completes.
+    for i, seen in enumerate(decision.seen_decisions_at_call):
+        assert seen == i, (
+            "decision_iteration events are NOT emitted live during the loop "
+            f"(call #{i + 1} saw {seen} prior decisions, expected {i}); "
+            f"observed sequence={decision.seen_decisions_at_call}"
+        )
+
+
+def test_live_stream_is_monotonic_unique_and_single_emit(tmp_path):
+    """Live emission must keep seq strictly monotonic/unique and emit each stage exactly once."""
+    sink = _RecordingSink()
+    run_scenario(_SID, model_wrappers=_models(True), reports_root=tmp_path, extra_sinks=[sink])
+
+    # The queue/recording sink and the file sink must agree (same single emission path).
+    file_events = _read_stream(tmp_path)
+    sink_seqs = [e["seq"] for e in sink.events]
+    file_seqs = [e["seq"] for e in file_events]
+    assert sink_seqs == file_seqs, "queue sink and file sink diverged"
+
+    # Strictly monotonic, unique.
+    assert sink_seqs == sorted(sink_seqs)
+    assert len(set(sink_seqs)) == len(sink_seqs)
+
+    # No stage emitted twice at the same (stage, status, seq) — guards the removed reconstruction.
+    keys = [(e["stage"], e["status"], e["seq"]) for e in sink.events]
+    assert len(set(keys)) == len(keys)
+
+    # Causal tail unchanged.
+    completes = [e["stage"] for e in sink.events if e["status"] == "complete"]
+    assert completes[-2:] == ["final_evaluation", "run_complete"]

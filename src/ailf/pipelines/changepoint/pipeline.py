@@ -27,7 +27,12 @@ from ailf.core.agent.engine import build_agent_graph
 from ailf.core.agent.runtime import RunContext
 from ailf.core.backtest.split import resolve_split
 from ailf.core.config.loader import load_config_yaml
-from ailf.core.config.resolve import resolve_config
+from ailf.core.config.resolve import (
+    LLM_PROVIDER_UNCONFIGURED,
+    NO_PROVIDER_MESSAGE,
+    ConfigError,
+    resolve_config,
+)
 from ailf.core.config.schema import ConfigOverride
 from ailf.core.events import payloads as ev
 from ailf.core.events.emitter import EventEmitter, NullEmitter
@@ -76,34 +81,41 @@ def _render_menu(registry) -> str:
     return "\n".join(lines)
 
 
+_SPLIT_TOLERANCE = 1e-6
+
+
 def _series_split_from_df(
     df: "pd.DataFrame",
-    split_ratio: float = 0.8,
+    *,
+    train_ratio: float = 0.8,
     val_ratio: float = 0.1,
+    test_ratio: float = 0.1,
 ) -> "SeriesSplit":
     """Build a SeriesSplit directly from an arbitrary DataFrame (no metadata required).
 
-    Used for pocs/data/ CSVs that are not registered as golden scenarios (§14i).
-
-    Split: ``train_ratio`` for fit+val, ``test_ratio = 1 - train_ratio - val_ratio``.
-    ``val_ratio`` is taken from inside the train portion so the agent sees only training data.
+    Used for custom-CSV runs (§14i) and the streamlined UI. Honors three explicit fractions that
+    must sum to 1 (within tolerance); ``val`` is taken from inside the training portion so the agent
+    still sees only training data. Rounding: floor test and val, train absorbs the remainder; each
+    segment must end up with >= 1 row.
     """
     from ailf.core.backtest.split import ResolvedSplit  # noqa: PLC0415
     from ailf.pipelines.changepoint.scenarios import SeriesSplit  # noqa: PLC0415
 
-    n = len(df)
-    test_ratio = 1.0 - split_ratio
-    # Distribute the split_ratio between train (fit) and val
-    actual_val_ratio = min(val_ratio, split_ratio - 0.05)  # guard: keep ≥5% for train fit
-    actual_train_ratio = split_ratio - actual_val_ratio
+    total = train_ratio + val_ratio + test_ratio
+    if abs(total - 1.0) > _SPLIT_TOLERANCE:
+        raise ValueError(
+            f"train/val/test fractions must sum to 1.0 (got {total:.6f}: "
+            f"train={train_ratio}, val={val_ratio}, test={test_ratio})."
+        )
 
+    n = len(df)
     test_rows = max(1, int(test_ratio * n))
-    val_rows  = max(1, int(actual_val_ratio * n))
+    val_rows  = max(1, int(val_ratio * n))
     train_rows = n - test_rows - val_rows
     if train_rows < 1:
         raise ValueError(
-            f"split_ratio={split_ratio} leaves no training rows for n={n} rows. "
-            "Increase the split ratio."
+            f"split train={train_ratio}/val={val_ratio}/test={test_ratio} leaves no training rows "
+            f"for n={n} rows — each of train/val/test needs at least 1 row."
         )
     resolved = ResolvedSplit.from_lengths(
         train_rows=train_rows,
@@ -111,7 +123,7 @@ def _series_split_from_df(
         test_rows=test_rows,
         source="override",
         units="ratios",
-        requested={"train_ratio": split_ratio, "val_ratio": actual_val_ratio, "test_ratio": test_ratio},
+        requested={"train_ratio": train_ratio, "val_ratio": val_ratio, "test_ratio": test_ratio},
         rounding_rule="floor_test_val_train_absorbs",
         n_rows=n,
     )
@@ -130,17 +142,21 @@ def run_scenario(
     reports_root: Path | None = None,
     emit_events: bool = True,
     series_df: "pd.DataFrame | None" = None,
-    split_ratio: float = 0.8,
+    train_ratio: float = 0.8,
+    val_ratio: float = 0.1,
+    test_ratio: float = 0.1,
     seasonal_period: int = 365,
     n_changepoints_to_detect: int = 3,
+    extra_sinks: "list | None" = None,
 ) -> dict:
     """Execute one scenario end-to-end and write artifacts; returns the metrics report dict.
 
-    When ``series_df`` is provided the registered metadata lookup is bypassed and the split
-    is built directly from the DataFrame using ``split_ratio`` (§14i).  This enables pocs/data/
-    CSVs (e.g. sec9_*, sec10_*) to be used without golden scenario fixtures.
+    When ``series_df`` is provided the registered metadata lookup is bypassed and the split is built
+    directly from the DataFrame using the three ``train_ratio``/``val_ratio``/``test_ratio`` fractions
+    (which must sum to 1). This enables custom-CSV runs and the streamlined UI without golden fixtures.
 
-    ``seasonal_period`` and ``n_changepoints_to_detect`` are used only when ``series_df`` is set.
+    ``train_ratio``/``val_ratio``/``test_ratio``, ``seasonal_period`` and ``n_changepoints_to_detect``
+    are used only when ``series_df`` is set.
     """
     # 1. Resolve config (merge → validate → lockstep).
     defaults = load_config_yaml(_CONFIG_PATH)
@@ -158,7 +174,9 @@ def run_scenario(
     # 3. Resolve split and load the scenario.
     if series_df is not None:
         # §14i: arbitrary CSV path — bypass metadata, build split from DataFrame
-        split = _series_split_from_df(series_df, split_ratio=split_ratio)
+        split = _series_split_from_df(
+            series_df, train_ratio=train_ratio, val_ratio=val_ratio, test_ratio=test_ratio
+        )
         # Build a minimal Scenario-like object; title uses scenario_id
         from ailf.pipelines.changepoint.scenarios import Scenario  # noqa: PLC0415
         scenario = Scenario(
@@ -187,7 +205,10 @@ def run_scenario(
     # prelude is emitted SEQUENTIALLY by this single-threaded driver before graph invocation; the
     # in-graph stages are reconstructed from final_state after invoke (no seq-race — FR-028).
     if emit_events:
-        emitter = EventEmitter(run_id, [FileEventSink(run_dir / "events.jsonl")], payload_dir=run_dir / "event_payloads")
+        sinks = [FileEventSink(run_dir / "events.jsonl")]
+        if extra_sinks:
+            sinks.extend(extra_sinks)  # e.g. the UI's QueueEventSink for live in-process streaming
+        emitter = EventEmitter(run_id, sinks, payload_dir=run_dir / "event_payloads")
     else:
         emitter = NullEmitter()
 
@@ -231,6 +252,11 @@ def run_scenario(
     if model_wrappers is not None:
         visual_model, decision_model = model_wrappers
     else:
+        # Real run: a provider MUST be configured. Fail fast with a clear message BEFORE any model
+        # call (FR-029) — this is the one place that needs credentials, so the check lives here
+        # rather than in config resolution (which runs credential-free in the test suite).
+        if cfg.models.llm_provider == LLM_PROVIDER_UNCONFIGURED:
+            raise ConfigError(NO_PROVIDER_MESSAGE)
         visual_model = ModelWrapper(
             build_visual_model(cfg.models.visual_model_id, cfg.models.aws_region, llm_provider=cfg.models.llm_provider),
             cfg.models.visual_model_id,
@@ -253,26 +279,48 @@ def run_scenario(
         prompt_ids={"decision": decision_prompt_id, "visual": "visual_inspection_v1" if visual_prompt else None},
     )
 
-    # 7. Invoke the core engine.
+    # 7. Invoke the core engine via .stream() so in-graph stages emit LIVE as each node completes
+    # (FR-030). Emission stays on this single-threaded driver — the integer seq counter cannot race
+    # (research R2). ``updates`` chunks drive per-node emission; the last ``values`` chunk is the
+    # full final state (equivalent to the old .invoke() return). This REPLACES the prior
+    # post-invoke reconstruction block — emitting both would double-emit (FR-031).
     app = build_agent_graph(ctx)
-    final_state = app.invoke(
+    menu_names = sorted(registry.allowed_names())
+    final_state: dict = {}
+    for mode, chunk in app.stream(
         {"scenario_id": scenario_id, "image_path": str(image_path) if image_path else "",
          "seasonal_period": scenario.seasonal_period, "iterations": [], "rejected_signatures": []},
+        stream_mode=["updates", "values"],
         config={"recursion_limit": 50},
-    )
-
-    # 7b. Emit the in-graph stages, reconstructed from final_state (single-threaded, post-invoke).
-    menu_names = sorted(registry.allowed_names())
-    if cfg.visual_analysis_enabled and final_state.get("visual"):
-        emitter.emit(
-            StageId.VISUAL_INSPECTION,
-            StageStatus.COMPLETE,
-            ev.visual_inspection(final_state["visual"], image_ref="agent_context.png"),
-            concurrency_group="visual_diagnostics",
-        )
-    for iteration in final_state.get("iterations", []):
-        emitter.emit(StageId.DECISION_ITERATION, StageStatus.COMPLETE, ev.decision_iteration(iteration, menu=menu_names))
-        emitter.emit(StageId.VALIDATION_OUTCOME, StageStatus.COMPLETE, ev.validation_outcome(iteration))
+    ):
+        if mode == "values":
+            final_state = chunk  # accumulating full state; last one wins
+            continue
+        # mode == "updates": one node completed this super-step.
+        for node, delta in chunk.items():
+            if not isinstance(delta, dict):
+                continue
+            if node == "visual_inspection" and cfg.visual_analysis_enabled and delta.get("visual"):
+                emitter.emit(
+                    StageId.VISUAL_INSPECTION,
+                    StageStatus.COMPLETE,
+                    ev.visual_inspection(delta["visual"], image_ref="agent_context.png"),
+                    concurrency_group="visual_diagnostics",
+                )
+            elif node == "decision" and delta.get("iterations"):
+                emitter.emit(
+                    StageId.DECISION_ITERATION,
+                    StageStatus.COMPLETE,
+                    ev.decision_iteration(delta["iterations"][-1], menu=menu_names),
+                )
+            elif node == "validation" and delta.get("iterations"):
+                emitter.emit(
+                    StageId.VALIDATION_OUTCOME,
+                    StageStatus.COMPLETE,
+                    ev.validation_outcome(delta["iterations"][-1]),
+                )
+            # "diagnostics" (emitted in the prelude) and "final_evaluation" (emitted in step 9 with
+            # test metrics) produce no event here.
 
     # 8. Write artifacts.
     fe = final_state["_final_eval"]
@@ -321,28 +369,34 @@ def run_scenario(
     )
 
     # §Forecasting 4/5: save forecast CSV — training region + forecast region in one file
-    # so Streamlit can render a continuous zoom-in/out/pan chart.
-    # Columns: ds, y_actual (NaN in forecast region), region ("train"|"forecast"),
-    #          yhat_full_history, yhat_naive, yhat_agent (NaN in training region).
+    # so the UI can render a continuous zoom-in/out/pan chart.
+    # Columns: ds, y_actual, region ("train"|"val"|"test"), yhat_full_history, yhat_naive, yhat_agent
+    #          (yhats are NaN in the train/val regions). The training region is split into "train"
+    #          ([0, fit_end)) and "val" ([fit_end, train_end)) so the UI can shade all three regions
+    #          distinctly (FR-025); the forecast/hidden-test region is labelled "test".
+    csv_path = run_dir / "forecast_comparison.csv"
+    csv_written = False
     try:
         train_hist = split.train_df.copy()
         test_hist  = split.test_df.copy()
         n_test     = len(test_hist)
+        fit_end    = split.fit_end  # boundary between "train" and "val" inside the training region
 
-        # Training region: actual values, NaN for forecast yhats
+        # Training region: actual values, NaN for forecast yhats. Rows [0, fit_end) = train,
+        # rows [fit_end, train_end) = val.
         _nan = float("nan")
         train_rows: list[dict] = []
-        for _, row in train_hist.iterrows():
+        for pos, (_, row) in enumerate(train_hist.iterrows()):
             train_rows.append({
                 "ds":               row["ds"].strftime("%Y-%m-%d"),
                 "y_actual":         round(float(row["y"]), 6),
-                "region":           "train",
+                "region":           "train" if pos < fit_end else "val",
                 "yhat_full_history": _nan,
                 "yhat_naive":        _nan,
                 "yhat_agent":        _nan,
             })
 
-        # Forecast region: NaN for y_actual, actual yhat values
+        # Forecast (hidden-test) region: actuals kept for comparison, plus each method's yhat.
         fh_yhat = [round(float(v), 6) for v in fe["full_history_prophet"]["yhat"][:n_test]]
         nw_yhat = [round(float(v), 6) for v in fe["naive_workflow"]["yhat"][:n_test]]
         ag_yhat = [round(float(v), 6) for v in fe["agent"]["yhat"][:n_test]]
@@ -352,15 +406,15 @@ def run_scenario(
             fc_rows.append({
                 "ds":               row["ds"].strftime("%Y-%m-%d"),
                 "y_actual":         round(float(row["y"]), 6),  # keep actuals for comparison
-                "region":           "forecast",
+                "region":           "test",
                 "yhat_full_history": fh_yhat[i] if i < len(fh_yhat) else _nan,
                 "yhat_naive":        nw_yhat[i] if i < len(nw_yhat) else _nan,
                 "yhat_agent":        ag_yhat[i] if i < len(ag_yhat) else _nan,
             })
 
         csv_df = pd.DataFrame(train_rows + fc_rows)
-        csv_path = run_dir / "forecast_comparison.csv"
         csv_df.to_csv(csv_path, index=False)
+        csv_written = True
     except Exception as _csv_exc:
         # Non-fatal: PNG already written; log and continue.
         print(f"  [warn] forecast_comparison.csv not written: {_csv_exc}")
@@ -388,7 +442,13 @@ def run_scenario(
 
     print(f"  {scenario_id}: winner={metrics_report['winner']} agent_tool={fe['agent']['tool']} "
           f"run_dir={run_dir}")
-    return {**metrics_report, "run_id": run_id, "final_eval": fe}
+    return {
+        **metrics_report,
+        "run_id": run_id,
+        "final_eval": fe,
+        "run_dir": str(run_dir),
+        "csv_path": str(csv_path) if csv_written else None,
+    }
 
 
 def main() -> None:

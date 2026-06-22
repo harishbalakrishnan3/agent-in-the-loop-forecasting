@@ -37,14 +37,13 @@ class ModelUnavailableError(RuntimeError):
 class _AnthropicProxy:
     """Returned by AnthropicStructuredClient.with_structured_output(); has .invoke(messages)."""
 
-    def __init__(self, model_id: str, schema: type, max_tokens: int) -> None:
+    def __init__(self, model_id: str, schema: type, max_tokens: int, client) -> None:
         self._model_id = model_id
         self._schema = schema
         self._max_tokens = max_tokens
+        self._client = client  # shared anthropic.Anthropic, built once per role (feature 006, R4)
 
     def invoke(self, messages):
-        import anthropic  # noqa: PLC0415
-
         content_parts = []
         image_parts = []
         for msg in messages:
@@ -73,11 +72,7 @@ class _AnthropicProxy:
                 f"\n\nRespond with ONLY valid JSON matching this schema:\n{schema_json}"
             )
 
-        import httpx  # noqa: PLC0415
-        # Corporate proxy uses self-signed cert — disable verification for internal network.
-        http_client = httpx.Client(verify=False)
-        client = anthropic.Anthropic(http_client=http_client)
-        response = client.messages.create(
+        response = self._client.messages.create(
             model=self._model_id,
             max_tokens=self._max_tokens,
             messages=[{"role": "user", "content": msg_content or content_parts}],
@@ -89,14 +84,24 @@ class _AnthropicProxy:
 
 
 class AnthropicStructuredClient:
-    """Anthropic SDK client duck-typing ChatBedrockConverse for ModelWrapper."""
+    """Anthropic SDK client duck-typing ChatBedrockConverse for ModelWrapper.
+
+    The underlying ``anthropic.Anthropic`` client is constructed ONCE here (per model role, per run)
+    and reused across all invocations — a single clean initialization rather than rebuilding it on
+    every call (feature 006, FR-028/R4).
+    """
 
     def __init__(self, model_id: str, *, max_tokens: int = 2000) -> None:
+        import anthropic  # noqa: PLC0415
+        import httpx  # noqa: PLC0415
+
         self._model_id = model_id
         self._max_tokens = max_tokens
+        # Corporate proxy uses a self-signed cert — disable verification for the internal network.
+        self._client = anthropic.Anthropic(http_client=httpx.Client(verify=False))
 
     def with_structured_output(self, schema: type) -> _AnthropicProxy:
-        return _AnthropicProxy(self._model_id, schema, self._max_tokens)
+        return _AnthropicProxy(self._model_id, schema, self._max_tokens, self._client)
 
 
 # ---------------------------------------------------------------------------

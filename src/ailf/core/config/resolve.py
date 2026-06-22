@@ -46,18 +46,30 @@ def _to_anthropic_model_id(bedrock_id: str) -> str:
     return stripped
 
 
-def _detect_llm_provider() -> str:
-    """Return 'bedrock' if AWS_ACCESS_KEY_ID is set, else 'anthropic' if ANTHROPIC_API_KEY is set.
+# Sentinel for "no LLM provider credentials present". Config resolution stays pure and never
+# fails on this — the clear fail-fast happens only when a pipeline is about to build REAL model
+# clients (run_scenario with model_wrappers=None); injected fakes never need a provider.
+LLM_PROVIDER_UNCONFIGURED = "unconfigured"
 
-    Defaults to 'bedrock' when neither is set so that config resolution always succeeds — the
-    error surfaces at invocation time when Bedrock rejects the missing credentials, preserving the
-    existing "fail at model call, not at config load" behaviour (FR-036).
+NO_PROVIDER_MESSAGE = (
+    "No LLM provider configured: set ANTHROPIC_API_KEY (preferred) or AWS_ACCESS_KEY_ID "
+    "(for AWS Bedrock) in your .env or environment before running."
+)
+
+
+def _detect_llm_provider() -> str:
+    """Return 'anthropic' if ANTHROPIC_API_KEY is set, else 'bedrock' if AWS_ACCESS_KEY_ID is set.
+
+    The Anthropic API is PREFERRED when both are configured (feature 006, FR-027). When NEITHER is
+    configured, return the ``LLM_PROVIDER_UNCONFIGURED`` sentinel (never raises) so config
+    resolution stays side-effect-free for the deterministic test suite; the clear fail-fast for a
+    real run lives in the pipeline (FR-029). Whitespace-only values are treated as unset.
     """
-    if os.environ.get("AWS_ACCESS_KEY_ID", "").strip():
-        return "bedrock"
     if os.environ.get("ANTHROPIC_API_KEY", "").strip():
         return "anthropic"
-    return "bedrock"  # will fail with clear NoCredentialsError at first model invocation
+    if os.environ.get("AWS_ACCESS_KEY_ID", "").strip():
+        return "bedrock"
+    return LLM_PROVIDER_UNCONFIGURED
 
 # The always-on fallback tool: present in agent_tools with enabled:true, MAY NOT be disabled,
 # and is EXCLUDED from the structural-tool lockstep exact-match (FR-016).
