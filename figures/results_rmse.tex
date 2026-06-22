@@ -1,0 +1,20 @@
+% Requires \usepackage{booktabs} in the preamble.
+\begin{table}[t]
+  \centering
+  \caption{Hidden-test forecast error by scenario (lower is better). Best per row in \textbf{bold}; $\Delta$ is the agent's improvement over the naive baseline.}
+  \label{tab:results}
+  \small
+  \begin{tabular}{l r r r l r}
+    \toprule
+    Scenario & Agent (RMSE) & Full-hist.\ Prophet & Naive & Agent tool & $\Delta$ vs naive \\
+    \midrule
+    Gradual drift & \textbf{5.83} & 9.39 & 9.39 & ramp reg. & +38.0\% \\
+    Level shift & 12.75 & \textbf{10.23} & 10.23 & ramp reg. & -24.6\% \\
+    Many events & \textbf{2.24} & 14.43 & 14.43 & clean event & +84.4\% \\
+    Recurring event & \textbf{2.08} & 2.21 & 2.21 & tuned holidays & +6.3\% \\
+    Sustained anomaly & \textbf{2.00} & 7.17 & 6.35 & clean event & +68.5\% \\
+    Temporary event & \textbf{1.96} & 11.84 & 11.84 & clean event & +83.5\% \\
+    \bottomrule
+  \end{tabular}
+  % Agent wins 5/6 scenarios on hidden-test RMSE.
+\end{table}
