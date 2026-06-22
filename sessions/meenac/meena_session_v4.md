@@ -11437,8 +11437,7 @@ Let me check if the API key is being loaded correctly.Every model returns 404 â€
 Key starts with: <REDACTED_PREFIX>
 ```
 
-The key starts with `<REDACTED_ANTHROPIC_KEY_FRAGMENT>` and is 108 chars, which looks valid. But 404 on every model is unusual. Let me test with a simpler approach to see if it's a header/auth issue: 
-
+The key starts with `<REDACTED_ANTHROPIC_KEY_FRAGMENT>` and is 108 chars, which looks valid. But 404 on every model is unusual. Let me test with a simpler approach to see if it's a header/auth issue:
 > **[run_in_terminal]** Running ` cd /Users/m0c0qiy/Documents/IIScGit/Untitled/agent-in-the-loop-forecasting &...`
 > ```bash
 > cd /Users/m0c0qiy/Documents/IIScGit/Untitled/agent-in-the-loop-forecasting && set -a && source .env && set +a && .venv/bin/python -c "
