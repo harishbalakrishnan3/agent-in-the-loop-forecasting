@@ -143,15 +143,27 @@ def build_decision_model(
     return ChatBedrockConverse(model=model_id, region_name=region_name, max_tokens=max_tokens)
 
 
-def _wrap_bedrock_error(model_id: str, exc: Exception) -> ModelUnavailableError:
+def _wrap_model_error(model_id: str, exc: Exception, provider: str) -> ModelUnavailableError:
+    """Provider-aware error wrap — names the real provider and the right remediation."""
+    if provider == "anthropic":
+        hint = (
+            "Verify the Anthropic API key (the bring-your-own-key field, or ANTHROPIC_API_KEY) and "
+            "the model id. A 401 'invalid x-api-key' means the key is missing, mistyped, or revoked."
+        )
+        label = "Anthropic API"
+    else:
+        hint = (
+            "Verify the configured visual/decision model id and AWS Bedrock access in the configured "
+            "region."
+        )
+        label = "Bedrock"
     return ModelUnavailableError(
-        f"Bedrock model '{model_id}' could not be invoked ({type(exc).__name__}: {exc}). "
-        "Verify the configured visual/decision model id and Bedrock access in the configured "
-        "region. The system does not silently substitute a different model."
+        f"{label} model '{model_id}' could not be invoked ({type(exc).__name__}: {exc}). "
+        f"{hint} The system does not silently substitute a different model."
     )
 
 
-def _invoke_with_retry(structured, messages, model_id: str):
+def _invoke_with_retry(structured, messages, model_id: str, provider: str = "bedrock"):
     """Invoke a structured-output chain, retrying on parse failures (ValidationError)."""
     last_exc: Exception | None = None
     for attempt in range(_MAX_PARSE_RETRIES):
@@ -162,8 +174,8 @@ def _invoke_with_retry(structured, messages, model_id: str):
             if attempt < _MAX_PARSE_RETRIES - 1:
                 time.sleep(_RETRY_DELAY_S)
         except Exception as exc:  # noqa: BLE001
-            raise _wrap_bedrock_error(model_id, exc) from exc
-    raise _wrap_bedrock_error(model_id, last_exc) from last_exc
+            raise _wrap_model_error(model_id, exc, provider) from exc
+    raise _wrap_model_error(model_id, last_exc, provider) from last_exc
 
 
 class ModelWrapper:
@@ -176,6 +188,8 @@ class ModelWrapper:
     def __init__(self, client: ChatBedrockConverse, model_id: str) -> None:
         self._client = client
         self._model_id = model_id
+        # Derive the provider from the client type so error messages name the right provider.
+        self._provider = "anthropic" if isinstance(client, AnthropicStructuredClient) else "bedrock"
 
     @property
     def model_id(self) -> str:
@@ -184,7 +198,7 @@ class ModelWrapper:
     def invoke_structured_text(self, *, prompt: str, schema: type[T]) -> T:
         """Invoke a text-only prompt and parse the reply into ``schema`` (structured output)."""
         structured = self._client.with_structured_output(schema)
-        return _invoke_with_retry(structured, [HumanMessage(content=prompt)], self._model_id)
+        return _invoke_with_retry(structured, [HumanMessage(content=prompt)], self._model_id, self._provider)
 
     def invoke_structured_with_image(self, *, prompt: str, image_path: Path, schema: type[T]) -> T:
         """Invoke a multimodal (text + PNG) prompt and parse the reply into ``schema``."""
@@ -194,4 +208,4 @@ class ModelWrapper:
             {"type": "image", "source_type": "base64", "mime_type": "image/png", "data": image_b64},
         ]
         structured = self._client.with_structured_output(schema)
-        return _invoke_with_retry(structured, [HumanMessage(content=content)], self._model_id)
+        return _invoke_with_retry(structured, [HumanMessage(content=content)], self._model_id, self._provider)
