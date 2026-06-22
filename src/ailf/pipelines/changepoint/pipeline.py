@@ -129,7 +129,11 @@ def _series_split_from_df(
         n_rows=n,
     )
     return SeriesSplit(
-        ds=df["ds"].reset_index(drop=True),
+        # Coerce ds to datetime: the custom-CSV/UI upload path reads via pd.read_csv() WITHOUT
+        # parse_dates, so ds arrives as strings and downstream diagnostics (.iloc[i].date()) crash
+        # with "'str' object has no attribute 'date'". The metadata path already parses dates;
+        # this makes the upload path match it.
+        ds=pd.to_datetime(df["ds"]).reset_index(drop=True),
         y=df["y"].astype(float).reset_index(drop=True),
         resolved=resolved,
     )
