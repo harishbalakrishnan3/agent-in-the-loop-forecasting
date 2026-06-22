@@ -82,3 +82,14 @@ def test_removed_tool_recorded_in_trace(tmp_path):
     )
     trace = json.loads((tmp_path / f"{_SID}-1729" / "agent_trace.json").read_text())
     assert "full_history_step_regressor" in trace["removed_tools"]
+
+
+def test_real_run_without_provider_fails_fast(tmp_path, monkeypatch):
+    """A REAL run (no injected model_wrappers) with neither provider configured must raise a clear
+    ConfigError before any model call (FR-029) — not a cryptic deferred failure."""
+    from ailf.core.config.resolve import ConfigError
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("AWS_ACCESS_KEY_ID", raising=False)
+    with pytest.raises(ConfigError, match="No LLM provider configured"):
+        run_scenario(_SID, reports_root=tmp_path)  # model_wrappers=None → real-client path

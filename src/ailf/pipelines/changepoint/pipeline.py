@@ -27,7 +27,12 @@ from ailf.core.agent.engine import build_agent_graph
 from ailf.core.agent.runtime import RunContext
 from ailf.core.backtest.split import resolve_split
 from ailf.core.config.loader import load_config_yaml
-from ailf.core.config.resolve import resolve_config
+from ailf.core.config.resolve import (
+    LLM_PROVIDER_UNCONFIGURED,
+    NO_PROVIDER_MESSAGE,
+    ConfigError,
+    resolve_config,
+)
 from ailf.core.config.schema import ConfigOverride
 from ailf.core.events import payloads as ev
 from ailf.core.events.emitter import EventEmitter, NullEmitter
@@ -247,6 +252,11 @@ def run_scenario(
     if model_wrappers is not None:
         visual_model, decision_model = model_wrappers
     else:
+        # Real run: a provider MUST be configured. Fail fast with a clear message BEFORE any model
+        # call (FR-029) — this is the one place that needs credentials, so the check lives here
+        # rather than in config resolution (which runs credential-free in the test suite).
+        if cfg.models.llm_provider == LLM_PROVIDER_UNCONFIGURED:
+            raise ConfigError(NO_PROVIDER_MESSAGE)
         visual_model = ModelWrapper(
             build_visual_model(cfg.models.visual_model_id, cfg.models.aws_region, llm_provider=cfg.models.llm_provider),
             cfg.models.visual_model_id,

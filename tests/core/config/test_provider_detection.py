@@ -1,14 +1,14 @@
-"""T003 — provider detection (Anthropic-first, fail-fast) — contracts/model_selection.md, FR-027/029.
+"""T003 — provider detection (Anthropic-first; sentinel when unconfigured) — model_selection.md, FR-027/029.
 
-The detection order is flipped to prefer the Anthropic API; when neither provider is configured,
-detection raises a clear ConfigError at resolve time (not deferred to first model call).
+The detection order is flipped to prefer the Anthropic API. When neither provider is configured,
+detection returns the ``LLM_PROVIDER_UNCONFIGURED`` sentinel (it never raises) so config resolution
+stays credential-free for the deterministic test suite; the clear fail-fast for a REAL run lives in
+the pipeline (covered by test_pipeline_smoke).
 """
 
 from __future__ import annotations
 
-import pytest
-
-from ailf.core.config.resolve import ConfigError, _detect_llm_provider
+from ailf.core.config.resolve import LLM_PROVIDER_UNCONFIGURED, _detect_llm_provider
 
 _ANTHROPIC = "ANTHROPIC_API_KEY"
 _AWS = "AWS_ACCESS_KEY_ID"
@@ -38,12 +38,9 @@ def test_both_set_prefers_anthropic(monkeypatch):
     assert _detect_llm_provider() == "anthropic"
 
 
-def test_neither_set_raises_config_error(monkeypatch):
+def test_neither_set_returns_unconfigured_sentinel(monkeypatch):
     _clear(monkeypatch)
-    with pytest.raises(ConfigError) as exc:
-        _detect_llm_provider()
-    msg = str(exc.value)
-    assert "ANTHROPIC_API_KEY" in msg and "AWS_ACCESS_KEY_ID" in msg
+    assert _detect_llm_provider() == LLM_PROVIDER_UNCONFIGURED
 
 
 def test_blank_values_are_ignored(monkeypatch):
