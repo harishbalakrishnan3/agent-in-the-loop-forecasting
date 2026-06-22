@@ -139,12 +139,13 @@ def _render_control_pane() -> dict[str, Any]:
 def _render_credentials_panel() -> RunCredentials:
     """Render the main-area Credentials panel and return a RunCredentials.
 
-    Lives in the main area (not the sidebar) and is expanded until credentials are provided. The
-    panel makes it unmistakable that nothing is stored — credentials are used only for the current
-    run, in memory, on this session.
+    Lives in the main area (not the sidebar). The panel makes it unmistakable that nothing is
+    stored — credentials are used only for the current run, in memory, on this session.
     """
-    have_any = bool(st.session_state.get("_creds_provided"))
-    with st.expander("🔑 Credentials", expanded=not have_any):
+    # ``expanded`` MUST be a stable constant. Deriving it from session_state that changes within the
+    # same render makes Streamlit re-apply the value on every rerun and snap the box shut whenever a
+    # widget inside it changes. We start expanded and let the user collapse it.
+    with st.expander("🔑 Credentials", expanded=True):
         st.info(
             "🔒 **Your credentials are never stored.** They are kept only in memory for the current "
             "session and used solely to make this run's model calls — not written to disk, not "
@@ -174,18 +175,21 @@ def _render_credentials_panel() -> RunCredentials:
             aws_secret = c2.text_input("AWS secret access key", type="password").strip()
             aws_region = st.text_input("AWS region", value="us-west-2").strip()
 
-        # Optional LangSmith tracing.
-        with st.expander("LangSmith tracing (optional)"):
-            ls_on = st.toggle("Enable tracing", value=False, help="Trace this run to LangSmith.")
+        # Optional LangSmith tracing. A plain toggle-gated section — NOT a nested expander, which
+        # Streamlit does not reliably support inside another expander.
+        st.markdown("---")
+        ls_on = st.toggle("Enable LangSmith tracing", value=False, help="Trace this run to LangSmith.")
+        ls_key = ""
+        ls_project = "agent-in-the-loop-forecasting"
+        if ls_on:
             ls_key = st.text_input(
                 "LangSmith API key", type="password", placeholder="lsv2_…",
-                disabled=not ls_on,
             ).strip()
             ls_project = st.text_input(
-                "LangSmith project", value="agent-in-the-loop-forecasting", disabled=not ls_on,
+                "LangSmith project", value="agent-in-the-loop-forecasting",
             ).strip() or "agent-in-the-loop-forecasting"
 
-    creds = RunCredentials(
+    return RunCredentials(
         anthropic_api_key=anthropic_key or None,
         aws_access_key_id=aws_id or None,
         aws_secret_access_key=aws_secret or None,
@@ -194,8 +198,6 @@ def _render_credentials_panel() -> RunCredentials:
         langsmith_api_key=ls_key or None,
         langsmith_project=ls_project,
     )
-    st.session_state["_creds_provided"] = not creds.is_empty
-    return creds
 
 
 # --- pre-run validation ------------------------------------------------------------------------
