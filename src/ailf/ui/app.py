@@ -88,6 +88,16 @@ def _render_control_pane() -> dict[str, Any]:
                 sel["n_changepoints_to_detect"] = st.number_input("Changepoints to detect", 1, 50, 3)
 
         st.subheader("2 · Models")
+        sel["anthropic_api_key"] = st.text_input(
+            "Anthropic API key",
+            type="password",
+            help=(
+                "Bring your own Anthropic API key — used only for this run, stored nowhere. "
+                "Get one at console.anthropic.com. Leave blank to use the server's configured "
+                "provider (local development)."
+            ),
+            placeholder="sk-ant-…",
+        ).strip()
         sel["visual_analysis_enabled"] = st.toggle("Visual analysis", value=True)
         sel["visual_model_id"] = models.model_id_for_label(
             st.selectbox(
@@ -178,7 +188,7 @@ def _run_and_stream(sel: dict[str, Any]) -> None:
     st.subheader("What's running")
     st.code(_command_metadata(sel), language="bash")
 
-    kwargs: dict[str, Any] = {"override": override}
+    kwargs: dict[str, Any] = {"override": override, "anthropic_api_key": sel.get("anthropic_api_key") or None}
     if sel["dataset_mode"] == "scenario":
         scenario_id = sel["scenario_id"]
     else:

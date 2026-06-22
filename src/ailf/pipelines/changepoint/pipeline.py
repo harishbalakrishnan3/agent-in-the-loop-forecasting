@@ -148,6 +148,7 @@ def run_scenario(
     seasonal_period: int = 365,
     n_changepoints_to_detect: int = 3,
     extra_sinks: "list | None" = None,
+    anthropic_api_key: str | None = None,
 ) -> dict:
     """Execute one scenario end-to-end and write artifacts; returns the metrics report dict.
 
@@ -157,6 +158,10 @@ def run_scenario(
 
     ``train_ratio``/``val_ratio``/``test_ratio``, ``seasonal_period`` and ``n_changepoints_to_detect``
     are used only when ``series_df`` is set.
+
+    ``anthropic_api_key``, when supplied, forces the Anthropic provider and is threaded explicitly to
+    the model clients (a bring-your-own-key UI session) — no process-global env mutation, so it's
+    safe under concurrent users on a shared host.
     """
     # 1. Resolve config (merge → validate → lockstep).
     defaults = load_config_yaml(_CONFIG_PATH)
@@ -165,6 +170,7 @@ def run_scenario(
         override,
         diagnostics_field_names=set(DiagnosticsBundle.field_names()),
         structural_tool_names=set(structural_tool_names()),
+        anthropic_api_key=anthropic_api_key,
     )
 
     # 2. Seed FIRST (research Decision 17) — before any Prophet fit.
@@ -258,11 +264,17 @@ def run_scenario(
         if cfg.models.llm_provider == LLM_PROVIDER_UNCONFIGURED:
             raise ConfigError(NO_PROVIDER_MESSAGE)
         visual_model = ModelWrapper(
-            build_visual_model(cfg.models.visual_model_id, cfg.models.aws_region, llm_provider=cfg.models.llm_provider),
+            build_visual_model(
+                cfg.models.visual_model_id, cfg.models.aws_region,
+                llm_provider=cfg.models.llm_provider, api_key=anthropic_api_key,
+            ),
             cfg.models.visual_model_id,
         )
         decision_model = ModelWrapper(
-            build_decision_model(cfg.models.decision_model_id, cfg.models.aws_region, llm_provider=cfg.models.llm_provider),
+            build_decision_model(
+                cfg.models.decision_model_id, cfg.models.aws_region,
+                llm_provider=cfg.models.llm_provider, api_key=anthropic_api_key,
+            ),
             cfg.models.decision_model_id,
         )
 

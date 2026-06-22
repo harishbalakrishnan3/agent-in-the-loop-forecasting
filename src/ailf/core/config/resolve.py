@@ -134,8 +134,14 @@ def resolve_config(
     *,
     diagnostics_field_names: set[str],
     structural_tool_names: set[str],
+    anthropic_api_key: str | None = None,
 ) -> EffectiveConfig:
-    """Merge ``override`` onto ``defaults``, validate + lockstep-check, return ``EffectiveConfig``."""
+    """Merge ``override`` onto ``defaults``, validate + lockstep-check, return ``EffectiveConfig``.
+
+    When ``anthropic_api_key`` is provided (a bring-your-own-key session), the provider is forced to
+    ``anthropic`` regardless of server env, so a hosted/public deployment never needs its own
+    credentials in the process environment.
+    """
     override = override or ConfigOverride()
 
     # --- models (scalar replace within the block) ---
@@ -153,8 +159,8 @@ def resolve_config(
     if not region:
         raise ConfigError("aws_region is required and must be non-empty")
 
-    # Detect provider from env; translate Bedrock model IDs to native IDs for the Anthropic path.
-    llm_provider = _detect_llm_provider()
+    # An explicit BYO key forces the Anthropic provider; otherwise detect from env.
+    llm_provider = "anthropic" if (anthropic_api_key and anthropic_api_key.strip()) else _detect_llm_provider()
     if llm_provider == "anthropic":
         visual_id = _to_anthropic_model_id(visual_id)
         decision_id = _to_anthropic_model_id(decision_id)

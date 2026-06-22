@@ -91,14 +91,17 @@ class AnthropicStructuredClient:
     every call (feature 006, FR-028/R4).
     """
 
-    def __init__(self, model_id: str, *, max_tokens: int = 2000) -> None:
+    def __init__(self, model_id: str, *, max_tokens: int = 2000, api_key: str | None = None) -> None:
         import anthropic  # noqa: PLC0415
         import httpx  # noqa: PLC0415
 
         self._model_id = model_id
         self._max_tokens = max_tokens
+        # ``api_key`` is passed explicitly per run (e.g. a bring-your-own-key UI session) so no
+        # process-global ``os.environ`` mutation is needed — safe under concurrent users. When None,
+        # the Anthropic SDK reads ANTHROPIC_API_KEY from the environment as usual.
         # Corporate proxy uses a self-signed cert — disable verification for the internal network.
-        self._client = anthropic.Anthropic(http_client=httpx.Client(verify=False))
+        self._client = anthropic.Anthropic(api_key=api_key, http_client=httpx.Client(verify=False))
 
     def with_structured_output(self, schema: type) -> _AnthropicProxy:
         return _AnthropicProxy(self._model_id, schema, self._max_tokens, self._client)
@@ -114,10 +117,14 @@ def build_visual_model(
     *,
     max_tokens: int = 2000,
     llm_provider: str = "bedrock",
+    api_key: str | None = None,
 ):
-    """Build the visual-node model client. Dispatches on ``llm_provider``."""
+    """Build the visual-node model client. Dispatches on ``llm_provider``.
+
+    ``api_key`` (Anthropic provider only) is threaded explicitly for bring-your-own-key sessions.
+    """
     if llm_provider == "anthropic":
-        return AnthropicStructuredClient(model_id, max_tokens=max_tokens)
+        return AnthropicStructuredClient(model_id, max_tokens=max_tokens, api_key=api_key)
     # No temperature: newer Bedrock models (e.g. Opus 4.8) reject the deprecated parameter.
     return ChatBedrockConverse(model=model_id, region_name=region_name, max_tokens=max_tokens)
 
@@ -128,10 +135,11 @@ def build_decision_model(
     *,
     max_tokens: int = 2400,
     llm_provider: str = "bedrock",
+    api_key: str | None = None,
 ):
     """Build the decision-node model client. Dispatches on ``llm_provider``."""
     if llm_provider == "anthropic":
-        return AnthropicStructuredClient(model_id, max_tokens=max_tokens)
+        return AnthropicStructuredClient(model_id, max_tokens=max_tokens, api_key=api_key)
     return ChatBedrockConverse(model=model_id, region_name=region_name, max_tokens=max_tokens)
 
 

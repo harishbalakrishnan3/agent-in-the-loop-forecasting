@@ -48,3 +48,33 @@ def test_blank_values_are_ignored(monkeypatch):
     monkeypatch.setenv(_ANTHROPIC, "   ")  # whitespace-only → treated as unset
     monkeypatch.setenv(_AWS, "AKIA-test")
     assert _detect_llm_provider() == "bedrock"
+
+
+def test_byo_key_forces_anthropic_and_translates_model_ids(monkeypatch):
+    """An explicit bring-your-own-key forces the Anthropic provider even with NO server env
+    credentials, and Bedrock-form model ids are translated to native Anthropic ids."""
+    from ailf.core.config.resolve import resolve_config
+
+    _clear(monkeypatch)  # neither ANTHROPIC_API_KEY nor AWS_ACCESS_KEY_ID in env
+    defaults = {
+        "models": {
+            "visual_model_id": "us.anthropic.claude-opus-4-8",
+            "decision_model_id": "us.anthropic.claude-sonnet-4-6",
+        },
+        "aws_region": "us-west-2",
+        "visual_analysis_enabled": True,
+        "diagnostics": {"d1": True},
+        "agent_tools": {"t1": True, "full_history_default": True},
+        "split": {"units": "golden"},
+        "seed": 1729,
+    }
+    cfg = resolve_config(
+        defaults,
+        None,
+        diagnostics_field_names={"d1"},
+        structural_tool_names={"t1"},
+        anthropic_api_key="sk-ant-byo-test",
+    )
+    assert cfg.models.llm_provider == "anthropic"
+    assert cfg.models.visual_model_id == "claude-opus-4-8"      # translated from Bedrock-form
+    assert cfg.models.decision_model_id == "claude-sonnet-4-6"
