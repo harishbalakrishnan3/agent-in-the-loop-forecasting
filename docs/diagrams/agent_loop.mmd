@@ -1,0 +1,23 @@
+%% The bounded agent loop — diagnose → propose → backtest-gate → accept/reject.
+%% Mirrors the LangGraph engine: START → (visual ∥ diagnostics) → decision ↔ validation → final.
+%% Render: `mmdc -i agent_loop.mmd -o agent_loop.pdf` or paste into https://mermaid.live.
+flowchart TD
+    START([Start]) --> PRELUDE["Deterministic prelude<br/>detect changepoints · fit baselines<br/>(full-history Prophet, seasonal naive)"]
+    PRELUDE --> DIAG["Compute diagnostics bundle<br/>(training data only)"]
+    PRELUDE --> VIS["Visual inspection<br/>(optional)"]
+    DIAG --> DECIDE
+    VIS --> DECIDE
+
+    DECIDE["Agent decision<br/>pick ONE bounded tool + params<br/>(from a fixed menu) + rationale"]
+    DECIDE --> GATE{"Guardrail:<br/>backtest on validation fold<br/>strictly beats naive?"}
+    GATE -- "no · not yet at iteration cap" --> DECIDE
+    GATE -- "yes (accepted)" --> FINAL
+    GATE -- "iteration cap reached" --> FINAL
+
+    FINAL["Final evaluation<br/>(hidden test fold — read once)"]
+    FINAL --> VERDICT([Verdict + explanation report<br/>winner by lowest test MAE])
+
+    classDef decide fill:#ede7f6,stroke:#6a3d9a,color:#311b66;
+    classDef gate fill:#e8f5e9,stroke:#2e7d32,color:#14431a;
+    class DECIDE decide
+    class GATE gate

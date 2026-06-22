@@ -1,0 +1,29 @@
+%% System architecture — Agent-in-the-Loop Forecasting (5 layers).
+%% Render to vector: `mmdc -i architecture.mmd -o architecture.pdf` (npm i -g @mermaid-js/mermaid-cli)
+%% or paste into https://mermaid.live and export SVG/PDF.
+flowchart TB
+    subgraph DATA["1 · Data"]
+        D1["Seeded synthetic generators<br/>(Darts) + standard datasets"]
+    end
+    subgraph MODELS["2 · Forecasting models"]
+        M1["Seasonal Naive · Prophet<br/>(AutoARIMA / ETS optional)<br/>uniform interface"]
+    end
+    subgraph DIAG["3 · Diagnostics"]
+        G1["Drift / changepoint / outlier<br/>detection + metrics"]
+    end
+    subgraph AGENT["4 · LLM analyst agent (ReAct loop)"]
+        A1["Reads diagnostics →<br/>picks a tool →<br/>proposes a bounded intervention"]
+    end
+    subgraph GUARD["5 · Evaluation / guardrail"]
+        E1["Rolling backtest<br/>accepts or rejects<br/>(final authority)"]
+    end
+
+    DATA --> MODELS --> DIAG --> AGENT
+    AGENT -- "proposes (never applies)" --> GUARD
+    GUARD -- "accept → keep · reject → re-prompt" --> AGENT
+    GUARD --> REPORT["Explanation report<br/>+ verdict (winner by hidden-test MAE)"]
+
+    classDef agent fill:#ede7f6,stroke:#6a3d9a,color:#311b66;
+    classDef guard fill:#e8f5e9,stroke:#2e7d32,color:#14431a;
+    class AGENT agent
+    class GUARD guard
