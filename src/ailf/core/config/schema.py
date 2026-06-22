@@ -13,6 +13,46 @@ from typing import Any
 
 
 @dataclass(frozen=True)
+class RunCredentials:
+    """Per-run, bring-your-own LLM credentials threaded explicitly through the call chain.
+
+    Never written to disk, never placed in ``os.environ`` (process-global state is unsafe under
+    concurrent users on a shared host). When all fields are empty the run falls back to the
+    server-configured provider (local dev with a ``.env``).
+    """
+
+    anthropic_api_key: str | None = None
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: str | None = None
+    aws_region: str | None = None
+
+    # Optional LangSmith tracing (opt-in). When enabled with a key, the run is traced to LangSmith
+    # under ``langsmith_project``. Configured via env vars the LangChain SDK reads at call time.
+    langsmith_tracing: bool = False
+    langsmith_api_key: str | None = None
+    langsmith_project: str = "agent-in-the-loop-forecasting"
+
+    @property
+    def has_langsmith(self) -> bool:
+        return bool(self.langsmith_tracing and self.langsmith_api_key and self.langsmith_api_key.strip())
+
+    @property
+    def has_anthropic(self) -> bool:
+        return bool(self.anthropic_api_key and self.anthropic_api_key.strip())
+
+    @property
+    def has_aws(self) -> bool:
+        return bool(
+            self.aws_access_key_id and self.aws_access_key_id.strip()
+            and self.aws_secret_access_key and self.aws_secret_access_key.strip()
+        )
+
+    @property
+    def is_empty(self) -> bool:
+        return not (self.has_anthropic or self.has_aws)
+
+
+@dataclass(frozen=True)
 class ModelConfig:
     visual_model_id: str
     decision_model_id: str

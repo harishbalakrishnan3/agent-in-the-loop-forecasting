@@ -50,13 +50,8 @@ def test_blank_values_are_ignored(monkeypatch):
     assert _detect_llm_provider() == "bedrock"
 
 
-def test_byo_key_forces_anthropic_and_translates_model_ids(monkeypatch):
-    """An explicit bring-your-own-key forces the Anthropic provider even with NO server env
-    credentials, and Bedrock-form model ids are translated to native Anthropic ids."""
-    from ailf.core.config.resolve import resolve_config
-
-    _clear(monkeypatch)  # neither ANTHROPIC_API_KEY nor AWS_ACCESS_KEY_ID in env
-    defaults = {
+def _byo_defaults():
+    return {
         "models": {
             "visual_model_id": "us.anthropic.claude-opus-4-8",
             "decision_model_id": "us.anthropic.claude-sonnet-4-6",
@@ -68,13 +63,49 @@ def test_byo_key_forces_anthropic_and_translates_model_ids(monkeypatch):
         "split": {"units": "golden"},
         "seed": 1729,
     }
-    cfg = resolve_config(
-        defaults,
-        None,
-        diagnostics_field_names={"d1"},
-        structural_tool_names={"t1"},
-        anthropic_api_key="sk-ant-byo-test",
+
+
+def _resolve_byo(creds):
+    from ailf.core.config.resolve import resolve_config
+
+    return resolve_config(
+        _byo_defaults(), None,
+        diagnostics_field_names={"d1"}, structural_tool_names={"t1"},
+        credentials=creds,
     )
+
+
+def test_byo_anthropic_key_forces_anthropic_and_translates_model_ids(monkeypatch):
+    """An explicit BYO Anthropic key forces the Anthropic provider even with NO server env
+    credentials, and Bedrock-form model ids are translated to native Anthropic ids."""
+    from ailf.core.config.schema import RunCredentials
+
+    _clear(monkeypatch)  # neither ANTHROPIC_API_KEY nor AWS_ACCESS_KEY_ID in env
+    cfg = _resolve_byo(RunCredentials(anthropic_api_key="sk-ant-byo-test"))
     assert cfg.models.llm_provider == "anthropic"
     assert cfg.models.visual_model_id == "claude-opus-4-8"      # translated from Bedrock-form
     assert cfg.models.decision_model_id == "claude-sonnet-4-6"
+
+
+def test_byo_aws_creds_force_bedrock_and_override_region(monkeypatch):
+    """Explicit BYO AWS creds force the Bedrock provider (no env creds) and the supplied region wins;
+    Bedrock-form model ids are kept as-is (no translation)."""
+    from ailf.core.config.schema import RunCredentials
+
+    _clear(monkeypatch)
+    cfg = _resolve_byo(RunCredentials(
+        aws_access_key_id="AKIA-byo", aws_secret_access_key="secret-byo", aws_region="eu-west-1",
+    ))
+    assert cfg.models.llm_provider == "bedrock"
+    assert cfg.models.visual_model_id == "us.anthropic.claude-opus-4-8"  # unchanged for Bedrock
+    assert cfg.models.aws_region == "eu-west-1"
+
+
+def test_byo_anthropic_wins_when_both_kinds_present(monkeypatch):
+    from ailf.core.config.schema import RunCredentials
+
+    _clear(monkeypatch)
+    cfg = _resolve_byo(RunCredentials(
+        anthropic_api_key="sk-ant-byo", aws_access_key_id="AKIA", aws_secret_access_key="sec",
+    ))
+    assert cfg.models.llm_provider == "anthropic"

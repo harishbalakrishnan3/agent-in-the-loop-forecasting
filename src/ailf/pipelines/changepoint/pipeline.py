@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
 from pathlib import Path
 
@@ -33,7 +34,7 @@ from ailf.core.config.resolve import (
     ConfigError,
     resolve_config,
 )
-from ailf.core.config.schema import ConfigOverride
+from ailf.core.config.schema import ConfigOverride, RunCredentials
 from ailf.core.events import payloads as ev
 from ailf.core.events.emitter import EventEmitter, NullEmitter
 from ailf.core.events.sink import FileEventSink
@@ -148,7 +149,7 @@ def run_scenario(
     seasonal_period: int = 365,
     n_changepoints_to_detect: int = 3,
     extra_sinks: "list | None" = None,
-    anthropic_api_key: str | None = None,
+    credentials: "RunCredentials | None" = None,
 ) -> dict:
     """Execute one scenario end-to-end and write artifacts; returns the metrics report dict.
 
@@ -159,10 +160,58 @@ def run_scenario(
     ``train_ratio``/``val_ratio``/``test_ratio``, ``seasonal_period`` and ``n_changepoints_to_detect``
     are used only when ``series_df`` is set.
 
-    ``anthropic_api_key``, when supplied, forces the Anthropic provider and is threaded explicitly to
-    the model clients (a bring-your-own-key UI session) — no process-global env mutation, so it's
-    safe under concurrent users on a shared host.
+    ``credentials`` (a ``RunCredentials``), when supplied, forces the provider (Anthropic if an API
+    key is present, else Bedrock if AWS creds are present) and is threaded explicitly to the model
+    clients (a bring-your-own-credential UI session) — no process-global env mutation, so it's safe
+    under concurrent users on a shared host.
     """
+    # 0. Optional LangSmith tracing (opt-in). The LangChain SDK reads these env vars at call time;
+    # there is no per-call API, so this is the one place env vars are set. Scoped to this run and
+    # cleared in a finally block so it does not leak across concurrent runs on a shared host.
+    _ls_restore: dict[str, str | None] = {}
+    if credentials is not None and credentials.has_langsmith:
+        for k, v in (
+            ("LANGSMITH_TRACING", "true"),
+            ("LANGSMITH_API_KEY", credentials.langsmith_api_key or ""),
+            ("LANGSMITH_PROJECT", credentials.langsmith_project or "agent-in-the-loop-forecasting"),
+        ):
+            _ls_restore[k] = os.environ.get(k)
+            os.environ[k] = v
+
+    try:
+        return _run_scenario_inner(
+            scenario_id, override=override, model_wrappers=model_wrappers, reports_root=reports_root,
+            emit_events=emit_events, series_df=series_df, train_ratio=train_ratio, val_ratio=val_ratio,
+            test_ratio=test_ratio, seasonal_period=seasonal_period,
+            n_changepoints_to_detect=n_changepoints_to_detect, extra_sinks=extra_sinks,
+            credentials=credentials,
+        )
+    finally:
+        for k, prev in _ls_restore.items():
+            if prev is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = prev
+
+
+def _run_scenario_inner(
+    scenario_id: str,
+    *,
+    override: ConfigOverride | None = None,
+    model_wrappers: tuple | None = None,
+    reports_root: Path | None = None,
+    emit_events: bool = True,
+    series_df: "pd.DataFrame | None" = None,
+    train_ratio: float = 0.8,
+    val_ratio: float = 0.1,
+    test_ratio: float = 0.1,
+    seasonal_period: int = 365,
+    n_changepoints_to_detect: int = 3,
+    extra_sinks: "list | None" = None,
+    credentials: "RunCredentials | None" = None,
+) -> dict:
+    """Body of run_scenario; see run_scenario for the contract (split out so LangSmith env setup
+    can wrap it in a try/finally without indenting the whole function)."""
     # 1. Resolve config (merge → validate → lockstep).
     defaults = load_config_yaml(_CONFIG_PATH)
     cfg = resolve_config(
@@ -170,7 +219,7 @@ def run_scenario(
         override,
         diagnostics_field_names=set(DiagnosticsBundle.field_names()),
         structural_tool_names=set(structural_tool_names()),
-        anthropic_api_key=anthropic_api_key,
+        credentials=credentials,
     )
 
     # 2. Seed FIRST (research Decision 17) — before any Prophet fit.
@@ -263,17 +312,27 @@ def run_scenario(
         # rather than in config resolution (which runs credential-free in the test suite).
         if cfg.models.llm_provider == LLM_PROVIDER_UNCONFIGURED:
             raise ConfigError(NO_PROVIDER_MESSAGE)
+        byo_api_key = credentials.anthropic_api_key if (credentials and credentials.has_anthropic) else None
+        byo_aws = (
+            {
+                "aws_access_key_id": credentials.aws_access_key_id,
+                "aws_secret_access_key": credentials.aws_secret_access_key,
+                "region": credentials.aws_region,
+            }
+            if (credentials and credentials.has_aws)
+            else None
+        )
         visual_model = ModelWrapper(
             build_visual_model(
                 cfg.models.visual_model_id, cfg.models.aws_region,
-                llm_provider=cfg.models.llm_provider, api_key=anthropic_api_key,
+                llm_provider=cfg.models.llm_provider, api_key=byo_api_key, aws_creds=byo_aws,
             ),
             cfg.models.visual_model_id,
         )
         decision_model = ModelWrapper(
             build_decision_model(
                 cfg.models.decision_model_id, cfg.models.aws_region,
-                llm_provider=cfg.models.llm_provider, api_key=anthropic_api_key,
+                llm_provider=cfg.models.llm_provider, api_key=byo_api_key, aws_creds=byo_aws,
             ),
             cfg.models.decision_model_id,
         )

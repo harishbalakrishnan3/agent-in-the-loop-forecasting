@@ -111,6 +111,21 @@ class AnthropicStructuredClient:
 # Factory functions — dispatch on llm_provider
 # ---------------------------------------------------------------------------
 
+def _bedrock_kwargs(region_name: str, aws_creds: "dict | None") -> dict:
+    """Build ChatBedrockConverse kwargs, threading explicit BYO AWS creds when provided.
+
+    When ``aws_creds`` is None the client resolves credentials from the standard boto3 chain
+    (env / profile / instance role), preserving the local-dev and server-env behaviour.
+    """
+    kwargs: dict = {"region_name": region_name}
+    if aws_creds:
+        kwargs["aws_access_key_id"] = aws_creds["aws_access_key_id"]
+        kwargs["aws_secret_access_key"] = aws_creds["aws_secret_access_key"]
+        if aws_creds.get("region"):
+            kwargs["region_name"] = aws_creds["region"]
+    return kwargs
+
+
 def build_visual_model(
     model_id: str,
     region_name: str,
@@ -118,15 +133,17 @@ def build_visual_model(
     max_tokens: int = 2000,
     llm_provider: str = "bedrock",
     api_key: str | None = None,
+    aws_creds: "dict | None" = None,
 ):
     """Build the visual-node model client. Dispatches on ``llm_provider``.
 
-    ``api_key`` (Anthropic provider only) is threaded explicitly for bring-your-own-key sessions.
+    ``api_key`` (Anthropic) and ``aws_creds`` (Bedrock) are threaded explicitly for
+    bring-your-own-credential sessions — no process-global state.
     """
     if llm_provider == "anthropic":
         return AnthropicStructuredClient(model_id, max_tokens=max_tokens, api_key=api_key)
     # No temperature: newer Bedrock models (e.g. Opus 4.8) reject the deprecated parameter.
-    return ChatBedrockConverse(model=model_id, region_name=region_name, max_tokens=max_tokens)
+    return ChatBedrockConverse(model=model_id, max_tokens=max_tokens, **_bedrock_kwargs(region_name, aws_creds))
 
 
 def build_decision_model(
@@ -136,11 +153,12 @@ def build_decision_model(
     max_tokens: int = 2400,
     llm_provider: str = "bedrock",
     api_key: str | None = None,
+    aws_creds: "dict | None" = None,
 ):
     """Build the decision-node model client. Dispatches on ``llm_provider``."""
     if llm_provider == "anthropic":
         return AnthropicStructuredClient(model_id, max_tokens=max_tokens, api_key=api_key)
-    return ChatBedrockConverse(model=model_id, region_name=region_name, max_tokens=max_tokens)
+    return ChatBedrockConverse(model=model_id, max_tokens=max_tokens, **_bedrock_kwargs(region_name, aws_creds))
 
 
 def _wrap_model_error(model_id: str, exc: Exception, provider: str) -> ModelUnavailableError:

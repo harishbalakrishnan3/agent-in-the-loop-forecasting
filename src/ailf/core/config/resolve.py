@@ -17,6 +17,7 @@ from ailf.core.config.schema import (
     ConfigOverride,
     EffectiveConfig,
     ModelConfig,
+    RunCredentials,
     SplitSpec,
 )
 
@@ -134,13 +135,13 @@ def resolve_config(
     *,
     diagnostics_field_names: set[str],
     structural_tool_names: set[str],
-    anthropic_api_key: str | None = None,
+    credentials: "RunCredentials | None" = None,
 ) -> EffectiveConfig:
     """Merge ``override`` onto ``defaults``, validate + lockstep-check, return ``EffectiveConfig``.
 
-    When ``anthropic_api_key`` is provided (a bring-your-own-key session), the provider is forced to
-    ``anthropic`` regardless of server env, so a hosted/public deployment never needs its own
-    credentials in the process environment.
+    When ``credentials`` carries bring-your-own keys, the provider is forced accordingly (Anthropic
+    if an API key is present, else Bedrock if AWS creds are present) regardless of server env — so a
+    hosted/public deployment never needs its own credentials in the process environment.
     """
     override = override or ConfigOverride()
 
@@ -159,11 +160,20 @@ def resolve_config(
     if not region:
         raise ConfigError("aws_region is required and must be non-empty")
 
-    # An explicit BYO key forces the Anthropic provider; otherwise detect from env.
-    llm_provider = "anthropic" if (anthropic_api_key and anthropic_api_key.strip()) else _detect_llm_provider()
+    # Explicit BYO creds force the provider; otherwise detect from env. Anthropic wins when both
+    # kinds of BYO creds are somehow present (cheaper/safer public default).
+    if credentials is not None and credentials.has_anthropic:
+        llm_provider = "anthropic"
+    elif credentials is not None and credentials.has_aws:
+        llm_provider = "bedrock"
+    else:
+        llm_provider = _detect_llm_provider()
     if llm_provider == "anthropic":
         visual_id = _to_anthropic_model_id(visual_id)
         decision_id = _to_anthropic_model_id(decision_id)
+    # A BYO AWS region overrides the configured default.
+    if credentials is not None and credentials.has_aws and credentials.aws_region:
+        region = credentials.aws_region
 
     models = ModelConfig(
         visual_model_id=visual_id,

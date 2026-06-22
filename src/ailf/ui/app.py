@@ -22,7 +22,7 @@ import pandas as pd
 import streamlit as st
 
 from ailf.core.config.resolve import ConfigError
-from ailf.core.config.schema import ConfigOverride
+from ailf.core.config.schema import ConfigOverride, RunCredentials
 from ailf.pipelines.changepoint.datasets import load_metadata
 from ailf.ui import chart as chart_mod
 from ailf.ui import config_builder as cb
@@ -88,16 +88,6 @@ def _render_control_pane() -> dict[str, Any]:
                 sel["n_changepoints_to_detect"] = st.number_input("Changepoints to detect", 1, 50, 3)
 
         st.subheader("2 · Models")
-        sel["anthropic_api_key"] = st.text_input(
-            "Anthropic API key",
-            type="password",
-            help=(
-                "Bring your own Anthropic API key — used only for this run, stored nowhere. "
-                "Get one at console.anthropic.com. Leave blank to use the server's configured "
-                "provider (local development)."
-            ),
-            placeholder="sk-ant-…",
-        ).strip()
         sel["visual_analysis_enabled"] = st.toggle("Visual analysis", value=True)
         sel["visual_model_id"] = models.model_id_for_label(
             st.selectbox(
@@ -143,6 +133,71 @@ def _render_control_pane() -> dict[str, Any]:
     return sel
 
 
+# --- credentials panel (main area) -------------------------------------------------------------
+
+
+def _render_credentials_panel() -> RunCredentials:
+    """Render the main-area Credentials panel and return a RunCredentials.
+
+    Lives in the main area (not the sidebar) and is expanded until credentials are provided. The
+    panel makes it unmistakable that nothing is stored — credentials are used only for the current
+    run, in memory, on this session.
+    """
+    have_any = bool(st.session_state.get("_creds_provided"))
+    with st.expander("🔑 Credentials", expanded=not have_any):
+        st.info(
+            "🔒 **Your credentials are never stored.** They are kept only in memory for the current "
+            "session and used solely to make this run's model calls — not written to disk, not "
+            "logged, not shared. Reloading the page clears them.",
+            icon="🔒",
+        )
+        provider = st.radio(
+            "Provider", ["Anthropic API", "AWS Bedrock"], horizontal=True,
+            help="Bring your own credentials for whichever provider you use.",
+        )
+
+        anthropic_key = aws_id = aws_secret = aws_region = ""
+        if provider == "Anthropic API":
+            anthropic_key = st.text_input(
+                "Anthropic API key", type="password", placeholder="sk-ant-…",
+                help="Get one at console.anthropic.com. Used only for this session.",
+            ).strip()
+        else:
+            st.warning(
+                "⚠️ **Heads up:** AWS access keys are often broadly scoped. Prefer a key restricted "
+                "to Bedrock, and never reuse a production key on a shared/hosted app. As above, "
+                "nothing you enter here is stored.",
+                icon="⚠️",
+            )
+            c1, c2 = st.columns(2)
+            aws_id = c1.text_input("AWS access key ID", type="password", placeholder="AKIA…").strip()
+            aws_secret = c2.text_input("AWS secret access key", type="password").strip()
+            aws_region = st.text_input("AWS region", value="us-west-2").strip()
+
+        # Optional LangSmith tracing.
+        with st.expander("LangSmith tracing (optional)"):
+            ls_on = st.toggle("Enable tracing", value=False, help="Trace this run to LangSmith.")
+            ls_key = st.text_input(
+                "LangSmith API key", type="password", placeholder="lsv2_…",
+                disabled=not ls_on,
+            ).strip()
+            ls_project = st.text_input(
+                "LangSmith project", value="agent-in-the-loop-forecasting", disabled=not ls_on,
+            ).strip() or "agent-in-the-loop-forecasting"
+
+    creds = RunCredentials(
+        anthropic_api_key=anthropic_key or None,
+        aws_access_key_id=aws_id or None,
+        aws_secret_access_key=aws_secret or None,
+        aws_region=aws_region or None,
+        langsmith_tracing=bool(ls_on),
+        langsmith_api_key=ls_key or None,
+        langsmith_project=ls_project,
+    )
+    st.session_state["_creds_provided"] = not creds.is_empty
+    return creds
+
+
 # --- pre-run validation ------------------------------------------------------------------------
 
 
@@ -174,7 +229,7 @@ def _command_metadata(sel: dict[str, Any]) -> str:
     )
 
 
-def _run_and_stream(sel: dict[str, Any]) -> None:
+def _run_and_stream(sel: dict[str, Any], credentials: RunCredentials) -> None:
     override = ConfigOverride.from_dict(
         cb.to_override_dict(
             visual_model_id=sel["visual_model_id"],
@@ -188,7 +243,7 @@ def _run_and_stream(sel: dict[str, Any]) -> None:
     st.subheader("What's running")
     st.code(_command_metadata(sel), language="bash")
 
-    kwargs: dict[str, Any] = {"override": override, "anthropic_api_key": sel.get("anthropic_api_key") or None}
+    kwargs: dict[str, Any] = {"override": override, "credentials": credentials}
     if sel["dataset_mode"] == "scenario":
         scenario_id = sel["scenario_id"]
     else:
@@ -311,8 +366,19 @@ def main() -> None:  # pragma: no cover - exercised via the manual quickstart
     sel = _render_control_pane()
     st.title("Agent-in-the-Loop Forecasting")
 
+    credentials = _render_credentials_panel()
+
     if not sel["start"]:
-        st.info("Configure the run in the left pane, then click **Start run**.")
+        st.info("Configure the run in the left pane, add your credentials above, then click **Start run**.")
+        return
+
+    # Guard: a real run needs a provider. Block with a friendly prompt rather than failing mid-run.
+    if credentials.is_empty:
+        st.warning(
+            "Please enter your credentials in the **🔑 Credentials** panel above (an Anthropic API "
+            "key, or AWS Bedrock keys) before starting a run.",
+            icon="🔑",
+        )
         return
 
     result = _validate(sel)
@@ -321,7 +387,7 @@ def main() -> None:  # pragma: no cover - exercised via the manual quickstart
             st.error(err)
         return
 
-    _run_and_stream(sel)
+    _run_and_stream(sel, credentials)
 
 
 if __name__ == "__main__":  # pragma: no cover

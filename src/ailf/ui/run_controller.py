@@ -14,7 +14,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any
 
-from ailf.core.config.schema import ConfigOverride
+from ailf.core.config.schema import ConfigOverride, RunCredentials
 from ailf.core.events.sink import QueueEventSink
 
 
@@ -43,7 +43,7 @@ def start_run(
     seasonal_period: int = 365,
     n_changepoints_to_detect: int = 3,
     reports_root: Any | None = None,
-    anthropic_api_key: str | None = None,
+    credentials: "RunCredentials | None" = None,
 ) -> RunHandle:
     """Spawn a daemon worker running ``run_scenario`` with a live ``QueueEventSink``.
 
@@ -63,7 +63,7 @@ def start_run(
                 "override": override,
                 "reports_root": reports_root,
                 "extra_sinks": [sink],
-                "anthropic_api_key": anthropic_api_key,
+                "credentials": credentials,
             }
             if series_df is not None:
                 kwargs.update(

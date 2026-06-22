@@ -93,3 +93,44 @@ def test_real_run_without_provider_fails_fast(tmp_path, monkeypatch):
     monkeypatch.delenv("AWS_ACCESS_KEY_ID", raising=False)
     with pytest.raises(ConfigError, match="No LLM provider configured"):
         run_scenario(_SID, reports_root=tmp_path)  # model_wrappers=None → real-client path
+
+
+def test_langsmith_env_is_scoped_to_the_run_and_restored(tmp_path, monkeypatch):
+    """Opt-in LangSmith tracing sets the SDK env vars during the run and restores them after, so it
+    cannot leak across concurrent runs on a shared host."""
+    import os
+
+    from ailf.core.config.schema import RunCredentials
+
+    monkeypatch.delenv("LANGSMITH_TRACING", raising=False)
+    monkeypatch.delenv("LANGSMITH_API_KEY", raising=False)
+    monkeypatch.delenv("LANGSMITH_PROJECT", raising=False)
+
+    seen: dict[str, str | None] = {}
+
+    class _CapturingFake(_Fake):
+        def invoke_structured_text(self, *, prompt, schema):
+            seen["tracing"] = os.environ.get("LANGSMITH_TRACING")
+            seen["project"] = os.environ.get("LANGSMITH_PROJECT")
+            return super().invoke_structured_text(prompt=prompt, schema=schema)
+
+    v = _CapturingFake([])
+    d = _CapturingFake(
+        [InterventionChoice(tool="full_history_default", params={}, rationale="r", expected_effect="e")
+         for _ in range(5)]
+    )
+    run_scenario(
+        _SID,
+        override=ConfigOverride(visual_analysis_enabled=False),
+        model_wrappers=(v, d),
+        reports_root=tmp_path,
+        credentials=RunCredentials(
+            anthropic_api_key="sk-ant-x",  # provider source (unused — fakes injected)
+            langsmith_tracing=True, langsmith_api_key="lsv2_x", langsmith_project="my-proj",
+        ),
+    )
+    # During the run the env was set...
+    assert seen["tracing"] == "true" and seen["project"] == "my-proj"
+    # ...and restored (unset, since it wasn't set before) after the run.
+    assert os.environ.get("LANGSMITH_TRACING") is None
+    assert os.environ.get("LANGSMITH_PROJECT") is None
