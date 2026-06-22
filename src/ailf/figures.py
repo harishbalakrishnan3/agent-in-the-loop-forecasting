@@ -190,19 +190,101 @@ def render_forecast_comparison_paper(
     return out_path
 
 
+def render_dataset_overview_paper(
+    run_dir: str | Path,
+    out_path: str | Path,
+    *,
+    width: str = "double",
+    title: str | None = None,
+    injected_boundaries: list[int] | None = None,
+) -> Path:
+    """Render the FULL series (train+validation+test) for an appendix "here is the dataset" figure.
+
+    Plots every row of ``forecast_comparison.csv`` as a single line — NO forecasts — with the three
+    splits shaded and labelled and the ground-truth injected boundaries marked (dotted verticals).
+    ``injected_boundaries`` are ROW INDICES into the series (from the scenario metadata's
+    ``audit_only.true_injected_boundaries``); out-of-range indices are ignored.
+    """
+    frame, metrics = load_run_artifacts(run_dir)
+
+    base_font = 8.0 if width == "single" else 9.0
+    fig_w = COLUMN_WIDTH_IN if width == "single" else DOUBLE_WIDTH_IN
+    fig_h = fig_w * (0.72 if width == "single" else 0.42)
+
+    with plt.rc_context(_paper_rc(base_font)):
+        fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+
+        # Region shading across the WHOLE series.
+        for region, (color, alpha, _) in _REGION_FILL.items():
+            seg = frame[frame["region"] == region]
+            if seg.empty:
+                continue
+            ax.axvspan(seg["ds"].iloc[0], seg["ds"].iloc[-1], color=color, alpha=alpha, lw=0, zorder=0)
+
+        # The full observed series (actuals over every row).
+        ax.plot(frame["ds"], frame["y_actual"], color="#000000", linewidth=0.9, zorder=3, label="Series")
+
+        # Ground-truth injected boundaries (row index → its date), clamped to the series.
+        for idx in (injected_boundaries or []):
+            if 0 <= idx < len(frame):
+                ax.axvline(frame["ds"].iloc[idx], color="#d62728", linestyle=(0, (1, 2)),
+                           linewidth=0.8, zorder=2)
+
+        # Region labels near the top of each band.
+        ymax = ax.get_ylim()[1]
+        for region, (color, _, label) in _REGION_FILL.items():
+            seg = frame[frame["region"] == region]
+            if seg.empty:
+                continue
+            mid = seg["ds"].iloc[0] + (seg["ds"].iloc[-1] - seg["ds"].iloc[0]) / 2
+            ax.text(mid, ymax, label, ha="center", va="top", fontsize=base_font - 1,
+                    color=color, alpha=0.9)
+
+        if title is None:
+            sid = metrics.get("scenario_id", "")
+            title = sid or None
+        if title:
+            ax.set_title(title)
+        ax.set_xlabel("date")
+        ax.set_ylabel("value")
+        if injected_boundaries:
+            # A one-line note so readers know what the red verticals are.
+            ax.plot([], [], color="#d62728", linestyle=(0, (1, 2)), linewidth=0.8,
+                    label="injected boundary")
+            ax.legend(loc="best", frameon=False, fontsize=base_font - 1)
+        fig.autofmt_xdate(rotation=0, ha="center")
+        fig.tight_layout()
+
+        out_path = Path(out_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(out_path)
+        plt.close(fig)
+    return out_path
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Render a paper-grade forecast-comparison figure.")
+    parser = argparse.ArgumentParser(description="Render a paper-grade figure from a run's artifacts.")
     parser.add_argument("run_dir", help="A reports/changepoint/<run_id> directory")
+    parser.add_argument("--kind", choices=["comparison", "dataset"], default="comparison",
+                        help="comparison = forecast window (default); dataset = full series for an appendix")
     parser.add_argument("--out", default=None, help="Output file (.pdf/.svg/.png). Default: <run_dir>/figure.pdf")
     parser.add_argument("--width", choices=["single", "double"], default="double")
     parser.add_argument("--context-points", type=int, default=180)
     parser.add_argument("--title", default=None)
+    parser.add_argument("--boundaries", default=None,
+                        help="Comma-separated row indices to mark on a dataset figure (injected ground truth)")
     args = parser.parse_args()
 
     out = args.out or str(Path(args.run_dir) / "figure.pdf")
-    path = render_forecast_comparison_paper(
-        args.run_dir, out, width=args.width, context_points=args.context_points, title=args.title
-    )
+    if args.kind == "dataset":
+        bounds = [int(x) for x in args.boundaries.split(",")] if args.boundaries else None
+        path = render_dataset_overview_paper(
+            args.run_dir, out, width=args.width, title=args.title, injected_boundaries=bounds
+        )
+    else:
+        path = render_forecast_comparison_paper(
+            args.run_dir, out, width=args.width, context_points=args.context_points, title=args.title
+        )
     print(f"wrote {path}")
 
 

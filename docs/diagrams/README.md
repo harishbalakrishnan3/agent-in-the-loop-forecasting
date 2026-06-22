@@ -34,6 +34,20 @@ It reads `forecast_comparison.csv` + `metrics.json`, so the figure is reproducib
 scenario + seed — no agent re-run, no API calls. Output extension picks the format (`.pdf` / `.svg`
 for vector, `.png` for raster).
 
+## Dataset overview figure (appendix)
+
+For an appendix "here is the dataset" plot, render the **full** series (train + validation + test)
+with the splits shaded and the ground-truth injected boundaries marked — no forecasts:
+
+```bash
+uv run python -m ailf.figures reports/changepoint/<run_id> --kind dataset \
+    --out figures/dataset_<scenario>.pdf --width double \
+    --boundaries 610,700      # from scenario_metadata.json audit_only.true_injected_boundaries
+```
+
+The committed `figures/dataset_<scenario>.pdf` (one per scenario) were generated this way, pulling
+each scenario's `true_injected_boundaries` from the metadata.
+
 ## Results table (LaTeX)
 
 `src/ailf/metrics_table.py` aggregates every `<run>/metrics.json` under a reports directory into a
@@ -50,8 +64,9 @@ Requires `\usepackage{booktabs}`; drop it into the paper with `\input{figures/re
 ## Pre-rendered outputs (`figures/`)
 
 The repo's top-level `figures/` directory holds the generated, paper-ready artifacts produced by the
-commands above: `architecture.{pdf,svg}`, `agent_loop.{pdf,svg}`, `forecast_<scenario>.pdf` (one per
-scenario), and `results_{mae,rmse}.tex`. Regenerate any of them with the commands in this file.
+commands above: `architecture.{pdf,svg}`, `agent_loop.{pdf,svg}`, `forecast_<scenario>.pdf` (forecast
+window, one per scenario), `dataset_<scenario>.pdf` (full-series appendix plots, one per scenario),
+and `results_{mae,rmse}.tex`. Regenerate any of them with the commands in this file.
 
 ## Why not screenshot the Streamlit UI?
 

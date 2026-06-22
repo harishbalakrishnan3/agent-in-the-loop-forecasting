@@ -80,3 +80,20 @@ def test_changepoint_markers_accepted(run_dir, tmp_path):
         run_dir, out, changepoints=[{"ds": "2021-06-15", "trend_delta": 1.2}]
     )
     assert out.exists()
+
+
+@pytest.mark.parametrize("width", ["single", "double"])
+def test_dataset_overview_renders_pdf(run_dir, tmp_path, width):
+    out = tmp_path / f"dataset_{width}.pdf"
+    path = figures.render_dataset_overview_paper(
+        run_dir, out, width=width, injected_boundaries=[120, 300],
+    )
+    assert path.exists()
+    assert path.read_bytes()[:5] == b"%PDF-"
+
+
+def test_dataset_overview_ignores_out_of_range_boundaries(run_dir, tmp_path):
+    out = tmp_path / "dataset_oob.pdf"
+    # 9999 is past the end of the 400-row synthetic series — must be ignored, not error.
+    figures.render_dataset_overview_paper(run_dir, out, injected_boundaries=[10, 9999])
+    assert out.exists()
