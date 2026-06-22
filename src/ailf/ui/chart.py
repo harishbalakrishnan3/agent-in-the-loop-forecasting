@@ -121,6 +121,31 @@ def build_figure(data: ChartData):
     if test_start is not None:
         fig.add_vrect(x0=test_start, x1=x_end, fillcolor=_REGION_FILL["test"], line_width=0, layer="below")
 
+    # Label each region directly on the chart, near the top, centered over the VISIBLE part of its
+    # band (clamped to the default view window so the label isn't off-screen left for the long
+    # training region). Colors match the band shading: grey=Train, blue=Validation, green=Test.
+    view_lo, view_hi = data.view_window
+    region_spans = [
+        ("Train", x0, val_start if val_start is not None else (test_start or x_end), "rgba(120,120,120,0.95)"),
+        ("Validation", val_start, test_start or x_end, "rgba(70,130,180,1)"),
+        ("Test", test_start, x_end, "rgba(44,160,44,1)"),
+    ]
+    for label, span_lo, span_hi, color in region_spans:
+        if span_lo is None or span_hi is None:
+            continue
+        lo = max(pd.Timestamp(span_lo), pd.Timestamp(view_lo))
+        hi = min(pd.Timestamp(span_hi), pd.Timestamp(view_hi))
+        if lo >= hi:
+            continue  # band not in the default view
+        mid = lo + (hi - lo) / 2
+        fig.add_annotation(
+            x=mid, y=0.99, xref="x", yref="paper",
+            text=f"<b>{label}</b>", showarrow=False,
+            font={"size": 12, "color": color},
+            bgcolor="rgba(20,20,20,0.55)", borderpad=2,
+            yanchor="top",
+        )
+
     # Forecast + actual traces (skip a trace whose column is entirely empty).
     for name, (col, dash, color) in _TRACE_STYLE.items():
         if col not in frame.columns or frame[col].notna().sum() == 0:
