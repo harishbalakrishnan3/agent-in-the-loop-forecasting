@@ -1,0 +1,2816 @@
+{
+  "schema_version": "2.0-poc-llm-eval",
+  "description": "LLM-eval POC golden dataset: lever-tagged synthetic + unsolvable cases, each admitted by the brute-force solvability gate. audit_only must never reach the agent.",
+  "scenarios": [
+    {
+      "scenario_id": "competence_clean_0_0",
+      "title": "competence: clean gradual drift",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_0_0.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "08b9de0dc8479057f0803f4c582ad133bc96f1ae700930c352f8860a986f15bc",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean gradual drift",
+        "true_injected_boundaries": [
+          300,
+          520
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 2.096
+      }
+    },
+    {
+      "scenario_id": "competence_clean_0_1",
+      "title": "competence: clean gradual drift",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_0_1.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "473b44a4c94a5c442d8fc31d7d0c98116dfa15aa24ae9cb3f6f3502d1979ff8f",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "clean gradual drift",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": null,
+        "naive_val_mae": 1.5052
+      }
+    },
+    {
+      "scenario_id": "competence_clean_0_2",
+      "title": "competence: clean gradual drift",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_0_2.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "06ba8bcd5fbcfe610b48e8ad6d1f3d79981394b235a358b67b0680d48e61a153",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean gradual drift",
+        "true_injected_boundaries": [
+          340,
+          560
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 5.037
+      }
+    },
+    {
+      "scenario_id": "competence_clean_0_3",
+      "title": "competence: clean gradual drift",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_0_3.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "e3d84566ba18b5b40e9312d41329dd590eed8456e50154661a6f1d897c9d2553",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean gradual drift",
+        "true_injected_boundaries": [
+          300,
+          520
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 1.3915
+      }
+    },
+    {
+      "scenario_id": "competence_clean_0_4",
+      "title": "competence: clean gradual drift",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_0_4.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "c238b2c0db69e067822602bb58c649bb6d700cbc9c92df4d354d9b5b73f65e62",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean gradual drift",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_step_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_step_regressor",
+        "naive_val_mae": 1.5197
+      }
+    },
+    {
+      "scenario_id": "competence_clean_0_5",
+      "title": "competence: clean gradual drift",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_0_5.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "b5bb01df61c85be4b227816ec1c87eb686cadc19e5bff1dcbbbce1a907b68ecb",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean gradual drift",
+        "true_injected_boundaries": [
+          340,
+          560
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 4.7549
+      }
+    },
+    {
+      "scenario_id": "competence_clean_0_6",
+      "title": "competence: clean gradual drift",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_0_6.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "01bbce43bec56492a677344e1976ae088ba40c1b2a9337632b24a627fe3d122f",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean gradual drift",
+        "true_injected_boundaries": [
+          300,
+          520
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 1.5065
+      }
+    },
+    {
+      "scenario_id": "competence_clean_0_7",
+      "title": "competence: clean gradual drift",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_0_7.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "d576107a5756a6a52019adcead9840ceb5afaa2c37e4c4afa8268e960a64bd24",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean gradual drift",
+        "true_injected_boundaries": [
+          320,
+          540
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 3.4254
+      }
+    },
+    {
+      "scenario_id": "competence_clean_0_8",
+      "title": "competence: clean gradual drift",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_0_8.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "2ea4c1219ee9bdf3b0f12934b00e2fa5fdca63251688946f74a7f1e9b6ae7ac1",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean gradual drift",
+        "true_injected_boundaries": [
+          340,
+          560
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 1.9712
+      }
+    },
+    {
+      "scenario_id": "competence_clean_0_9",
+      "title": "competence: clean gradual drift",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_0_9.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "edea1cde26a7e0d8d7b062b95740609417f7c61b2481e16f1ea99a7460566f5f",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean gradual drift",
+        "true_injected_boundaries": [
+          300,
+          520
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 2.4198
+      }
+    },
+    {
+      "scenario_id": "competence_clean_0_10",
+      "title": "competence: clean gradual drift",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_0_10.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "0a400d2cb9bc2427620e3bf721b7e85558ebc8914d064cfe11978dd37e03b33e",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean gradual drift",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_step_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_step_regressor",
+        "naive_val_mae": 4.2055
+      }
+    },
+    {
+      "scenario_id": "competence_clean_1_0",
+      "title": "competence: clean temporary events",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_1_0.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "987986d7eb04926f1f6ac3be86568f43a904d6ed9d020d2c514e37b4acea9ba2",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean temporary events",
+        "true_injected_boundaries": [
+          250,
+          268,
+          420,
+          444,
+          575,
+          600
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 5.7594
+      }
+    },
+    {
+      "scenario_id": "competence_clean_1_1",
+      "title": "competence: clean temporary events",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_1_1.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "843c4837fea6c923c37ab4ff1d6a73cdc9f20fa1906eb66085157e3319bb08df",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean temporary events",
+        "true_injected_boundaries": [
+          255,
+          273,
+          420,
+          444,
+          575,
+          600
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 6.1216
+      }
+    },
+    {
+      "scenario_id": "competence_clean_1_2",
+      "title": "competence: clean temporary events",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_1_2.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "8e6aea03830649bb4b6212922099a68dc103d8bc87a9651c11b54d9e693cecd9",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean temporary events",
+        "true_injected_boundaries": [
+          260,
+          278,
+          420,
+          444,
+          575,
+          600
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 6.0426
+      }
+    },
+    {
+      "scenario_id": "competence_clean_1_3",
+      "title": "competence: clean temporary events",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_1_3.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "558c71cabbcda7280c02f552cb4fe0a8d9bdb65259e2607037a76f560259ac3a",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean temporary events",
+        "true_injected_boundaries": [
+          265,
+          283,
+          420,
+          444,
+          575,
+          600
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 6.6955
+      }
+    },
+    {
+      "scenario_id": "competence_clean_1_4",
+      "title": "competence: clean temporary events",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_1_4.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "37e47877afb348fe7a502f57a3e8b21cfa49ee0724efb929cb813802e23aff80",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean temporary events",
+        "true_injected_boundaries": [
+          270,
+          288,
+          420,
+          444,
+          575,
+          600
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 6.0664
+      }
+    },
+    {
+      "scenario_id": "competence_clean_1_5",
+      "title": "competence: clean temporary events",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_1_5.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "49fd7c21830814622c161bd23ec81b6e65798ece5f85aeefdaf2c0bf7126ef0a",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean temporary events",
+        "true_injected_boundaries": [
+          275,
+          293,
+          420,
+          444,
+          575,
+          600
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 6.7963
+      }
+    },
+    {
+      "scenario_id": "competence_clean_1_6",
+      "title": "competence: clean temporary events",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_1_6.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "7f5359a2d1782c93a700ba17eae90f931f74dd4a3037b4046efed9abacdb8524",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean temporary events",
+        "true_injected_boundaries": [
+          280,
+          298,
+          420,
+          444,
+          575,
+          600
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 6.0735
+      }
+    },
+    {
+      "scenario_id": "competence_clean_1_7",
+      "title": "competence: clean temporary events",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_1_7.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "c5e01386157a106d8938c4f02c897ef3f52e719b3cd62654fdf96e9f88b0a943",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean temporary events",
+        "true_injected_boundaries": [
+          285,
+          303,
+          420,
+          444,
+          575,
+          600
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 7.1845
+      }
+    },
+    {
+      "scenario_id": "competence_clean_1_8",
+      "title": "competence: clean temporary events",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_1_8.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "7a8a7a6f6f31e728f379f274ea78c56cc3de7d17f5f876b4c2d596fd14318010",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean temporary events",
+        "true_injected_boundaries": [
+          290,
+          308,
+          420,
+          444,
+          575,
+          600
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 7.1197
+      }
+    },
+    {
+      "scenario_id": "competence_clean_1_9",
+      "title": "competence: clean temporary events",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_1_9.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "81c8a5b6deba1c6e7c81c620494f36ff9b8e86130e5938e619c9de8c8e92827b",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean temporary events",
+        "true_injected_boundaries": [
+          295,
+          313,
+          420,
+          444,
+          575,
+          600
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 7.9446
+      }
+    },
+    {
+      "scenario_id": "competence_clean_1_10",
+      "title": "competence: clean temporary events",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_1_10.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "33a5f808809849dc8988d09838a965f4ce924f2f7f792cb7f76bb85421905705",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean temporary events",
+        "true_injected_boundaries": [
+          300,
+          318,
+          420,
+          444,
+          575,
+          600
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 8.4171
+      }
+    },
+    {
+      "scenario_id": "competence_clean_2_0",
+      "title": "competence: clean level shift (gate decides family)",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_2_0.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "f1f1312e20fef881360315b0bc04e889086f2a15cf410d57d673ad977c347a8d",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean level shift (gate decides family)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_step_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 21.0562
+      }
+    },
+    {
+      "scenario_id": "competence_clean_2_1",
+      "title": "competence: clean level shift (gate decides family)",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_2_1.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "350c2f4455f3d5a8a1a979cd684ba6891fe59a0892f8e5e413de8ab036b72556",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean level shift (gate decides family)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_step_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 19.7524
+      }
+    },
+    {
+      "scenario_id": "competence_clean_2_2",
+      "title": "competence: clean level shift (gate decides family)",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_2_2.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "d99f5f95207d2fbeba9603494fa991e79959e0279d98c104008ff8c9aaf09551",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean level shift (gate decides family)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_step_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 16.3226
+      }
+    },
+    {
+      "scenario_id": "competence_clean_2_3",
+      "title": "competence: clean level shift (gate decides family)",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_2_3.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "5c5dfab31437aa446221598e047c6955f1d882a960de1a6a8b4324d878dfd289",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean level shift (gate decides family)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_step_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 16.2164
+      }
+    },
+    {
+      "scenario_id": "competence_clean_2_4",
+      "title": "competence: clean level shift (gate decides family)",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_2_4.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "9fb746d172c57abf7fc3345e11700720089d39a1c88e8c7e2ba358fe7bb83c6e",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean level shift (gate decides family)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_step_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 12.5232
+      }
+    },
+    {
+      "scenario_id": "competence_clean_2_5",
+      "title": "competence: clean level shift (gate decides family)",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_2_5.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "1ab4668ca27dcee86436ddad1246f1a324a3de7f18acd87b709e3645ff38b32a",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean level shift (gate decides family)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_step_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 10.7486
+      }
+    },
+    {
+      "scenario_id": "competence_clean_2_6",
+      "title": "competence: clean level shift (gate decides family)",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_2_6.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "11f5aefb284d98777d8086e676cb861dc7dbb59e352417a97a14b3b7cde07901",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean level shift (gate decides family)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_step_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 11.0022
+      }
+    },
+    {
+      "scenario_id": "competence_clean_2_7",
+      "title": "competence: clean level shift (gate decides family)",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_2_7.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "8ea405d59ad6c46b71353a38a9e9eab00ea206343c6365c594931d0d9155e72f",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean level shift (gate decides family)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_step_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 8.8293
+      }
+    },
+    {
+      "scenario_id": "competence_clean_2_8",
+      "title": "competence: clean level shift (gate decides family)",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_2_8.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "457093d18137c2e931392b950a1e7504a5c6391a5b695c6ef55729828015aaf9",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean level shift (gate decides family)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_step_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 6.8502
+      }
+    },
+    {
+      "scenario_id": "competence_clean_2_9",
+      "title": "competence: clean level shift (gate decides family)",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_2_9.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "7676c0e0ffa7d68da779a18096a6282ba348c505bb464d25764d4b66d6dbf42b",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean level shift (gate decides family)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_step_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 6.3608
+      }
+    },
+    {
+      "scenario_id": "competence_clean_2_10",
+      "title": "competence: clean level shift (gate decides family)",
+      "csv_path": "pocs/llm_eval/data/csv/competence_clean_2_10.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "c09912eec46ccfec60e24e0566f26711a385241456f724c128882b148d95ec94",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean level shift (gate decides family)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_step_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 5.3854
+      }
+    },
+    {
+      "scenario_id": "prompt_p3_3_0",
+      "title": "prompt: P3 drift-looks-like-step",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p3_3_0.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "c07c90c7e2f112b86fcd770f3c0ce0d5bc4cb538dc8d94dbb86d9c5786243cdd",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P3 drift-looks-like-step",
+        "true_injected_boundaries": [
+          480,
+          620
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 1.9941
+      }
+    },
+    {
+      "scenario_id": "prompt_p3_3_1",
+      "title": "prompt: P3 drift-looks-like-step",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p3_3_1.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "8ab928578336d400bbd4b7b233dac76afa35ed14e6bde9bfe6eec572ff6e38d4",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P3 drift-looks-like-step",
+        "true_injected_boundaries": [
+          488,
+          628
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 1.8418
+      }
+    },
+    {
+      "scenario_id": "prompt_p3_3_2",
+      "title": "prompt: P3 drift-looks-like-step",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p3_3_2.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "a7a9c6c312379b1640ecf5d67f39be4f20bb2a1354c6953a48a97e0662568be7",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P3 drift-looks-like-step",
+        "true_injected_boundaries": [
+          496,
+          636
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 1.7689
+      }
+    },
+    {
+      "scenario_id": "prompt_p3_3_3",
+      "title": "prompt: P3 drift-looks-like-step",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p3_3_3.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "fca9d92547e297013379992ed01ebfe8e9fd0f3d8187403990493455615d2fdd",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P3 drift-looks-like-step",
+        "true_injected_boundaries": [
+          504,
+          644
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 1.8335
+      }
+    },
+    {
+      "scenario_id": "prompt_p3_3_4",
+      "title": "prompt: P3 drift-looks-like-step",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p3_3_4.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "becd30c6cb7c29466b5c7e9ac436282ea2749bc68e31e135a7ef7e77ddc37855",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P3 drift-looks-like-step",
+        "true_injected_boundaries": [
+          512,
+          652
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 1.5167
+      }
+    },
+    {
+      "scenario_id": "prompt_p3_3_5",
+      "title": "prompt: P3 drift-looks-like-step",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p3_3_5.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "7af9518c44056cb81838a30ea0cfdccd678f5a5278a2e1b8e16fe2afa3e41074",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P3 drift-looks-like-step",
+        "true_injected_boundaries": [
+          520,
+          660
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 1.6078
+      }
+    },
+    {
+      "scenario_id": "prompt_p3_3_6",
+      "title": "prompt: P3 drift-looks-like-step",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p3_3_6.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "177e159e86d72a9e465813e3090b70b00b7b270a4e2902ce1734cc94064c5078",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P3 drift-looks-like-step",
+        "true_injected_boundaries": [
+          528,
+          668
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 1.7418
+      }
+    },
+    {
+      "scenario_id": "prompt_p3_3_7",
+      "title": "prompt: P3 drift-looks-like-step",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p3_3_7.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "472919deb6e95ed0808884bf52724c79db080ae031714229bb8528481eb44523",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P3 drift-looks-like-step",
+        "true_injected_boundaries": [
+          536,
+          676
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 3.5983
+      }
+    },
+    {
+      "scenario_id": "prompt_p3_3_8",
+      "title": "prompt: P3 drift-looks-like-step",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p3_3_8.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "e0af73b9fc1c9467a1c8a62c0e4f321b9bc014ea2586d1574e352dfe7d5871ff",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "P3 drift-looks-like-step",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": null,
+        "naive_val_mae": 1.6606
+      }
+    },
+    {
+      "scenario_id": "prompt_p3_3_9",
+      "title": "prompt: P3 drift-looks-like-step",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p3_3_9.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "b9ccc8b62996aafb7cc458cb9ea8427bae8ff252b90dc006fbcfa0878be15ff9",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P3 drift-looks-like-step",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_step_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_step_regressor",
+        "naive_val_mae": 2.6529
+      }
+    },
+    {
+      "scenario_id": "prompt_p3_3_10",
+      "title": "prompt: P3 drift-looks-like-step",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p3_3_10.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "57c6fb992155ad9540f40ca78695fdd0a7b87383a4616f07304b79fff1d72f8f",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P3 drift-looks-like-step",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_step_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_step_regressor",
+        "naive_val_mae": 2.0164
+      }
+    },
+    {
+      "scenario_id": "prompt_p3_3_11",
+      "title": "prompt: P3 drift-looks-like-step",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p3_3_11.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "cf7f9d9394fe8cc236675c3009cc274fad69819e3e8943d57d96d75d7e2009d5",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P3 drift-looks-like-step",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_step_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_step_regressor",
+        "naive_val_mae": 8.0655
+      }
+    },
+    {
+      "scenario_id": "prompt_p3_3_12",
+      "title": "prompt: P3 drift-looks-like-step",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p3_3_12.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "d1db66a13530fd154fa857745c1abeeda2729fab5d1c9a8a8f624c0bec6783f4",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P3 drift-looks-like-step",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_step_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_step_regressor",
+        "naive_val_mae": 6.2427
+      }
+    },
+    {
+      "scenario_id": "prompt_p4_4_0",
+      "title": "prompt: P4 dominant event + distractor",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p4_4_0.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "b86c194a455b1412867f5d1a7aaae99cab0d6bf17dcb7cb631f97e1d209c01c9",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P4 dominant event + distractor",
+        "true_injected_boundaries": [
+          300,
+          330
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 2.996
+      }
+    },
+    {
+      "scenario_id": "prompt_p4_4_1",
+      "title": "prompt: P4 dominant event + distractor",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p4_4_1.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "f0dda3931b312970fb62c3fa37a1c9253a601aab66083e99fd2928331af12913",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P4 dominant event + distractor",
+        "true_injected_boundaries": [
+          306,
+          336
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 4.4255
+      }
+    },
+    {
+      "scenario_id": "prompt_p4_4_2",
+      "title": "prompt: P4 dominant event + distractor",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p4_4_2.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "5fa6f44697b1accacb8471faeda0cb1ff1d95e5bf839ba541136e8530c982bc1",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P4 dominant event + distractor",
+        "true_injected_boundaries": [
+          312,
+          342
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 8.4101
+      }
+    },
+    {
+      "scenario_id": "prompt_p4_4_3",
+      "title": "prompt: P4 dominant event + distractor",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p4_4_3.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "667d9a8d7345319cb4377fa3428c8cccd23c6de9f848b267c88d55a3b7f73293",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P4 dominant event + distractor",
+        "true_injected_boundaries": [
+          318,
+          348
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 10.2861
+      }
+    },
+    {
+      "scenario_id": "prompt_p4_4_4",
+      "title": "prompt: P4 dominant event + distractor",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p4_4_4.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "be5526d9124f17b8c8c650dc92285c0b906ffd9834b8b0b75e061db0ab076e20",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P4 dominant event + distractor",
+        "true_injected_boundaries": [
+          324,
+          354
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 11.1702
+      }
+    },
+    {
+      "scenario_id": "prompt_p4_4_5",
+      "title": "prompt: P4 dominant event + distractor",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p4_4_5.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "5fed667b613977d8d2fda0366fc237766d0c6471561a12fb29d66c4d300e9ba3",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P4 dominant event + distractor",
+        "true_injected_boundaries": [
+          330,
+          360
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 12.5584
+      }
+    },
+    {
+      "scenario_id": "prompt_p4_4_6",
+      "title": "prompt: P4 dominant event + distractor",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p4_4_6.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "26adca847ca37717f4f4f26ef680926f3c4d595d0f82d492ac977cc831181755",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P4 dominant event + distractor",
+        "true_injected_boundaries": [
+          336,
+          366
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 7.3583
+      }
+    },
+    {
+      "scenario_id": "prompt_p4_4_7",
+      "title": "prompt: P4 dominant event + distractor",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p4_4_7.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "fff17309a7209fbe81a46b8e36a27db8232a7fd766e7b709a4d641c6aa8bd8cf",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P4 dominant event + distractor",
+        "true_injected_boundaries": [
+          342,
+          372
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 19.8425
+      }
+    },
+    {
+      "scenario_id": "prompt_p4_4_8",
+      "title": "prompt: P4 dominant event + distractor",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p4_4_8.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "a027fef8e0d3bb3d73d152d3b60276890d7675b545ef1f81c39e4d84d69ad584",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P4 dominant event + distractor",
+        "true_injected_boundaries": [
+          348,
+          378
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 21.3794
+      }
+    },
+    {
+      "scenario_id": "prompt_p4_4_9",
+      "title": "prompt: P4 dominant event + distractor",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p4_4_9.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "a1452b36de6fb87e405b0f28d217827c5bb3a9464b2f655ff398252e180459c3",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P4 dominant event + distractor",
+        "true_injected_boundaries": [
+          354,
+          384
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 19.6698
+      }
+    },
+    {
+      "scenario_id": "prompt_p4_4_10",
+      "title": "prompt: P4 dominant event + distractor",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p4_4_10.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "f8a329cbbeb22987054b730b66d88acbce9ae6f365149e3bc2bcb80c3f239f69",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P4 dominant event + distractor",
+        "true_injected_boundaries": [
+          360,
+          390
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 20.6353
+      }
+    },
+    {
+      "scenario_id": "prompt_p4_4_11",
+      "title": "prompt: P4 dominant event + distractor",
+      "csv_path": "pocs/llm_eval/data/csv/prompt_p4_4_11.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "4c50e64fea9d796d32b8709afa672dfa0a33138bfb0d7a010591209285178da6",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P4 dominant event + distractor",
+        "true_injected_boundaries": [
+          366,
+          396
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 20.186
+      }
+    },
+    {
+      "scenario_id": "pipeline_t2_5_0",
+      "title": "pipeline: T2 longer event",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t2_5_0.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "e1224e3d685a2c7efe0547851185693823ad92e21d578a614586636408a5f10f",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "T2 longer event",
+        "true_injected_boundaries": [
+          150,
+          230
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 3.4358
+      }
+    },
+    {
+      "scenario_id": "pipeline_t2_5_1",
+      "title": "pipeline: T2 longer event",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t2_5_1.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "c79825656a8a6ae6ce2d35617c40c95a76d353150dc47efc09e231933b46af69",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "T2 longer event",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_step_regressor",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_step_regressor",
+        "naive_val_mae": 5.8901
+      }
+    },
+    {
+      "scenario_id": "pipeline_t2_5_2",
+      "title": "pipeline: T2 longer event",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t2_5_2.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "600d458897c490078eef207de4de8f1d3f104b89cfb521a17c84b1ab609863b6",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "T2 longer event",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_step_regressor",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_step_regressor",
+        "naive_val_mae": 7.1976
+      }
+    },
+    {
+      "scenario_id": "pipeline_t2_5_3",
+      "title": "pipeline: T2 longer event",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t2_5_3.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "6d9cc1061f41b08c2a3ea3250b003c98b0941812cded2cd933c9624314929573",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "T2 longer event",
+        "true_injected_boundaries": [
+          180,
+          260
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 13.8628
+      }
+    },
+    {
+      "scenario_id": "pipeline_t2_5_4",
+      "title": "pipeline: T2 longer event",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t2_5_4.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "8918ca3d6b76e9121cba095378e3e1cc09581470ff3674c49b834ad568302a26",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "T2 longer event",
+        "true_injected_boundaries": [
+          190,
+          270
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 17.4644
+      }
+    },
+    {
+      "scenario_id": "pipeline_t2_5_5",
+      "title": "pipeline: T2 longer event",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t2_5_5.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "49a4c5fa9491107b12709a6a3606cb2401716cf59cd244bad16740ed5aec26c3",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "T2 longer event",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": null,
+        "naive_val_mae": 15.1707
+      }
+    },
+    {
+      "scenario_id": "pipeline_t2_5_6",
+      "title": "pipeline: T2 longer event",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t2_5_6.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "ac7d1b666dc33156be92085bf017379e5586010349e527cdac497bed818399a1",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "T2 longer event",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": null,
+        "naive_val_mae": 15.9312
+      }
+    },
+    {
+      "scenario_id": "pipeline_t2_5_7",
+      "title": "pipeline: T2 longer event",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t2_5_7.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "f69c579c481ea538c13236cd71075723d35faf1c76ac763aadb23acddb678888",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "T2 longer event",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": null,
+        "naive_val_mae": 15.7132
+      }
+    },
+    {
+      "scenario_id": "pipeline_t2_5_8",
+      "title": "pipeline: T2 longer event",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t2_5_8.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "60b794d04cfe93a504c1c2389ebd54170de5a524355b5e23d93badb23ceb48f0",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "T2 longer event",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": null,
+        "naive_val_mae": 16.4799
+      }
+    },
+    {
+      "scenario_id": "pipeline_t2_5_9",
+      "title": "pipeline: T2 longer event",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t2_5_9.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "c9276bedf063f2f1cde9f076714f622f95c904792ba002602f925c17c6e76f56",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "T2 longer event",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": null,
+        "naive_val_mae": 15.5153
+      }
+    },
+    {
+      "scenario_id": "pipeline_t1_6_0",
+      "title": "pipeline: T1 short drift",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t1_6_0.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "e2e74d7841f5af88e5115ca77adf9bb6d18ebbc5e62b7d1427e08f9cbba54c8d",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "T1 short drift",
+        "true_injected_boundaries": [
+          400,
+          460
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 17.3638
+      }
+    },
+    {
+      "scenario_id": "pipeline_t1_6_1",
+      "title": "pipeline: T1 short drift",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t1_6_1.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "87f607b32b0fe6712a9dfe3e1db5256201f95c57c3692fa71a8d6fd5cc69a546",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "T1 short drift",
+        "true_injected_boundaries": [
+          408,
+          468
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 14.1463
+      }
+    },
+    {
+      "scenario_id": "pipeline_t1_6_2",
+      "title": "pipeline: T1 short drift",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t1_6_2.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "ece3b7c555309b38e1a519422c5a3b56c804672d8888af5971e3fd8ec5e23e49",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "T1 short drift",
+        "true_injected_boundaries": [
+          416,
+          476
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 11.9171
+      }
+    },
+    {
+      "scenario_id": "pipeline_t1_6_3",
+      "title": "pipeline: T1 short drift",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t1_6_3.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "cf03589de4dec193e787f157a4af4ef10751ee3a81a0d7fbd22c49b4f8a44e84",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "T1 short drift",
+        "true_injected_boundaries": [
+          424,
+          484
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 10.5989
+      }
+    },
+    {
+      "scenario_id": "pipeline_t1_6_4",
+      "title": "pipeline: T1 short drift",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t1_6_4.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "d6687be564920e4285f7987fe6baebd776fef1f616129263c74224d33c879421",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "T1 short drift",
+        "true_injected_boundaries": [
+          432,
+          492
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 8.1768
+      }
+    },
+    {
+      "scenario_id": "pipeline_t1_6_5",
+      "title": "pipeline: T1 short drift",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t1_6_5.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "a726a1f78e39ab34f63b61d159041a81622d8d787eec86a87d0cbb75d1a2c834",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "T1 short drift",
+        "true_injected_boundaries": [
+          440,
+          500
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 8.3671
+      }
+    },
+    {
+      "scenario_id": "pipeline_t1_6_6",
+      "title": "pipeline: T1 short drift",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t1_6_6.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "fa07924b513ea2e4be0d42513268b763b178916a044f5f5cb5fc8259e26f84b9",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "T1 short drift",
+        "true_injected_boundaries": [
+          448,
+          508
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 6.7495
+      }
+    },
+    {
+      "scenario_id": "pipeline_t1_6_7",
+      "title": "pipeline: T1 short drift",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t1_6_7.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "2c7ca0f5c343878e0e574b5fea16d540d5445fe78e63ed5354b3e538ee4138f0",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "T1 short drift",
+        "true_injected_boundaries": [
+          456,
+          516
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 5.2572
+      }
+    },
+    {
+      "scenario_id": "pipeline_t1_6_8",
+      "title": "pipeline: T1 short drift",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t1_6_8.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "f4645022ae059292bac9895c6606ec5360aacdde357b92b4dcc1a25b979e215d",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "T1 short drift",
+        "true_injected_boundaries": [
+          464,
+          524
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 4.0109
+      }
+    },
+    {
+      "scenario_id": "pipeline_t1_6_9",
+      "title": "pipeline: T1 short drift",
+      "csv_path": "pocs/llm_eval/data/csv/pipeline_t1_6_9.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "ccf04861ac399e9dfe47ec6a155fd2224b799fba9e18129205e7a8f669d9a74a",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "T1 short drift",
+        "true_injected_boundaries": [
+          472,
+          532
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 3.1673
+      }
+    },
+    {
+      "scenario_id": "tool_growing_7_0",
+      "title": "tool: growing seasonal amplitude (NOTES.md sinusoid)",
+      "csv_path": "pocs/llm_eval/data/csv/tool_growing_7_0.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "5a6f8bf1876881c04df1e9032e5ac2cfe25182105ccb7c73e98f5fd550fb4510",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "dev",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "growing seasonal amplitude (NOTES.md sinusoid)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": null,
+        "naive_val_mae": 4.4033
+      }
+    },
+    {
+      "scenario_id": "tool_growing_7_1",
+      "title": "tool: growing seasonal amplitude (NOTES.md sinusoid)",
+      "csv_path": "pocs/llm_eval/data/csv/tool_growing_7_1.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "9c3ec98a6b935fe3492b71f08e5f3b0fb784ec8229168bf236db3b4c2257c1e8",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "dev",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "growing seasonal amplitude (NOTES.md sinusoid)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": null,
+        "naive_val_mae": 4.2139
+      }
+    },
+    {
+      "scenario_id": "tool_growing_7_2",
+      "title": "tool: growing seasonal amplitude (NOTES.md sinusoid)",
+      "csv_path": "pocs/llm_eval/data/csv/tool_growing_7_2.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "3b78c301e10553631e55a63cf343b16c8507eb0e357de0dd0b2540613a162e6d",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "dev",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "growing seasonal amplitude (NOTES.md sinusoid)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": null,
+        "naive_val_mae": 4.5919
+      }
+    },
+    {
+      "scenario_id": "tool_growing_7_3",
+      "title": "tool: growing seasonal amplitude (NOTES.md sinusoid)",
+      "csv_path": "pocs/llm_eval/data/csv/tool_growing_7_3.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "ff85ac333e24d7cbf9c85cfdb6b8980c741787ace7b5840bf76e148b8b48ceaf",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "test",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "growing seasonal amplitude (NOTES.md sinusoid)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": null,
+        "naive_val_mae": 4.1079
+      }
+    },
+    {
+      "scenario_id": "tool_growing_7_4",
+      "title": "tool: growing seasonal amplitude (NOTES.md sinusoid)",
+      "csv_path": "pocs/llm_eval/data/csv/tool_growing_7_4.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "60491901fefc57f3a9cb22c41d423359f1c3d2ea7e9499123eeb8e75a5f554db",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "test",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "growing seasonal amplitude (NOTES.md sinusoid)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": null,
+        "naive_val_mae": 3.8607
+      }
+    },
+    {
+      "scenario_id": "tool_multiplicative_8_0",
+      "title": "tool: multiplicative seasonality",
+      "csv_path": "pocs/llm_eval/data/csv/tool_multiplicative_8_0.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "bb82eed82d1617b9005abc64ecc5ed205db64f3c54dbaebecd71781ccf62f29d",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "dev",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "multiplicative seasonality",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": null,
+        "naive_val_mae": 1.3373
+      }
+    },
+    {
+      "scenario_id": "tool_multiplicative_8_1",
+      "title": "tool: multiplicative seasonality",
+      "csv_path": "pocs/llm_eval/data/csv/tool_multiplicative_8_1.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "da69d06a402f4ca7f2be9ca75210219268e691cfadcbbb57cd400682b8ccc17b",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "dev",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "multiplicative seasonality",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 1.5071
+      }
+    },
+    {
+      "scenario_id": "tool_multiplicative_8_2",
+      "title": "tool: multiplicative seasonality",
+      "csv_path": "pocs/llm_eval/data/csv/tool_multiplicative_8_2.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "c31456b56eba22b2ed696423ed8b14f083e38aad405273af3e45e4b9129bf2ce",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "test",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "multiplicative seasonality",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 1.6432
+      }
+    },
+    {
+      "scenario_id": "tool_multiplicative_8_3",
+      "title": "tool: multiplicative seasonality",
+      "csv_path": "pocs/llm_eval/data/csv/tool_multiplicative_8_3.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "d2124b847afb08eb14814f80cc0460dd8192e155cd6510bac715e5ecda94b98f",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "test",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "multiplicative seasonality",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": null,
+        "naive_val_mae": 1.3134
+      }
+    },
+    {
+      "scenario_id": "tool_nonlinear_9_0",
+      "title": "tool: nonlinear (quadratic) trend",
+      "csv_path": "pocs/llm_eval/data/csv/tool_nonlinear_9_0.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "a56b6a60b13fe5df3d827ca7c936fb3dbf06f29c5762eab1014c8b909910f938",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "dev",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "nonlinear (quadratic) trend",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": null,
+        "naive_val_mae": 281.6211
+      }
+    },
+    {
+      "scenario_id": "tool_nonlinear_9_1",
+      "title": "tool: nonlinear (quadratic) trend",
+      "csv_path": "pocs/llm_eval/data/csv/tool_nonlinear_9_1.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "e4d38e8bbf1f214f2e0218721dbaed63f700551104eae196434bb56b76fe1043",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "dev",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "nonlinear (quadratic) trend",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": null,
+        "naive_val_mae": 277.1051
+      }
+    },
+    {
+      "scenario_id": "tool_nonlinear_9_2",
+      "title": "tool: nonlinear (quadratic) trend",
+      "csv_path": "pocs/llm_eval/data/csv/tool_nonlinear_9_2.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "71e7f294958ad770ae44fd4b79fcd1ddb711bf668b061c89770fa1a26827d3b7",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "test",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "nonlinear (quadratic) trend",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": null,
+        "naive_val_mae": 308.6385
+      }
+    }
+  ]
+}
