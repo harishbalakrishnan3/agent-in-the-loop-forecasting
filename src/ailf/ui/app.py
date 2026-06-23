@@ -147,7 +147,7 @@ def _render_credentials_panel() -> RunCredentials:
     # widget inside it changes. We start expanded and let the user collapse it.
     with st.expander("🔑 Credentials", expanded=True):
         st.info(
-            "🔒 **Your credentials are never stored.** They are kept only in memory for the current "
+            "**Your credentials are never stored.** They are kept only in memory for the current "
             "session and used solely to make this run's model calls — not written to disk, not "
             "logged, not shared. Reloading the page clears them.",
             icon="🔒",
@@ -282,7 +282,15 @@ def _run_and_stream(sel: dict[str, Any], credentials: RunCredentials) -> None:
             # Use a contiguous render counter (1,2,3…) — the raw emitter seq skips numbers because
             # each stage emits a hidden `start` event before its `complete`.
             step = rendered + 1
-            with stream_area.expander(f"{icon} [{step}] {vm.title} — {vm.summary}", expanded=vm.is_error):
+            # When a stage has a summary, show "… — summary"; otherwise append a ✓ (a dangling dash
+            # with nothing after it reads as broken) — errors keep the 🛑 icon and no tick.
+            if vm.summary:
+                label = f"{icon} [{step}] {vm.title} — {vm.summary}"
+            elif vm.is_error:
+                label = f"{icon} [{step}] {vm.title}"
+            else:
+                label = f"{icon} [{step}] {vm.title}  ✓"
+            with stream_area.expander(label, expanded=vm.is_error):
                 if vm.payload_ref:
                     st.caption(f"(large payload offloaded to {vm.payload_ref})")
                 st.json(vm.payload)

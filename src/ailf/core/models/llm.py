@@ -91,7 +91,9 @@ class AnthropicStructuredClient:
     every call (feature 006, FR-028/R4).
     """
 
-    def __init__(self, model_id: str, *, max_tokens: int = 2000, api_key: str | None = None) -> None:
+    def __init__(
+        self, model_id: str, *, max_tokens: int = 2000, api_key: str | None = None, trace: bool = False
+    ) -> None:
         import anthropic  # noqa: PLC0415
         import httpx  # noqa: PLC0415
 
@@ -101,7 +103,17 @@ class AnthropicStructuredClient:
         # process-global ``os.environ`` mutation is needed — safe under concurrent users. When None,
         # the Anthropic SDK reads ANTHROPIC_API_KEY from the environment as usual.
         # Corporate proxy uses a self-signed cert — disable verification for the internal network.
-        self._client = anthropic.Anthropic(api_key=api_key, http_client=httpx.Client(verify=False))
+        client = anthropic.Anthropic(api_key=api_key, http_client=httpx.Client(verify=False))
+        # LangSmith only auto-traces LangChain/LangGraph; raw-SDK calls (messages.create below) must
+        # be wrapped explicitly or the trace is empty. Wrap only when tracing is requested.
+        if trace:
+            try:
+                from langsmith.wrappers import wrap_anthropic  # noqa: PLC0415
+
+                client = wrap_anthropic(client)
+            except Exception:  # noqa: BLE001 — never let tracing setup break a real run
+                pass
+        self._client = client
 
     def with_structured_output(self, schema: type) -> _AnthropicProxy:
         return _AnthropicProxy(self._model_id, schema, self._max_tokens, self._client)
@@ -134,14 +146,16 @@ def build_visual_model(
     llm_provider: str = "bedrock",
     api_key: str | None = None,
     aws_creds: "dict | None" = None,
+    trace: bool = False,
 ):
     """Build the visual-node model client. Dispatches on ``llm_provider``.
 
     ``api_key`` (Anthropic) and ``aws_creds`` (Bedrock) are threaded explicitly for
-    bring-your-own-credential sessions — no process-global state.
+    bring-your-own-credential sessions — no process-global state. ``trace`` wraps the Anthropic
+    raw-SDK client for LangSmith (Bedrock via LangChain is auto-traced when tracing env is set).
     """
     if llm_provider == "anthropic":
-        return AnthropicStructuredClient(model_id, max_tokens=max_tokens, api_key=api_key)
+        return AnthropicStructuredClient(model_id, max_tokens=max_tokens, api_key=api_key, trace=trace)
     # No temperature: newer Bedrock models (e.g. Opus 4.8) reject the deprecated parameter.
     return ChatBedrockConverse(model=model_id, max_tokens=max_tokens, **_bedrock_kwargs(region_name, aws_creds))
 
@@ -154,10 +168,11 @@ def build_decision_model(
     llm_provider: str = "bedrock",
     api_key: str | None = None,
     aws_creds: "dict | None" = None,
+    trace: bool = False,
 ):
     """Build the decision-node model client. Dispatches on ``llm_provider``."""
     if llm_provider == "anthropic":
-        return AnthropicStructuredClient(model_id, max_tokens=max_tokens, api_key=api_key)
+        return AnthropicStructuredClient(model_id, max_tokens=max_tokens, api_key=api_key, trace=trace)
     return ChatBedrockConverse(model=model_id, max_tokens=max_tokens, **_bedrock_kwargs(region_name, aws_creds))
 
 

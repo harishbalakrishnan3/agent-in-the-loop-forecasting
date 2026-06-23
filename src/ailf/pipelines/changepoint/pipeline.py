@@ -326,17 +326,18 @@ def _run_scenario_inner(
             if (credentials and credentials.has_aws)
             else None
         )
+        trace = bool(credentials and credentials.has_langsmith)
         visual_model = ModelWrapper(
             build_visual_model(
                 cfg.models.visual_model_id, cfg.models.aws_region,
-                llm_provider=cfg.models.llm_provider, api_key=byo_api_key, aws_creds=byo_aws,
+                llm_provider=cfg.models.llm_provider, api_key=byo_api_key, aws_creds=byo_aws, trace=trace,
             ),
             cfg.models.visual_model_id,
         )
         decision_model = ModelWrapper(
             build_decision_model(
                 cfg.models.decision_model_id, cfg.models.aws_region,
-                llm_provider=cfg.models.llm_provider, api_key=byo_api_key, aws_creds=byo_aws,
+                llm_provider=cfg.models.llm_provider, api_key=byo_api_key, aws_creds=byo_aws, trace=trace,
             ),
             cfg.models.decision_model_id,
         )
