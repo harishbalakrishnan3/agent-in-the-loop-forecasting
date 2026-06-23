@@ -46,19 +46,25 @@ def _print_headline(records: list[dict]) -> None:
 
 
 def cmd_batch(args) -> tuple[list[str], list[dict]]:
+    """Re-run the agent. With --curated, runs ONLY the 10 curated scenarios (fast, ~min); else all 90."""
     from llm_eval.poc_runner import run_all_poc
-    dirs, crashes = run_all_poc()
+    sids = None
+    if getattr(args, "curated", False):
+        from llm_eval.curated import CURATED_IDS
+        sids = CURATED_IDS
+        print(f"[poc-cli] --curated: running only the {len(sids)} curated cases")
+    dirs, crashes = run_all_poc(sids)
     (POC_GOLDEN_JSONL.parent / "poc_run_dirs.json").write_text(json.dumps(dirs))
     return dirs, crashes
 
 
-def _discover_crashes(reports_root) -> list[dict]:
+def _discover_crashes(reports_root, only_ids=None) -> list[dict]:
     """Build crash records for scenarios that have a partial run dir (events.jsonl) but NO
     agent_trace.json — i.e. the agent run crashed. Recovers from the existing artifacts; no re-run.
     The crash cause is recovered from events (last stage) + a probe of the failing tool."""
     from llm_eval.poc_runner import build_crash_record, poc_ground_truth, poc_scenario_ids
     crashes = []
-    for sid in poc_scenario_ids():
+    for sid in (only_ids or poc_scenario_ids()):
         d = reports_root / f"{sid}-1729"
         if (d / "agent_trace.json").exists() or not (d / "events.jsonl").exists():
             continue
@@ -115,8 +121,14 @@ def cmd_join(args, run_dirs: list[str] | None = None, crash_records: list[dict] 
     from llm_eval.poc_runner import poc_ground_truth, poc_scenario_ids
     from llm_eval.batch import DEFAULT_REPORTS_ROOT
     rr = args.reports_root or DEFAULT_REPORTS_ROOT
+    curated = getattr(args, "curated", False)
+    only_ids = None
+    if curated:
+        from llm_eval.curated import CURATED_IDS
+        only_ids = CURATED_IDS  # scope join (and crash discovery) to the curated cases
     if run_dirs is None:
-        run_dirs = [str(rr / f"{sid}-1729") for sid in poc_scenario_ids()
+        scope = only_ids or poc_scenario_ids()
+        run_dirs = [str(rr / f"{sid}-1729") for sid in scope
                     if (rr / f"{sid}-1729" / "agent_trace.json").exists()]
     records = []
     for d in run_dirs:
@@ -125,27 +137,53 @@ def cmd_join(args, run_dirs: list[str] | None = None, crash_records: list[dict] 
         except Exception as exc:  # noqa: BLE001
             print(f"[poc-cli] skip {d}: {type(exc).__name__}: {exc}")
     # crash records: from batch (passed in) OR discovered from partial run dirs on a standalone join.
-    crashes = crash_records if crash_records is not None else _discover_crashes(rr)
+    crashes = crash_records if crash_records is not None else _discover_crashes(rr, only_ids=only_ids)
     records.extend(crashes)
     if crashes:
         print(f"[poc-cli] captured {len(crashes)} crashed cases as failure records.")
     if not records:
         raise SystemExit("[poc-cli] no records built — run `batch` first.")
-    write_jsonl(records, POC_GOLDEN_JSONL)
+    out = CURATED_JSONL if curated else POC_GOLDEN_JSONL  # --curated writes the curated file, NOT the 90
+    write_jsonl(records, out)
     print(f"[poc-cli] wrote {len(records)} golden records ({len(records)-len(crashes)} completed + "
-          f"{len(crashes)} crashed) -> {POC_GOLDEN_JSONL}")
+          f"{len(crashes)} crashed) -> {out}")
     _print_headline(records)
     return records
 
 
-def _load() -> list[dict]:
-    if not POC_GOLDEN_JSONL.exists():
-        raise SystemExit(f"[poc-cli] {POC_GOLDEN_JSONL} missing — run `join` first.")
-    return [json.loads(l) for l in POC_GOLDEN_JSONL.read_text().splitlines() if l.strip()]
+CURATED_JSONL = POC_GOLDEN_JSONL.parent / "curated_golden.jsonl"
+
+
+def _records_path(args) -> Path:
+    """The curated 10-case regression set when --curated, else the full 90-case set."""
+    return CURATED_JSONL if getattr(args, "curated", False) else POC_GOLDEN_JSONL
+
+
+def _load(args=None) -> list[dict]:
+    path = _records_path(args) if args is not None else POC_GOLDEN_JSONL
+    if not path.exists():
+        raise SystemExit(f"[poc-cli] {path} missing — run `join` (or `curate`) first.")
+    return [json.loads(l) for l in path.read_text().splitlines() if l.strip()]
+
+
+def cmd_curate(args) -> None:
+    """Build the curated regression set (curated_golden.jsonl) by filtering the full records to
+    CURATED_IDS, in that order. The proper golden set for monitoring fixes (controls + issue cases)."""
+    from llm_eval.curated import CURATED_IDS
+    full = {json.loads(l)["scenario_id"]: json.loads(l)
+            for l in POC_GOLDEN_JSONL.read_text().splitlines() if l.strip()}
+    picked, missing = [], []
+    for sid in CURATED_IDS:
+        (picked.append(full[sid]) if sid in full else missing.append(sid))
+    if missing:
+        print(f"[poc-cli] WARNING: {len(missing)} curated ids not in full records: {missing}")
+    CURATED_JSONL.write_text("\n".join(json.dumps(r) for r in picked) + "\n")
+    print(f"[poc-cli] wrote {len(picked)} curated records -> {CURATED_JSONL}")
+    _print_headline(picked)
 
 
 def cmd_score(args) -> None:
-    _print_headline(_load())
+    _print_headline(_load(args))
 
 
 SNAP_DIR = POC_GOLDEN_JSONL.parent / "snapshots"
@@ -169,11 +207,12 @@ def _snapshot_dict(records: list[dict]) -> dict:
 def cmd_snapshot(args) -> None:
     """Save the current score + per-case verdicts under a label (for before/after comparison)."""
     SNAP_DIR.mkdir(parents=True, exist_ok=True)
-    snap = _snapshot_dict(_load())
+    recs = _load(args)
+    snap = _snapshot_dict(recs)
     path = SNAP_DIR / f"{args.label}.json"
     path.write_text(json.dumps(snap, indent=2))
     print(f"[poc-cli] snapshot '{args.label}' saved -> {path}")
-    _print_headline(_load())
+    _print_headline(recs)
 
 
 def cmd_compare(args) -> None:
@@ -215,7 +254,7 @@ def cmd_compare(args) -> None:
 
 def cmd_eval(args) -> None:
     from llm_eval.langsmith_push import ensure_dataset, experiment_url, get_client, run_experiment
-    records = _load()
+    records = _load(args)
     client = get_client()
     ensure_dataset(client, args.dataset_name, records)
     results = run_experiment(client, args.dataset_name, records,
@@ -240,16 +279,18 @@ def main() -> None:
     flags.add_argument("--max-concurrency", type=int, default=4)
     flags.add_argument("--judge", action="store_true",
                        help="also run the LLM-as-judge (rationale adherence); calls Bedrock per case")
-    p = argparse.ArgumentParser(description="100-case POC eval (Topic 2 + Topic 4).", parents=[flags])
+    flags.add_argument("--curated", action="store_true",
+                       help="operate on the curated 10-case regression set (curated_golden.jsonl)")
+    p = argparse.ArgumentParser(description="POC eval (Topic 2 + Topic 4).", parents=[flags])
     sub = p.add_subparsers(dest="cmd", required=True)
-    for name in ("batch", "join", "score", "eval", "all"):
+    for name in ("batch", "join", "score", "eval", "all", "curate"):
         sub.add_parser(name, parents=[flags])
     snap = sub.add_parser("snapshot", parents=[flags]); snap.add_argument("label")
     cmp = sub.add_parser("compare", parents=[flags])
     cmp.add_argument("baseline"); cmp.add_argument("candidate")
     args = p.parse_args()
     {"batch": cmd_batch, "join": cmd_join, "score": cmd_score, "eval": cmd_eval, "all": cmd_all,
-     "snapshot": cmd_snapshot, "compare": cmd_compare}[args.cmd](args)
+     "curate": cmd_curate, "snapshot": cmd_snapshot, "compare": cmd_compare}[args.cmd](args)
 
 
 if __name__ == "__main__":

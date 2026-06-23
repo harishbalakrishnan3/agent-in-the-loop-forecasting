@@ -39,13 +39,20 @@ def ensure_dataset(client, name: str, records: list[dict[str, Any]]):
     if client.has_dataset(dataset_name=name):
         print(f"[langsmith] dataset {name!r} already exists — reusing (examples not refreshed).")
         return client.read_dataset(dataset_name=name)
+    from llm_eval.evaluators import failure_mode_metadata  # noqa: PLC0415
+    from llm_eval.curated import CURATED_ROLE as _CURATED_ROLE  # noqa: PLC0415
     ds = client.create_dataset(name, description="6 committed changepoint scenarios; audit_only ground truth (MVP)")
     client.create_examples(
         dataset_id=ds.id,
         examples=[{"inputs": _example_inputs(rec),
                    "outputs": rec,  # FULL golden record so REPLAY evaluators read everything
+                   # Topic-4 failure mode rides as METADATA (a label, not a score) so the UI can
+                   # filter/group by it without it masquerading as an evaluator.
                    "metadata": {"family_channel": rec["ground_truth"]["family_channel"],
-                                "expected_intervention_family": rec["ground_truth"]["expected_intervention_family"]}}
+                                "expected_intervention_family": rec["ground_truth"]["expected_intervention_family"],
+                                **({"curated_role": _CURATED_ROLE[rec["scenario_id"]]}
+                                   if rec["scenario_id"] in _CURATED_ROLE else {}),
+                                **failure_mode_metadata(rec)}}
                   for rec in records],
         max_concurrency=3,  # 0.8.15 requires 1..3
     )

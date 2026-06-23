@@ -118,21 +118,25 @@ def point_boundary_recall_detector(run, example) -> dict[str, Any]:
             "comment": f"DETECTOR (not agent): tp={m['tp']} fp={m['fp']} fn={m['fn']} N={m['tolerance']}"}
 
 
-def failure_mode_label(run, example) -> dict[str, Any]:
-    """Topic-4 diagnosis as a categorical LangSmith result: the primary failure-mode label for this
-    case (or 'clean_success'). Surfaces *why* a case failed, not just that it did. score=None
-    (categorical); the label rides in ``value`` so it's filterable in the UI."""
+def failure_mode_metadata(rec: dict[str, Any]) -> dict[str, Any]:
+    """Topic-4 diagnosis as plain METADATA (NOT an evaluator/score): the primary failure-mode label
+    + the class flags for a record. Attached to the LangSmith example so the UI can filter/group by
+    it, and surfaced in inspect_case. A label, not a metric."""
     from llm_eval.failure_modes import classify_record  # noqa: PLC0415
-    rec = _rec(run, example)
     row = classify_record(rec)
     labels = row["failure_mode_labels"] or ["unlabeled"]
-    # primary = first non-success label, else clean_success
-    primary = next((l for l in labels if l != "clean_success"), labels[0])
-    return {"key": "failure_mode", "score": None, "value": primary,
-            "comment": f"labels={labels} capability_gap={row['is_capability_gap']} "
-                       f"behavioral={row['is_behavioral_failure']}"}
+    primary = next((l for l in labels if l != "clean_success"), labels[0])  # first non-success, else clean_success
+    return {"failure_mode": primary, "failure_mode_labels": labels,
+            "is_capability_gap": row["is_capability_gap"],
+            "is_behavioral_failure": row["is_behavioral_failure"],
+            "is_pipeline_blindness": row["is_pipeline_blindness"]}
 
 
+# NOTE: the Topic-4 failure mode is NOT an evaluator — it is a categorical LABEL (a diagnosis of
+# *why* a case failed), not a pass/fail metric. It is attached as LangSmith example METADATA in
+# langsmith_push.ensure_dataset (still filterable/groupable in the UI) and shown in inspect_case's
+# dedicated "FAILURE-MODE DIAGNOSIS" section. ``failure_mode_label`` is kept below only as the
+# metadata helper; it is intentionally OUT of ALL_EVALUATORS so it doesn't masquerade as a score.
 ALL_EVALUATORS = [
     beat_naive,                       # headline
     boundary_recall_interval,         # headline (interval families)
@@ -140,7 +144,6 @@ ALL_EVALUATORS = [
     chose_authored_family,            # diagnostic (caveated)
     agent_minus_naive_mae,            # diagnostic
     point_boundary_recall_detector,   # diagnostic (detector, not agent)
-    failure_mode_label,               # Topic-4 diagnosis (categorical)
 ]
 
 
