@@ -1,0 +1,83 @@
+site_name: Agent-in-the-Loop Forecasting
+site_description: A bounded LLM analyst agent for diagnosing and repairing Prophet forecasts.
+site_url: https://harishbalakrishnan3.github.io/agent-in-the-loop-forecasting/
+repo_url: https://github.com/harishbalakrishnan3/agent-in-the-loop-forecasting
+repo_name: harishbalakrishnan3/agent-in-the-loop-forecasting
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.sections
+    - navigation.path
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.tabs.link
+    - search.suggest
+    - search.highlight
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Concepts: concepts.md
+  - Architecture: architecture.md
+  - Agent Loop: agent-loop.md
+  - Pipelines:
+      - Overview: pipelines/overview.md
+      - Changepoint: pipelines/changepoint.md
+      - Drift: pipelines/drift.md
+      - Anomaly: pipelines/anomaly.md
+  - Experiments:
+      - Overview: experiments/overview.md
+      - Scenario Suite: experiments/scenarios.md
+      - Evaluation Protocol: experiments/evaluation.md
+      - Results: experiments/results.md
+  - Development:
+      - Setup: development/setup.md
+      - Adding a Pipeline: development/adding-a-pipeline.md
+      - Prompts and Tools: development/prompts-and-tools.md
+      - Testing: development/testing.md
+  - Limitations: limitations.md
+  - Roadmap: roadmap.md
+  - Reference:
+      - Diagrams: diagrams/README.md
+      - Decision 0001: decisions/0001-repo-structure.md
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+
+validation:
+  nav:
+    omitted_files: ignore

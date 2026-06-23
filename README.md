@@ -14,6 +14,9 @@ must clear an empirical backtest gate before it can affect a forecast.
 time-series failure modes, recommending interventions, and validating those interventions through
 backtesting?*
 
+**Documentation:** the public project docs are built with MkDocs from [`docs/`](docs/) and deployed
+to GitHub Pages.
+
 ---
 
 ## Architecture (5 layers)
@@ -128,4 +131,4 @@ changes inside your pipeline's directories; changes to `src/ailf/core/` get an e
 - **What we're building & why** → [`SPEC.md`](SPEC.md)
 - **How we build (principles & quality gates)** → [`.specify/memory/constitution.md`](.specify/memory/constitution.md)
 - **Day-to-day repo operation** → [`CLAUDE.md`](CLAUDE.md)
-- **Background** → [`docs/`](docs/) (proposal + high-level plan), decisions in [`docs/decisions/`](docs/decisions/)
+- **Public docs** → [`docs/`](docs/) (MkDocs source), decisions in [`docs/decisions/`](docs/decisions/)
