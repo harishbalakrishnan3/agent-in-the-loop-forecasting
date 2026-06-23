@@ -129,7 +129,16 @@ def _invoke_ramp(ctx: ToolContext, params: dict) -> ToolResult:
         intervals = [(d["start"], d["end"]) for d in drifts]
     regressors: dict[str, tuple[np.ndarray, np.ndarray]] = {}
     for i, (s, e) in enumerate(intervals):
-        s_ds, e_ds = _ds_at(train, s), _ds_at(train, e)
+        # EVAL-DRIVEN FIX (ISSUE 2 — IndexError frame mismatch): candidate_drift_intervals are
+        # computed on the FULL training frame [0, train_end), but the validation gate fits on the
+        # SHORTER [0, fit_end) frame, so a drift-interval endpoint can exceed len(train) here ->
+        # _ds_at(train, e) -> train["ds"].iloc[e] raised an uncaught IndexError. Clamp both bounds
+        # into the available frame. (To restore the bug for a demo, swap back to the line below.)
+        # --- BUGGY (pre-fix): ---
+        # s_ds, e_ds = _ds_at(train, s), _ds_at(train, e)
+        # --- FIXED: ---
+        last = len(train) - 1
+        s_ds, e_ds = _ds_at(train, min(s, last)), _ds_at(train, min(e, last))
         regressors[f"ramp_{i}"] = (_ramp_regressor(train["ds"], s_ds, e_ds), _ramp_regressor(future, s_ds, e_ds))
     yhat = fit_predict_prophet(train, future, regressors=regressors)
     return {"yhat": yhat.tolist(), "resolved_params": params}

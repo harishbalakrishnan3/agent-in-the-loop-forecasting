@@ -119,7 +119,15 @@ def _best_proposal(state: dict[str, Any]) -> dict[str, Any]:
         if it.get("val_result") and "val_metrics" in it["val_result"]
     ]
     if not scored:
-        return state["iterations"][0]["proposal"]
+        # EVAL-DRIVEN FIX (ISSUE 1 crash form / crashed_at_final_eval): when NO proposal was scored
+        # (e.g. every iteration was precondition-rejected), the old code returned iterations[0] — a
+        # possibly-BLOCKED proposal that final_evaluation_node then re-invokes uncaught, crashing the
+        # run with ToolBoundsError. Degrade to the always-valid fallback instead.
+        # (To restore the crash for a demo, swap back to the commented line below.)
+        # --- BUGGY (pre-fix): ---
+        # return state["iterations"][0]["proposal"]
+        # --- FIXED: ---
+        return {"tool": "full_history_default", "params": {}}
     best = min(scored, key=lambda it: it["val_result"]["val_metrics"]["mae"])
     return best["proposal"]
 
