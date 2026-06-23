@@ -65,16 +65,18 @@ def make_replay_target(records: list[dict[str, Any]]) -> Callable[[dict], dict]:
 
 
 def run_experiment(client, dataset_name: str, records: list[dict[str, Any]],
-                   *, experiment_prefix: str, max_concurrency: int = 4):
-    """Run evaluate() over the dataset with the deterministic evaluators (REPLAY target)."""
+                   *, experiment_prefix: str, max_concurrency: int = 4, with_judge: bool = False):
+    """Run evaluate() over the dataset (REPLAY target). with_judge=True adds the LLM-as-judge
+    (rationale adherence) — Bedrock calls per case, so keep concurrency modest."""
     from langsmith.evaluation import evaluate  # noqa: PLC0415
+    from llm_eval.evaluators import all_evaluators  # noqa: PLC0415
     target = make_replay_target(records)
     return evaluate(
         target,  # positional-only
         data=dataset_name,
-        evaluators=ALL_EVALUATORS,
+        evaluators=all_evaluators(with_judge=with_judge),
         experiment_prefix=experiment_prefix,
-        max_concurrency=max_concurrency,
+        max_concurrency=(2 if with_judge else max_concurrency),  # judge hits Bedrock — throttle
         client=client,
     )
 

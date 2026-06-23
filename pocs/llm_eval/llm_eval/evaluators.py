@@ -70,15 +70,31 @@ def agent_is_winner(run, example) -> dict[str, Any]:
     return {"key": "agent_is_winner", "score": 1 if rec.get("outcome", {}).get("agent_is_winner") else 0}
 
 
+# The gate's gold label "fallback" (unsolvable: no tool should win) is expressed by the AGENT as
+# choosing the always-valid fallback tool, which is named "full_history_default". Treat them as a
+# match so a correct fallback on an unsolvable case scores 1 (was a bug: it could never score 1).
+_FALLBACK_TOOL = "full_history_default"
+
+
+def _family_matches(chosen: str | None, expected: str | None) -> bool:
+    if chosen == expected:
+        return True
+    return expected == "fallback" and chosen == _FALLBACK_TOOL
+
+
 def chose_authored_family(run, example) -> dict[str, Any]:
-    """Did the agent pick the AUTHORED expected family? CAVEAT (Topic-2): the authored intent can
-    differ from the family that actually wins the gate (a clean step is best fixed by the ramp
-    tool), so a 0 here is NOT necessarily an agent error. Diagnostic only — never the headline."""
+    """Did the agent pick the AUTHORED expected family? Treats choosing the fallback tool
+    (``full_history_default``) as matching the gold label ``fallback`` on unsolvable cases.
+    CAVEAT (Topic-2): the authored intent can differ from the gate-winning family, so a 0 here is
+    NOT necessarily an agent error. Diagnostic only — never the headline."""
     rec = _rec(run, example)
     chosen = rec.get("prediction", {}).get("chosen_tool")
     expected = rec.get("ground_truth", {}).get("expected_intervention_family")
-    return {"key": "chose_authored_family", "score": 1 if chosen == expected else 0,
-            "comment": f"chosen={chosen} authored={expected} (authored-intent; may differ from gate-winner)"}
+    match = _family_matches(chosen, expected)
+    return {"key": "chose_authored_family", "score": 1 if match else 0,
+            "comment": f"chosen={chosen} authored={expected}"
+                       + (" (fallback tool == 'fallback' label)" if match and chosen == _FALLBACK_TOOL and expected == "fallback" else "")
+                       + " (authored-intent; may differ from gate-winner)"}
 
 
 def agent_minus_naive_mae(run, example) -> dict[str, Any]:
@@ -126,6 +142,17 @@ ALL_EVALUATORS = [
     point_boundary_recall_detector,   # diagnostic (detector, not agent)
     failure_mode_label,               # Topic-4 diagnosis (categorical)
 ]
+
+
+def all_evaluators(with_judge: bool = False) -> list:
+    """The evaluator set. ``with_judge=True`` appends the LLM-as-judge (rationale constraint
+    adherence) — it calls Bedrock per case (cost + latency), so it is OFF by default and only used
+    where you explicitly want the explanation-quality dimension (e.g. `poc_cli eval --judge`)."""
+    evs = list(ALL_EVALUATORS)
+    if with_judge:
+        from llm_eval.judge import judge_rationale_adherence  # noqa: PLC0415
+        evs.append(judge_rationale_adherence)
+    return evs
 
 
 def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:

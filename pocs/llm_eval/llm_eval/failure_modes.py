@@ -59,8 +59,13 @@ def _m_spurious_win_on_unsolvable(rec: dict) -> bool:
     return _is_unsolvable(rec) and _beat(rec)
 
 
-def _m_accepted_worse_than_naive(rec: dict) -> bool:
-    # SOLVABLE case the agent failed to beat naive on test — a behavioral miss (a winning tool existed).
+def _m_no_proposal_beat_naive(rec: dict) -> bool:
+    # SOLVABLE case (a tool CAN beat naive) where the agent did NOT find a beating tool in its
+    # iterations. NOTE: nothing was "accepted" — final_case is best_proposal_no_beat, and the
+    # evaluation layer still falls back to the best baseline (winner = min test-MAE over the 3
+    # methods), so the *forecast is safe*. This is an AGENT-SEARCH shortfall (it left value on the
+    # table), not a system failure and not a "failed to fall back". Borderline cases may actually be
+    # capability gaps if the gate's solvable verdict is unstable.
     return (not _is_unsolvable(rec)) and not _beat(rec)
 
 
@@ -82,21 +87,59 @@ def _m_clean_success(rec: dict) -> bool:
     return (not _is_unsolvable(rec)) and _beat(rec) and _chose_gate_winner(rec)
 
 
+# --- crash modes (the agent run did not complete; rec carries a crash_info block) ----------------
+# These are gated ONLY on rec["crash_info"], so they are False on every normal (completed) record
+# and the 6 outcome-based modes above stay untouched. Conversely, a crash record has no real
+# outcome, so the outcome-based modes are suppressed for it (see _is_crash guard in classify_record).
+
+def _crash(rec: dict) -> dict:
+    return rec.get("crash_info") or {}
+
+
+def _m_looped_on_blocked_tool(rec: dict) -> bool:
+    # Agent re-proposed a precondition-rejected tool >=2x until iterations ran out (BUG#3 precursor;
+    # can also occur without a crash). Recovered from events.jsonl proposals.
+    return bool(_crash(rec).get("repeated_blocked_tool"))
+
+
+def _m_crashed_at_final_eval(rec: dict) -> bool:
+    # BUG#3: final_evaluation re-invoked an unvalidated (blocked) proposal -> ToolBoundsError escaped.
+    return _crash(rec).get("crash_stage") == "final_eval"
+
+
+def _m_crashed_indexerror(rec: dict) -> bool:
+    # BUG#1: ramp drift-interval end index out of the validation frame -> IndexError escaped.
+    return _crash(rec).get("exception_type") == "IndexError"
+
+
 TAXONOMY: list[Mode] = [
     ("clean_success", "solvable; beat naive with the gate-winning family", "none", _m_clean_success),
     ("capability_gap", "unsolvable; agent correctly did NOT beat naive (toolset limit, not a bug)", "capability", _m_capability_gap),
     ("spurious_win_on_unsolvable", "gate-unsolvable yet agent beat naive on test (model variance)", "none", _m_spurious_win_on_unsolvable),
-    ("accepted_worse_than_naive", "solvable but agent failed to beat naive (a winning tool existed)", "behavioral", _m_accepted_worse_than_naive),
+    ("no_proposal_beat_naive", "solvable, but the agent's proposals never beat naive (agent-search shortfall; system still falls back to the best baseline — forecast is safe)", "behavioral", _m_no_proposal_beat_naive),
     ("wrong_family_but_won", "beat naive but not via the gate-winning family (suboptimal diagnosis)", "behavioral", _m_wrong_family_but_won),
     ("missed_boundary_structure", "interval recall <0.5: diagnostics hid the injected structure", "pipeline", _m_missed_boundary_structure),
+    # crash modes (Topic-4, bugs #1/#3 captured as failure modes):
+    ("looped_on_blocked_tool", "agent re-proposed a precondition-rejected tool >=2x until iterations ran out", "behavioral", _m_looped_on_blocked_tool),
+    ("crashed_at_final_eval", "final_evaluation re-invoked a blocked proposal; ToolBoundsError escaped the run", "behavioral", _m_crashed_at_final_eval),
+    ("crashed_indexerror", "ramp interval end out of the validation frame; IndexError escaped validation_node", "pipeline", _m_crashed_indexerror),
 ]
+
+# Modes that should NOT fire on a crash record (they read a real outcome the crashed run never produced).
+_OUTCOME_MODES = {"clean_success", "capability_gap", "spurious_win_on_unsolvable",
+                  "no_proposal_beat_naive", "wrong_family_but_won", "missed_boundary_structure"}
 
 
 def classify_record(rec: dict) -> dict[str, Any]:
     """Assign all applicable failure-mode labels to one record (a case may carry several, e.g. a
-    behavioral miss AND a missed-boundary). Also flags the capability vs behavioral class."""
-    labels = [name for name, _desc, _cls, pred in TAXONOMY if pred(rec)]
-    classes = {cls for name, _desc, cls, pred in TAXONOMY if pred(rec) and cls != "none"}
+    behavioral miss AND a missed-boundary). Also flags the capability vs behavioral class.
+
+    A CRASHED run (rec carries ``crash_info``) never produced a real outcome, so the six
+    outcome-based modes are suppressed for it — only the crash modes apply."""
+    is_crash = bool(rec.get("crash_info"))
+    active = [(n, d, c, p) for n, d, c, p in TAXONOMY if not (is_crash and n in _OUTCOME_MODES)]
+    labels = [name for name, _desc, _cls, pred in active if pred(rec)]
+    classes = {cls for name, _desc, cls, pred in active if pred(rec) and cls != "none"}
     return {
         "scenario_id": rec["scenario_id"],
         "lever": rec["ground_truth"].get("intended_failure_lever"),
