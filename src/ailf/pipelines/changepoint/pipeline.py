@@ -293,8 +293,14 @@ def _run_scenario_inner(
     registry = register_changepoint_registry().for_run(set(cfg.enabled_tools))
     menu = _render_menu(registry)
     if cfg.visual_analysis_enabled:
-        decision_prompt = load_prompt(_PROMPT_DIR, "react_decision", 2, fill={"tool_menu": menu})
-        decision_prompt_id = "react_decision_v2"
+        # EVAL-DRIVEN FIX (ISSUE 1+3): v2 had no hard precondition gate + no fallback rule, so the
+        # agent rationalized around is_calendar_recurring and looped/crashed on the gated holiday
+        # tool instead of falling back. v3 adds the hard-constraint pre-check + "fall back when
+        # nothing fits" rule. (Principle III: v2 left untouched; new version added.)
+        # decision_prompt = load_prompt(_PROMPT_DIR, "react_decision", 2, fill={"tool_menu": menu})
+        # decision_prompt_id = "react_decision_v2"
+        decision_prompt = load_prompt(_PROMPT_DIR, "react_decision", 3, fill={"tool_menu": menu})
+        decision_prompt_id = "react_decision_v3"
         visual_prompt = load_prompt(_PROMPT_DIR, "visual_inspection", 1)
         image_path = render_agent_context(split, "training history", run_dir / "agent_context.png")
     else:
