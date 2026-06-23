@@ -55,7 +55,6 @@ nav:
   - Roadmap: roadmap.md
   - Reference:
       - Diagrams: diagrams/README.md
-      - Decision 0001: decisions/0001-repo-structure.md
 
 plugins:
   - search
