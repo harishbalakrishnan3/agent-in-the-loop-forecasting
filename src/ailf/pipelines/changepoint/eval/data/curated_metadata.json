@@ -1,0 +1,309 @@
+{
+  "schema_version": "2.0-poc-llm-eval",
+  "description": "curated 10-case live-rerun metadata (src eval)",
+  "scenarios": [
+    {
+      "scenario_id": "competence_clean_0_0",
+      "title": "competence: clean gradual drift",
+      "csv_path": "src/ailf/pipelines/changepoint/eval/data/csv/competence_clean_0_0.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "08b9de0dc8479057f0803f4c582ad133bc96f1ae700930c352f8860a986f15bc",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean gradual drift",
+        "true_injected_boundaries": [
+          300,
+          520
+        ],
+        "expected_intervention_family": "full_history_ramp_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_ramp_regressor",
+        "naive_val_mae": 2.096
+      }
+    },
+    {
+      "scenario_id": "competence_clean_1_0",
+      "title": "competence: clean temporary events",
+      "csv_path": "src/ailf/pipelines/changepoint/eval/data/csv/competence_clean_1_0.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "987986d7eb04926f1f6ac3be86568f43a904d6ed9d020d2c514e37b4acea9ba2",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean temporary events",
+        "true_injected_boundaries": [
+          250,
+          268,
+          420,
+          444,
+          575,
+          600
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 5.7594
+      }
+    },
+    {
+      "scenario_id": "prompt_p4_4_7",
+      "title": "prompt: P4 dominant event + distractor",
+      "csv_path": "src/ailf/pipelines/changepoint/eval/data/csv/prompt_p4_4_7.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "fff17309a7209fbe81a46b8e36a27db8232a7fd766e7b709a4d641c6aa8bd8cf",
+      "intended_failure_lever": "prompt",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "P4 dominant event + distractor",
+        "true_injected_boundaries": [
+          342,
+          372
+        ],
+        "expected_intervention_family": "full_history_clean_event",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": "full_history_clean_event",
+        "naive_val_mae": 19.8425
+      }
+    },
+    {
+      "scenario_id": "tool_nonlinear_9_0",
+      "title": "tool: nonlinear (quadratic) trend",
+      "csv_path": "src/ailf/pipelines/changepoint/eval/data/csv/tool_nonlinear_9_0.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "a56b6a60b13fe5df3d827ca7c936fb3dbf06f29c5762eab1014c8b909910f938",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "dev",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "nonlinear (quadratic) trend",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": null,
+        "naive_val_mae": 281.6211
+      }
+    },
+    {
+      "scenario_id": "tool_growing_7_3",
+      "title": "tool: growing seasonal amplitude (NOTES.md sinusoid)",
+      "csv_path": "src/ailf/pipelines/changepoint/eval/data/csv/tool_growing_7_3.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "ff85ac333e24d7cbf9c85cfdb6b8980c741787ace7b5840bf76e148b8b48ceaf",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "test",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "growing seasonal amplitude (NOTES.md sinusoid)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": null,
+        "naive_val_mae": 4.1079
+      }
+    },
+    {
+      "scenario_id": "tool_growing_7_1",
+      "title": "tool: growing seasonal amplitude (NOTES.md sinusoid)",
+      "csv_path": "src/ailf/pipelines/changepoint/eval/data/csv/tool_growing_7_1.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "9c3ec98a6b935fe3492b71f08e5f3b0fb784ec8229168bf236db3b4c2257c1e8",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "dev",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "growing seasonal amplitude (NOTES.md sinusoid)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": null,
+        "naive_val_mae": 4.2139
+      }
+    },
+    {
+      "scenario_id": "tool_multiplicative_8_3",
+      "title": "tool: multiplicative seasonality",
+      "csv_path": "src/ailf/pipelines/changepoint/eval/data/csv/tool_multiplicative_8_3.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "d2124b847afb08eb14814f80cc0460dd8192e155cd6510bac715e5ecda94b98f",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "test",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "multiplicative seasonality",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": null,
+        "naive_val_mae": 1.3134
+      }
+    },
+    {
+      "scenario_id": "tool_growing_7_0",
+      "title": "tool: growing seasonal amplitude (NOTES.md sinusoid)",
+      "csv_path": "src/ailf/pipelines/changepoint/eval/data/csv/tool_growing_7_0.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1730,
+      "train_end": 1610,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "5a6f8bf1876881c04df1e9032e5ac2cfe25182105ccb7c73e98f5fd550fb4510",
+      "intended_failure_lever": "tool",
+      "dev_or_test": "dev",
+      "source_bucket": "unsolvable",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "growing seasonal amplitude (NOTES.md sinusoid)",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "fallback",
+        "gate_winner_family": null,
+        "naive_val_mae": 4.4033
+      }
+    },
+    {
+      "scenario_id": "pipeline_t2_5_9",
+      "title": "pipeline: T2 longer event",
+      "csv_path": "src/ailf/pipelines/changepoint/eval/data/csv/pipeline_t2_5_9.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "c9276bedf063f2f1cde9f076714f622f95c904792ba002602f925c17c6e76f56",
+      "intended_failure_lever": "pipeline",
+      "dev_or_test": "test",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "objective_only",
+      "audit_only": {
+        "note": "T2 longer event",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "fallback",
+        "authored_intent_family": "full_history_clean_event",
+        "gate_winner_family": null,
+        "naive_val_mae": 15.5153
+      }
+    },
+    {
+      "scenario_id": "competence_clean_0_4",
+      "title": "competence: clean gradual drift",
+      "csv_path": "src/ailf/pipelines/changepoint/eval/data/csv/competence_clean_0_4.csv",
+      "schema": {
+        "date_column": "ds",
+        "target_column": "y",
+        "frequency": "D"
+      },
+      "row_count": 1000,
+      "train_end": 880,
+      "test_horizon": 120,
+      "validation_horizon": 120,
+      "n_changepoints_to_detect": 2,
+      "seasonal_period": 365,
+      "csv_sha256": "c238b2c0db69e067822602bb58c649bb6d700cbc9c92df4d354d9b5b73f65e62",
+      "intended_failure_lever": "competence",
+      "dev_or_test": "dev",
+      "source_bucket": "synthetic_combined",
+      "ground_truth_kind": "boundary_and_objective",
+      "audit_only": {
+        "note": "clean gradual drift",
+        "true_injected_boundaries": [],
+        "expected_intervention_family": "full_history_step_regressor",
+        "authored_intent_family": "full_history_ramp_regressor",
+        "gate_winner_family": "full_history_step_regressor",
+        "naive_val_mae": 1.5197
+      }
+    }
+  ]
+}

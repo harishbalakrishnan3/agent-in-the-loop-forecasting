@@ -1,0 +1,742 @@
+{
+  "summary": {
+    "n": 90,
+    "beat_naive_rate": 0.6444444444444445,
+    "beat_naive_count": "58/90",
+    "agent_is_winner_count": "54/90",
+    "chose_authored_family_count": "59/90",
+    "interval_recall_micro": 0.9054054054054054,
+    "interval_family_n": 65
+  },
+  "cases": {
+    "competence_clean_0_0": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.6853
+    },
+    "competence_clean_0_1": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_step_regressor",
+      "failure_modes": [
+        "capability_gap"
+      ],
+      "agent_mae": 6.8784
+    },
+    "competence_clean_0_2": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.3372
+    },
+    "competence_clean_0_3": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 2.5606
+    },
+    "competence_clean_0_4": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_step_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive"
+      ],
+      "agent_mae": 4.4103
+    },
+    "competence_clean_0_5": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.4006
+    },
+    "competence_clean_0_6": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 2.3335
+    },
+    "competence_clean_0_7": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.4687
+    },
+    "competence_clean_0_8": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive"
+      ],
+      "agent_mae": 3.7399
+    },
+    "competence_clean_0_9": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.7043
+    },
+    "competence_clean_0_10": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "wrong_family_but_won"
+      ],
+      "agent_mae": 1.7256
+    },
+    "competence_clean_1_0": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.5772
+    },
+    "competence_clean_1_1": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.6345
+    },
+    "competence_clean_1_2": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.5161
+    },
+    "competence_clean_1_3": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.4339
+    },
+    "competence_clean_1_4": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.552
+    },
+    "competence_clean_1_5": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.5071
+    },
+    "competence_clean_1_6": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.5959
+    },
+    "competence_clean_1_7": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.4518
+    },
+    "competence_clean_1_8": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.3283
+    },
+    "competence_clean_1_9": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.3567
+    },
+    "competence_clean_1_10": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.3682
+    },
+    "competence_clean_2_0": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 2.073
+    },
+    "competence_clean_2_1": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.2656
+    },
+    "competence_clean_2_2": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_step_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive"
+      ],
+      "agent_mae": 1.583
+    },
+    "competence_clean_2_3": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_step_regressor",
+      "failure_modes": [
+        "wrong_family_but_won"
+      ],
+      "agent_mae": 1.3933
+    },
+    "competence_clean_2_4": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.5133
+    },
+    "competence_clean_2_5": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.5351
+    },
+    "competence_clean_2_6": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_step_regressor",
+      "failure_modes": [
+        "wrong_family_but_won"
+      ],
+      "agent_mae": 1.4951
+    },
+    "competence_clean_2_7": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_step_regressor",
+      "failure_modes": [
+        "wrong_family_but_won"
+      ],
+      "agent_mae": 1.9083
+    },
+    "competence_clean_2_8": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive"
+      ],
+      "agent_mae": 2.9308
+    },
+    "competence_clean_2_9": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive"
+      ],
+      "agent_mae": 2.1665
+    },
+    "competence_clean_2_10": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_step_regressor",
+      "failure_modes": [
+        "wrong_family_but_won"
+      ],
+      "agent_mae": 1.4646
+    },
+    "prompt_p3_3_0": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.8529
+    },
+    "prompt_p3_3_1": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 2.0595
+    },
+    "prompt_p3_3_2": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.777
+    },
+    "prompt_p3_3_3": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 2.7489
+    },
+    "prompt_p3_3_4": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 2.9388
+    },
+    "prompt_p3_3_5": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive"
+      ],
+      "agent_mae": 8.3569
+    },
+    "prompt_p3_3_6": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive"
+      ],
+      "agent_mae": 7.268
+    },
+    "prompt_p3_3_7": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 2.276
+    },
+    "prompt_p3_3_8": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_step_regressor",
+      "failure_modes": [
+        "capability_gap"
+      ],
+      "agent_mae": 8.5994
+    },
+    "prompt_p3_3_9": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_step_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive"
+      ],
+      "agent_mae": 5.1328
+    },
+    "prompt_p3_3_10": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_step_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 5.7939
+    },
+    "prompt_p3_3_11": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "wrong_family_but_won"
+      ],
+      "agent_mae": 2.9101
+    },
+    "prompt_p3_3_12": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "wrong_family_but_won"
+      ],
+      "agent_mae": 3.2632
+    },
+    "prompt_p4_4_0": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.3955
+    },
+    "prompt_p4_4_1": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.4045
+    },
+    "prompt_p4_4_2": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.2721
+    },
+    "prompt_p4_4_3": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.2955
+    },
+    "prompt_p4_4_4": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.3742
+    },
+    "prompt_p4_4_5": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.4553
+    },
+    "prompt_p4_4_6": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.3881
+    },
+    "prompt_p4_4_7": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.4336
+    },
+    "prompt_p4_4_8": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.2247
+    },
+    "prompt_p4_4_9": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.3829
+    },
+    "prompt_p4_4_10": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.7738
+    },
+    "prompt_p4_4_11": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.4487
+    },
+    "pipeline_t2_5_0": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive",
+        "missed_boundary_structure"
+      ],
+      "agent_mae": 18.207
+    },
+    "pipeline_t2_5_1": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive"
+      ],
+      "agent_mae": 23.392
+    },
+    "pipeline_t2_5_2": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_step_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 18.0382
+    },
+    "pipeline_t2_5_3": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive",
+        "missed_boundary_structure"
+      ],
+      "agent_mae": 19.6488
+    },
+    "pipeline_t2_5_4": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "wrong_family_but_won",
+        "missed_boundary_structure"
+      ],
+      "agent_mae": 21.6844
+    },
+    "pipeline_t2_5_5": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "capability_gap"
+      ],
+      "agent_mae": 35.9844
+    },
+    "pipeline_t2_5_7": {
+      "beat_naive": false,
+      "chosen_tool": "recent_window",
+      "failure_modes": [
+        "capability_gap"
+      ],
+      "agent_mae": 33.7188
+    },
+    "pipeline_t2_5_8": {
+      "beat_naive": true,
+      "chosen_tool": "recent_window",
+      "failure_modes": [
+        "spurious_win_on_unsolvable"
+      ],
+      "agent_mae": 3.1647
+    },
+    "pipeline_t2_5_9": {
+      "beat_naive": false,
+      "chosen_tool": "recent_window",
+      "failure_modes": [
+        "capability_gap"
+      ],
+      "agent_mae": 30.8675
+    },
+    "pipeline_t1_6_0": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive"
+      ],
+      "agent_mae": 2.9697
+    },
+    "pipeline_t1_6_1": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive"
+      ],
+      "agent_mae": 1.6178
+    },
+    "pipeline_t1_6_2": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.3363
+    },
+    "pipeline_t1_6_3": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.4449
+    },
+    "pipeline_t1_6_4": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.443
+    },
+    "pipeline_t1_6_5": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_step_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive",
+        "missed_boundary_structure"
+      ],
+      "agent_mae": 2.0681
+    },
+    "pipeline_t1_6_6": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.5565
+    },
+    "pipeline_t1_6_7": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_step_regressor",
+      "failure_modes": [
+        "wrong_family_but_won",
+        "missed_boundary_structure"
+      ],
+      "agent_mae": 1.5455
+    },
+    "pipeline_t1_6_8": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_step_regressor",
+      "failure_modes": [
+        "wrong_family_but_won",
+        "missed_boundary_structure"
+      ],
+      "agent_mae": 1.294
+    },
+    "pipeline_t1_6_9": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_step_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive",
+        "missed_boundary_structure"
+      ],
+      "agent_mae": 2.4089
+    },
+    "tool_growing_7_0": {
+      "beat_naive": false,
+      "chosen_tool": "recent_window",
+      "failure_modes": [
+        "capability_gap"
+      ],
+      "agent_mae": 31.509
+    },
+    "tool_growing_7_4": {
+      "beat_naive": false,
+      "chosen_tool": "recent_window",
+      "failure_modes": [
+        "capability_gap"
+      ],
+      "agent_mae": 34.5905
+    },
+    "tool_multiplicative_8_0": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "capability_gap"
+      ],
+      "agent_mae": 1.7808
+    },
+    "tool_multiplicative_8_1": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.7587
+    },
+    "tool_multiplicative_8_2": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive"
+      ],
+      "agent_mae": 1.325
+    },
+    "pipeline_t2_5_6": {
+      "beat_naive": false,
+      "chosen_tool": null,
+      "failure_modes": [
+        "crashed_indexerror"
+      ],
+      "agent_mae": null
+    },
+    "tool_growing_7_1": {
+      "beat_naive": false,
+      "chosen_tool": null,
+      "failure_modes": [
+        "looped_on_blocked_tool",
+        "crashed_at_final_eval"
+      ],
+      "agent_mae": null
+    },
+    "tool_growing_7_2": {
+      "beat_naive": false,
+      "chosen_tool": null,
+      "failure_modes": [
+        "crashed_at_final_eval"
+      ],
+      "agent_mae": null
+    },
+    "tool_growing_7_3": {
+      "beat_naive": false,
+      "chosen_tool": null,
+      "failure_modes": [
+        "crashed_indexerror"
+      ],
+      "agent_mae": null
+    },
+    "tool_multiplicative_8_3": {
+      "beat_naive": false,
+      "chosen_tool": null,
+      "failure_modes": [
+        "looped_on_blocked_tool",
+        "crashed_at_final_eval"
+      ],
+      "agent_mae": null
+    },
+    "tool_nonlinear_9_0": {
+      "beat_naive": false,
+      "chosen_tool": null,
+      "failure_modes": [
+        "crashed_indexerror"
+      ],
+      "agent_mae": null
+    },
+    "tool_nonlinear_9_1": {
+      "beat_naive": false,
+      "chosen_tool": null,
+      "failure_modes": [
+        "crashed_indexerror"
+      ],
+      "agent_mae": null
+    },
+    "tool_nonlinear_9_2": {
+      "beat_naive": false,
+      "chosen_tool": null,
+      "failure_modes": [
+        "crashed_indexerror"
+      ],
+      "agent_mae": null
+    }
+  }
+}

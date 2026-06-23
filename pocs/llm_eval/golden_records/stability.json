@@ -1,0 +1,521 @@
+{
+  "competence_clean_0_0": {
+    "n": 5,
+    "tools": {
+      "full_history_ramp_regressor": 5
+    },
+    "winners": {
+      "agent": 5
+    },
+    "beat_naive_2way": "5/5",
+    "runs": [
+      {
+        "sid": "competence_clean_0_0",
+        "rep": 4,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "agent",
+        "beat_naive_2way": true,
+        "agent_mae": 1.685,
+        "naive_mae": 4.674,
+        "full_mae": 4.674
+      },
+      {
+        "sid": "competence_clean_0_0",
+        "rep": 0,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "agent",
+        "beat_naive_2way": true,
+        "agent_mae": 1.685,
+        "naive_mae": 4.674,
+        "full_mae": 4.674
+      },
+      {
+        "sid": "competence_clean_0_0",
+        "rep": 2,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "agent",
+        "beat_naive_2way": true,
+        "agent_mae": 1.685,
+        "naive_mae": 4.674,
+        "full_mae": 4.674
+      },
+      {
+        "sid": "competence_clean_0_0",
+        "rep": 1,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "agent",
+        "beat_naive_2way": true,
+        "agent_mae": 1.685,
+        "naive_mae": 4.674,
+        "full_mae": 4.674
+      },
+      {
+        "sid": "competence_clean_0_0",
+        "rep": 3,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "agent",
+        "beat_naive_2way": true,
+        "agent_mae": 1.685,
+        "naive_mae": 4.674,
+        "full_mae": 4.674
+      }
+    ]
+  },
+  "competence_clean_0_1": {
+    "n": 5,
+    "tools": {
+      "full_history_ramp_regressor": 1,
+      "full_history_step_regressor": 4
+    },
+    "winners": {
+      "agent": 1,
+      "full_history_prophet": 4
+    },
+    "beat_naive_2way": "1/5",
+    "runs": [
+      {
+        "sid": "competence_clean_0_1",
+        "rep": 1,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "agent",
+        "beat_naive_2way": true,
+        "agent_mae": 1.371,
+        "naive_mae": 6.439,
+        "full_mae": 6.439
+      },
+      {
+        "sid": "competence_clean_0_1",
+        "rep": 2,
+        "ok": true,
+        "chosen_tool": "full_history_step_regressor",
+        "winner": "full_history_prophet",
+        "beat_naive_2way": false,
+        "agent_mae": 6.459,
+        "naive_mae": 6.439,
+        "full_mae": 6.439
+      },
+      {
+        "sid": "competence_clean_0_1",
+        "rep": 0,
+        "ok": true,
+        "chosen_tool": "full_history_step_regressor",
+        "winner": "full_history_prophet",
+        "beat_naive_2way": false,
+        "agent_mae": 6.459,
+        "naive_mae": 6.439,
+        "full_mae": 6.439
+      },
+      {
+        "sid": "competence_clean_0_1",
+        "rep": 3,
+        "ok": true,
+        "chosen_tool": "full_history_step_regressor",
+        "winner": "full_history_prophet",
+        "beat_naive_2way": false,
+        "agent_mae": 6.459,
+        "naive_mae": 6.439,
+        "full_mae": 6.439
+      },
+      {
+        "sid": "competence_clean_0_1",
+        "rep": 4,
+        "ok": true,
+        "chosen_tool": "full_history_step_regressor",
+        "winner": "full_history_prophet",
+        "beat_naive_2way": false,
+        "agent_mae": 6.459,
+        "naive_mae": 6.439,
+        "full_mae": 6.439
+      }
+    ]
+  },
+  "competence_clean_0_10": {
+    "n": 5,
+    "tools": {
+      "full_history_ramp_regressor": 5
+    },
+    "winners": {
+      "agent": 5
+    },
+    "beat_naive_2way": "5/5",
+    "runs": [
+      {
+        "sid": "competence_clean_0_10",
+        "rep": 2,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "agent",
+        "beat_naive_2way": true,
+        "agent_mae": 1.726,
+        "naive_mae": 4.254,
+        "full_mae": 4.254
+      },
+      {
+        "sid": "competence_clean_0_10",
+        "rep": 0,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "agent",
+        "beat_naive_2way": true,
+        "agent_mae": 1.726,
+        "naive_mae": 4.254,
+        "full_mae": 4.254
+      },
+      {
+        "sid": "competence_clean_0_10",
+        "rep": 1,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "agent",
+        "beat_naive_2way": true,
+        "agent_mae": 1.726,
+        "naive_mae": 4.254,
+        "full_mae": 4.254
+      },
+      {
+        "sid": "competence_clean_0_10",
+        "rep": 3,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "agent",
+        "beat_naive_2way": true,
+        "agent_mae": 1.726,
+        "naive_mae": 4.254,
+        "full_mae": 4.254
+      },
+      {
+        "sid": "competence_clean_0_10",
+        "rep": 4,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "agent",
+        "beat_naive_2way": true,
+        "agent_mae": 1.726,
+        "naive_mae": 4.254,
+        "full_mae": 4.254
+      }
+    ]
+  },
+  "competence_clean_0_4": {
+    "n": 5,
+    "tools": {
+      "full_history_step_regressor": 4,
+      "full_history_ramp_regressor": 1
+    },
+    "winners": {
+      "full_history_prophet": 4,
+      "agent": 1
+    },
+    "beat_naive_2way": "1/5",
+    "runs": [
+      {
+        "sid": "competence_clean_0_4",
+        "rep": 0,
+        "ok": true,
+        "chosen_tool": "full_history_step_regressor",
+        "winner": "full_history_prophet",
+        "beat_naive_2way": false,
+        "agent_mae": 4.41,
+        "naive_mae": 3.892,
+        "full_mae": 3.892
+      },
+      {
+        "sid": "competence_clean_0_4",
+        "rep": 1,
+        "ok": true,
+        "chosen_tool": "full_history_step_regressor",
+        "winner": "full_history_prophet",
+        "beat_naive_2way": false,
+        "agent_mae": 4.41,
+        "naive_mae": 3.892,
+        "full_mae": 3.892
+      },
+      {
+        "sid": "competence_clean_0_4",
+        "rep": 2,
+        "ok": true,
+        "chosen_tool": "full_history_step_regressor",
+        "winner": "full_history_prophet",
+        "beat_naive_2way": false,
+        "agent_mae": 4.41,
+        "naive_mae": 3.892,
+        "full_mae": 3.892
+      },
+      {
+        "sid": "competence_clean_0_4",
+        "rep": 3,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "agent",
+        "beat_naive_2way": true,
+        "agent_mae": 1.44,
+        "naive_mae": 3.892,
+        "full_mae": 3.892
+      },
+      {
+        "sid": "competence_clean_0_4",
+        "rep": 4,
+        "ok": true,
+        "chosen_tool": "full_history_step_regressor",
+        "winner": "full_history_prophet",
+        "beat_naive_2way": false,
+        "agent_mae": 4.41,
+        "naive_mae": 3.892,
+        "full_mae": 3.892
+      }
+    ]
+  },
+  "pipeline_t2_5_0": {
+    "n": 5,
+    "tools": {
+      "full_history_ramp_regressor": 5
+    },
+    "winners": {
+      "full_history_prophet": 5
+    },
+    "beat_naive_2way": "0/5",
+    "runs": [
+      {
+        "sid": "pipeline_t2_5_0",
+        "rep": 0,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "full_history_prophet",
+        "beat_naive_2way": false,
+        "agent_mae": 18.207,
+        "naive_mae": 17.903,
+        "full_mae": 17.903
+      },
+      {
+        "sid": "pipeline_t2_5_0",
+        "rep": 1,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "full_history_prophet",
+        "beat_naive_2way": false,
+        "agent_mae": 18.207,
+        "naive_mae": 17.903,
+        "full_mae": 17.903
+      },
+      {
+        "sid": "pipeline_t2_5_0",
+        "rep": 2,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "full_history_prophet",
+        "beat_naive_2way": false,
+        "agent_mae": 18.207,
+        "naive_mae": 17.903,
+        "full_mae": 17.903
+      },
+      {
+        "sid": "pipeline_t2_5_0",
+        "rep": 4,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "full_history_prophet",
+        "beat_naive_2way": false,
+        "agent_mae": 18.207,
+        "naive_mae": 17.903,
+        "full_mae": 17.903
+      },
+      {
+        "sid": "pipeline_t2_5_0",
+        "rep": 3,
+        "ok": true,
+        "chosen_tool": "full_history_ramp_regressor",
+        "winner": "full_history_prophet",
+        "beat_naive_2way": false,
+        "agent_mae": 18.207,
+        "naive_mae": 17.903,
+        "full_mae": 17.903
+      }
+    ]
+  },
+  "pipeline_t2_5_6": {
+    "n": 5,
+    "tools": {
+      "recent_window": 5
+    },
+    "winners": {
+      "naive_workflow": 5
+    },
+    "beat_naive_2way": "0/5",
+    "runs": [
+      {
+        "sid": "pipeline_t2_5_6",
+        "rep": 1,
+        "ok": true,
+        "chosen_tool": "recent_window",
+        "winner": "naive_workflow",
+        "beat_naive_2way": false,
+        "agent_mae": 32.73,
+        "naive_mae": 32.73,
+        "full_mae": 37.699
+      },
+      {
+        "sid": "pipeline_t2_5_6",
+        "rep": 2,
+        "ok": true,
+        "chosen_tool": "recent_window",
+        "winner": "naive_workflow",
+        "beat_naive_2way": false,
+        "agent_mae": 32.73,
+        "naive_mae": 32.73,
+        "full_mae": 37.699
+      },
+      {
+        "sid": "pipeline_t2_5_6",
+        "rep": 0,
+        "ok": true,
+        "chosen_tool": "recent_window",
+        "winner": "naive_workflow",
+        "beat_naive_2way": false,
+        "agent_mae": 32.73,
+        "naive_mae": 32.73,
+        "full_mae": 37.699
+      },
+      {
+        "sid": "pipeline_t2_5_6",
+        "rep": 4,
+        "ok": true,
+        "chosen_tool": "recent_window",
+        "winner": "naive_workflow",
+        "beat_naive_2way": false,
+        "agent_mae": 32.73,
+        "naive_mae": 32.73,
+        "full_mae": 37.699
+      },
+      {
+        "sid": "pipeline_t2_5_6",
+        "rep": 3,
+        "ok": true,
+        "chosen_tool": "recent_window",
+        "winner": "naive_workflow",
+        "beat_naive_2way": false,
+        "agent_mae": 32.73,
+        "naive_mae": 32.73,
+        "full_mae": 37.699
+      }
+    ]
+  },
+  "pipeline_t2_5_8": {
+    "n": 5,
+    "tools": {
+      "recent_window": 4,
+      "CRASH:IndexError": 1
+    },
+    "winners": {
+      "agent": 4,
+      "CRASH": 1
+    },
+    "beat_naive_2way": "4/4",
+    "runs": [
+      {
+        "sid": "pipeline_t2_5_8",
+        "rep": 0,
+        "ok": true,
+        "chosen_tool": "recent_window",
+        "winner": "agent",
+        "beat_naive_2way": true,
+        "agent_mae": 3.165,
+        "naive_mae": 29.778,
+        "full_mae": 38.388
+      },
+      {
+        "sid": "pipeline_t2_5_8",
+        "rep": 1,
+        "ok": true,
+        "chosen_tool": "recent_window",
+        "winner": "agent",
+        "beat_naive_2way": true,
+        "agent_mae": 3.165,
+        "naive_mae": 29.778,
+        "full_mae": 38.388
+      },
+      {
+        "sid": "pipeline_t2_5_8",
+        "rep": 2,
+        "ok": true,
+        "chosen_tool": "recent_window",
+        "winner": "agent",
+        "beat_naive_2way": true,
+        "agent_mae": 3.165,
+        "naive_mae": 29.778,
+        "full_mae": 38.388
+      },
+      {
+        "sid": "pipeline_t2_5_8",
+        "rep": 3,
+        "ok": false,
+        "crash": "IndexError: single positional indexer is out-of-bounds"
+      },
+      {
+        "sid": "pipeline_t2_5_8",
+        "rep": 4,
+        "ok": true,
+        "chosen_tool": "recent_window",
+        "winner": "agent",
+        "beat_naive_2way": true,
+        "agent_mae": 3.165,
+        "naive_mae": 29.778,
+        "full_mae": 38.388
+      }
+    ]
+  },
+  "tool_growing_7_1": {
+    "n": 5,
+    "tools": {
+      "CRASH:IndexError": 4,
+      "recent_window": 1
+    },
+    "winners": {
+      "CRASH": 4,
+      "full_history_prophet": 1
+    },
+    "beat_naive_2way": "0/1",
+    "runs": [
+      {
+        "sid": "tool_growing_7_1",
+        "rep": 2,
+        "ok": false,
+        "crash": "IndexError: single positional indexer is out-of-bounds"
+      },
+      {
+        "sid": "tool_growing_7_1",
+        "rep": 0,
+        "ok": false,
+        "crash": "IndexError: single positional indexer is out-of-bounds"
+      },
+      {
+        "sid": "tool_growing_7_1",
+        "rep": 3,
+        "ok": false,
+        "crash": "IndexError: single positional indexer is out-of-bounds"
+      },
+      {
+        "sid": "tool_growing_7_1",
+        "rep": 4,
+        "ok": false,
+        "crash": "IndexError: single positional indexer is out-of-bounds"
+      },
+      {
+        "sid": "tool_growing_7_1",
+        "rep": 1,
+        "ok": true,
+        "chosen_tool": "recent_window",
+        "winner": "full_history_prophet",
+        "beat_naive_2way": false,
+        "agent_mae": 33.16,
+        "naive_mae": 33.16,
+        "full_mae": 32.086
+      }
+    ]
+  }
+}
