@@ -1,0 +1,94 @@
+{
+  "summary": {
+    "n": 10,
+    "beat_naive_rate": 0.3,
+    "beat_naive_count": "3/10",
+    "agent_is_winner_count": "3/10",
+    "interval_recall_micro": 1.0,
+    "interval_family_n": 3
+  },
+  "cases": {
+    "competence_clean_0_0": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_ramp_regressor",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.6853
+    },
+    "competence_clean_1_0": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.5772
+    },
+    "prompt_p4_4_7": {
+      "beat_naive": true,
+      "chosen_tool": "full_history_clean_event",
+      "failure_modes": [
+        "clean_success"
+      ],
+      "agent_mae": 1.4336
+    },
+    "tool_nonlinear_9_0": {
+      "beat_naive": false,
+      "chosen_tool": null,
+      "failure_modes": [
+        "crashed_indexerror"
+      ],
+      "agent_mae": null
+    },
+    "tool_growing_7_3": {
+      "beat_naive": false,
+      "chosen_tool": null,
+      "failure_modes": [
+        "crashed_indexerror"
+      ],
+      "agent_mae": null
+    },
+    "tool_growing_7_1": {
+      "beat_naive": false,
+      "chosen_tool": null,
+      "failure_modes": [
+        "looped_on_blocked_tool",
+        "crashed_at_final_eval"
+      ],
+      "agent_mae": null
+    },
+    "tool_multiplicative_8_3": {
+      "beat_naive": false,
+      "chosen_tool": null,
+      "failure_modes": [
+        "looped_on_blocked_tool",
+        "crashed_at_final_eval"
+      ],
+      "agent_mae": null
+    },
+    "tool_growing_7_0": {
+      "beat_naive": false,
+      "chosen_tool": "recent_window",
+      "failure_modes": [
+        "capability_gap"
+      ],
+      "agent_mae": 31.509
+    },
+    "pipeline_t2_5_9": {
+      "beat_naive": false,
+      "chosen_tool": "recent_window",
+      "failure_modes": [
+        "capability_gap"
+      ],
+      "agent_mae": 30.8675
+    },
+    "competence_clean_0_4": {
+      "beat_naive": false,
+      "chosen_tool": "full_history_step_regressor",
+      "failure_modes": [
+        "no_proposal_beat_naive"
+      ],
+      "agent_mae": 4.4103
+    }
+  }
+}
